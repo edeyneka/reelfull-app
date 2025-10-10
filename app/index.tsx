@@ -46,7 +46,7 @@ export default function IntroScreen() {
   return (
     <View style={styles.container}>
       <Video
-        source={require('@/media/copy_650C6C12-53E6-490D-942B-5339F8D37BC5.MOV')}
+        source={require('@/assets/videos/intro.mov')}
         style={styles.video}
         resizeMode={ResizeMode.COVER}
         shouldPlay
