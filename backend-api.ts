@@ -37,6 +37,38 @@ export type PublicApiType = {
       { id: Id<"projects"> },
       any
     >;
+    updateProjectWithReelfulData: FunctionReference<
+      "mutation",
+      "public",
+      {
+        audioUrl?: string;
+        error?: string;
+        id: Id<"projects">;
+        musicUrl?: string;
+        script?: string;
+        status: "completed" | "failed";
+        videoUrls?: Array<string>;
+      },
+      any
+    >;
+    deleteProject: FunctionReference<
+      "mutation",
+      "public",
+      { id: Id<"projects"> },
+      any
+    >;
+    simulateCompleted: FunctionReference<
+      "mutation",
+      "public",
+      { id: Id<"projects"> },
+      any
+    >;
+    processProjectWithReelful: FunctionReference<
+      "action",
+      "public",
+      { projectId: Id<"projects">; reelfulApiUrl: string },
+      any
+    >;
   };
   render: {
     render: FunctionReference<"action", "public", { projectId: string }, any>;
