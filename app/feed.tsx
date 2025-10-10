@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { Plus, Trash2, Download } from 'lucide-react-native';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   Dimensions,
   FlatList,
@@ -10,9 +10,11 @@ import {
   TouchableOpacity,
   View,
   Alert,
+  Animated,
 } from 'react-native';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import * as MediaLibrary from 'expo-media-library';
 import * as FileSystem from 'expo-file-system';
 import Colors from '@/constants/colors';
@@ -78,6 +80,63 @@ export default function FeedScreen() {
     }
   );
 
+  // Animated values for slide gesture
+  const translateY = useRef(new Animated.Value(0)).current;
+  const opacity = useRef(new Animated.Value(1)).current;
+
+  const closeModal = () => {
+    setSelectedVideo(null);
+    translateY.setValue(0);
+    opacity.setValue(1);
+  };
+
+  // Slide down gesture to close modal
+  const panGesture = Gesture.Pan()
+    .onUpdate((event) => {
+      // Only allow downward drag
+      if (event.translationY > 0) {
+        translateY.setValue(event.translationY);
+        // Gradually fade out as user drags down
+        opacity.setValue(Math.max(0.5, 1 - event.translationY / 400));
+      }
+    })
+    .onEnd((event) => {
+      // If swiped down far enough or with velocity, close modal
+      if (event.translationY > 150 || event.velocityY > 500) {
+        // Fast animate out before closing
+        Animated.parallel([
+          Animated.timing(translateY, {
+            toValue: 800,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacity, {
+            toValue: 0,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+        ]).start(() => {
+          closeModal();
+        });
+      } else {
+        // Quickly spring back to original position
+        Animated.parallel([
+          Animated.spring(translateY, {
+            toValue: 0,
+            useNativeDriver: true,
+            tension: 100,
+            friction: 8,
+          }),
+          Animated.spring(opacity, {
+            toValue: 1,
+            useNativeDriver: true,
+            tension: 100,
+            friction: 8,
+          }),
+        ]).start();
+      }
+    });
+
   const renderVideoThumbnail = ({ item }: { item: VideoType }) => (
     <VideoThumbnail item={item} onPress={() => setSelectedVideo(item)} />
   );
@@ -94,7 +153,7 @@ export default function FeedScreen() {
   const handleDelete = () => {
     if (selectedVideo) {
       deleteVideo(selectedVideo.id);
-      setSelectedVideo(null);
+      closeModal();
     }
   };
 
@@ -151,53 +210,56 @@ export default function FeedScreen() {
 
       <Modal
         visible={selectedVideo !== null}
-        animationType="fade"
-        onRequestClose={() => setSelectedVideo(null)}
+        animationType="none"
+        onRequestClose={closeModal}
       >
         {selectedVideo && (
-          <View style={styles.modalContainer}>
-            <VideoView
-              player={modalPlayer}
-              style={styles.fullVideo}
-              contentFit="contain"
-              nativeControls={true}
-            />
-            <View style={[styles.modalButtons, { top: insets.top + 16 }]}>
-              <TouchableOpacity
-                style={styles.downloadButton}
-                onPress={handleDownload}
-                activeOpacity={0.8}
-              >
-                <Download size={24} color={Colors.white} strokeWidth={2} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.deleteButton}
-                onPress={handleDelete}
-                activeOpacity={0.8}
-              >
-                <Trash2 size={24} color={Colors.white} strokeWidth={2} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.closeButton}
-                onPress={() => setSelectedVideo(null)}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.closeButtonText}>✕</Text>
-              </TouchableOpacity>
-            </View>
-            <TouchableOpacity
-              style={styles.modalOverlay}
-              onPress={() => setIsPromptExpanded(!isPromptExpanded)}
-              activeOpacity={0.9}
+          <GestureDetector gesture={panGesture}>
+            <Animated.View
+              style={[
+                styles.modalContainer,
+                {
+                  transform: [{ translateY }],
+                  opacity,
+                },
+              ]}
             >
-              <Text
-                style={styles.modalPrompt}
-                numberOfLines={isPromptExpanded ? undefined : 2}
+              <VideoView
+                player={modalPlayer}
+                style={styles.fullVideo}
+                contentFit="contain"
+                nativeControls={true}
+              />
+              <View style={[styles.modalButtons, { top: insets.top + 16 }]}>
+                <TouchableOpacity
+                  style={styles.downloadButton}
+                  onPress={handleDownload}
+                  activeOpacity={0.8}
+                >
+                  <Download size={24} color={Colors.white} strokeWidth={2} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={handleDelete}
+                  activeOpacity={0.8}
+                >
+                  <Trash2 size={24} color={Colors.white} strokeWidth={2} />
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity
+                style={styles.modalOverlay}
+                onPress={() => setIsPromptExpanded(!isPromptExpanded)}
+                activeOpacity={0.9}
               >
-                {selectedVideo.prompt}
-              </Text>
-            </TouchableOpacity>
-          </View>
+                <Text
+                  style={styles.modalPrompt}
+                  numberOfLines={isPromptExpanded ? undefined : 2}
+                >
+                  {selectedVideo.prompt}
+                </Text>
+              </TouchableOpacity>
+            </Animated.View>
+          </GestureDetector>
         )}
       </Modal>
     </View>
@@ -331,21 +393,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     borderColor: Colors.white,
-  },
-  closeButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: Colors.white,
-  },
-  closeButtonText: {
-    fontSize: 24,
-    color: Colors.white,
-    fontWeight: '700' as const,
   },
   modalOverlay: {
     position: 'absolute',
