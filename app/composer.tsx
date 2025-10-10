@@ -269,6 +269,7 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 32,
+    paddingTop: 50,
   },
   closeButton: {
     position: 'absolute',
