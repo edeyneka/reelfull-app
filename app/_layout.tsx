@@ -23,7 +23,7 @@ export default function RootLayout() {
             <Stack.Screen name="index" />
             <Stack.Screen name="onboarding" />
             <Stack.Screen name="feed" />
-            <Stack.Screen name="composer" options={{ presentation: "modal" }} />
+            <Stack.Screen name="composer" options={{ presentation: "fullScreenModal" }} />
             <Stack.Screen name="loader" />
             <Stack.Screen name="result" />
           </Stack>

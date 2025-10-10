@@ -1,7 +1,8 @@
 import { useRouter } from 'expo-router';
 import { Image as LucideImage, Upload, X } from 'lucide-react-native';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
+  Animated,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -11,6 +12,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  PanResponder,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -41,6 +43,31 @@ export default function ComposerScreen() {
   const { user } = useApp();
   const [prompt, setPrompt] = useState('');
   const [mediaUris, setMediaUris] = useState<{ uri: string; type: 'video' | 'image' }[]>([]);
+  
+  const pan = useRef(new Animated.Value(0)).current;
+  
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        return gestureState.dy > 5;
+      },
+      onPanResponderMove: (_, gestureState) => {
+        if (gestureState.dy > 0) {
+          pan.setValue(gestureState.dy);
+        }
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dy > 100) {
+          router.back();
+        } else {
+          Animated.spring(pan, {
+            toValue: 0,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+    })
+  ).current;
 
   const pickMedia = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -85,11 +112,26 @@ export default function ComposerScreen() {
   const isValid = prompt.trim().length > 0 && mediaUris.length > 0;
 
   return (
-    <View style={styles.container}>
-      <LinearGradient
-        colors={[Colors.black, Colors.grayDark]}
-        style={styles.gradient}
+    <View style={styles.backgroundContainer}>
+      <Animated.View 
+        style={[
+          styles.container, 
+          { transform: [{ translateY: pan }] }
+        ]}
+        {...panResponder.panHandlers}
       >
+        <LinearGradient
+          colors={[Colors.black, Colors.grayDark]}
+          style={styles.gradient}
+        >
+        <TouchableOpacity
+          style={[styles.closeButton, { top: insets.top + 20 }]}
+          onPress={() => router.back()}
+          activeOpacity={0.7}
+        >
+          <X size={28} color={Colors.white} strokeWidth={2.5} />
+        </TouchableOpacity>
+        
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.keyboardView}
@@ -102,13 +144,6 @@ export default function ComposerScreen() {
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.header}>
-              <TouchableOpacity
-                style={styles.closeButton}
-                onPress={() => router.back()}
-                activeOpacity={0.7}
-              >
-                <X size={28} color={Colors.white} />
-              </TouchableOpacity>
               <Text style={styles.title}>
                 Hey, {user?.name || 'there'}, what&apos;s your day been like?
               </Text>
@@ -208,11 +243,16 @@ export default function ComposerScreen() {
           </ScrollView>
         </KeyboardAvoidingView>
       </LinearGradient>
+      </Animated.View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  backgroundContainer: {
+    flex: 1,
+    backgroundColor: Colors.black,
+  },
   container: {
     flex: 1,
     backgroundColor: Colors.black,
@@ -231,9 +271,10 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   closeButton: {
-    alignSelf: 'flex-start',
-    marginBottom: 16,
-    padding: 4,
+    position: 'absolute',
+    right: 24,
+    zIndex: 10,
+    padding: 8,
   },
   title: {
     fontSize: 24,
