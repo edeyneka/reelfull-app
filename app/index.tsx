@@ -79,9 +79,6 @@ export default function IntroScreen() {
           </View>
           <Text style={styles.title}>Reelful</Text>
           <Text style={styles.subtitle}>Your stories, reimagined</Text>
-          <View style={styles.debug}>
-            <Text style={styles.debugText}>tasks: {JSON.stringify(tasks)}</Text>
-          </View>
         </Animated.View>
       </LinearGradient>
     </View>
@@ -128,15 +125,5 @@ const styles = StyleSheet.create({
     color: Colors.orange,
     fontWeight: '500' as const,
     letterSpacing: 1,
-  },
-  debug: {
-    marginTop: 20,
-    padding: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 8,
-  },
-  debugText: {
-    color: Colors.white,
-    fontSize: 12,
   },
 });
