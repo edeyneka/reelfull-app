@@ -9,19 +9,6 @@ SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
 
-function RootLayoutNav() {
-  return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="index" />
-      <Stack.Screen name="onboarding" />
-      <Stack.Screen name="feed" />
-      <Stack.Screen name="composer" options={{ presentation: "modal" }} />
-      <Stack.Screen name="loader" />
-      <Stack.Screen name="result" />
-    </Stack>
-  );
-}
-
 export default function RootLayout() {
   useEffect(() => {
     SplashScreen.hideAsync();
@@ -31,7 +18,14 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <AppProvider>
-          <RootLayoutNav />
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="onboarding" />
+            <Stack.Screen name="feed" />
+            <Stack.Screen name="composer" options={{ presentation: "modal" }} />
+            <Stack.Screen name="loader" />
+            <Stack.Screen name="result" />
+          </Stack>
         </AppProvider>
       </GestureHandlerRootView>
     </QueryClientProvider>
