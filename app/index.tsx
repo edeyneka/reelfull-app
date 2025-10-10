@@ -3,6 +3,7 @@ import { Film } from 'lucide-react-native';
 import { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Video, ResizeMode } from 'expo-av';
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
 
@@ -44,8 +45,16 @@ export default function IntroScreen() {
 
   return (
     <View style={styles.container}>
+      <Video
+        source={require('@/media/copy_650C6C12-53E6-490D-942B-5339F8D37BC5.MOV')}
+        style={styles.video}
+        resizeMode={ResizeMode.COVER}
+        shouldPlay
+        isLooping
+        isMuted
+      />
       <LinearGradient
-        colors={[Colors.black, Colors.grayDark, Colors.black]}
+        colors={['rgba(0,0,0,0.6)', 'transparent', 'rgba(0,0,0,0.8)']}
         style={styles.gradient}
       >
         <Animated.View
@@ -72,6 +81,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.black,
+  },
+  video: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
   },
   gradient: {
     flex: 1,
