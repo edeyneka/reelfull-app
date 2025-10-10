@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { ResizeMode, Video } from 'expo-av';
+import { VideoView, useVideoPlayer } from 'expo-video';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
@@ -20,45 +20,64 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const ITEM_SPACING = 8;
 const ITEM_WIDTH = (SCREEN_WIDTH - ITEM_SPACING * 3) / 2;
 
+function VideoThumbnail({ item, onPress }: { item: VideoType; onPress: () => void }) {
+  if (!item.uri || item.uri.length === 0) {
+    return (
+      <View style={styles.thumbnailContainer}>
+        <View style={styles.errorThumbnail}>
+          <Text style={styles.errorText}>Unavailable</Text>
+        </View>
+      </View>
+    );
+  }
+
+  const thumbnailPlayer = useVideoPlayer(item.uri, (player) => {
+    player.muted = true;
+    // Don't autoplay thumbnails
+  });
+
+  return (
+    <TouchableOpacity
+      style={styles.thumbnailContainer}
+      onPress={onPress}
+      activeOpacity={0.9}
+    >
+      <VideoView
+        player={thumbnailPlayer}
+        style={styles.thumbnail}
+        contentFit="cover"
+        nativeControls={false}
+      />
+      <View style={styles.thumbnailOverlay}>
+        <Text style={styles.thumbnailPrompt} numberOfLines={2}>
+          {item.prompt}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
 export default function FeedScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { videos } = useApp();
   const [selectedVideo, setSelectedVideo] = useState<VideoType | null>(null);
   const [isPromptExpanded, setIsPromptExpanded] = useState(false);
-
-  const renderVideoThumbnail = ({ item }: { item: VideoType }) => {
-    if (!item.uri || item.uri.length === 0) {
-      return (
-        <View style={styles.thumbnailContainer}>
-          <View style={styles.errorThumbnail}>
-            <Text style={styles.errorText}>Unavailable</Text>
-          </View>
-        </View>
-      );
+  
+  const modalPlayer = useVideoPlayer(
+    selectedVideo?.uri || null,
+    (player) => {
+      if (player && selectedVideo) {
+        player.loop = true;
+        player.muted = false;
+        player.play();
+      }
     }
+  );
 
-    return (
-      <TouchableOpacity
-        style={styles.thumbnailContainer}
-        onPress={() => setSelectedVideo(item)}
-        activeOpacity={0.9}
-      >
-        <Video
-          source={{ uri: item.uri }}
-          style={styles.thumbnail}
-          resizeMode={ResizeMode.COVER}
-          shouldPlay={false}
-          isMuted
-        />
-        <View style={styles.thumbnailOverlay}>
-          <Text style={styles.thumbnailPrompt} numberOfLines={2}>
-            {item.prompt}
-          </Text>
-        </View>
-      </TouchableOpacity>
-    );
-  };
+  const renderVideoThumbnail = ({ item }: { item: VideoType }) => (
+    <VideoThumbnail item={item} onPress={() => setSelectedVideo(item)} />
+  );
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
@@ -102,14 +121,11 @@ export default function FeedScreen() {
       >
         {selectedVideo && (
           <View style={styles.modalContainer}>
-            <Video
-              source={{ uri: selectedVideo.uri }}
+            <VideoView
+              player={modalPlayer}
               style={styles.fullVideo}
-              resizeMode={ResizeMode.CONTAIN}
-              shouldPlay
-              isLooping
-              isMuted={false}
-              useNativeControls
+              contentFit="contain"
+              nativeControls={true}
             />
             <TouchableOpacity
               style={[styles.closeButton, { top: insets.top + 16 }]}

@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import * as FileSystem from 'expo-file-system';
 import * as MediaLibrary from 'expo-media-library';
-import { ResizeMode, Video } from 'expo-av';
+import { VideoView, useVideoPlayer } from 'expo-video';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '@/constants/colors';
@@ -34,6 +34,17 @@ export default function ResultScreen() {
   }, [params.videoData]);
   
   const firstMedia = useMemo(() => mediaUris[0], [mediaUris]);
+  
+  const videoPlayer = useVideoPlayer(
+    firstMedia?.type === 'video' && firstMedia?.uri ? firstMedia.uri : null,
+    (player) => {
+      if (player && firstMedia?.type === 'video') {
+        player.loop = true;
+        player.muted = false;
+        player.play();
+      }
+    }
+  );
 
   useEffect(() => {
     const handleSaveToFeed = async () => {
@@ -117,13 +128,11 @@ export default function ResultScreen() {
   return (
     <View style={styles.container}>
       {firstMedia.type === 'video' ? (
-        <Video
-          source={{ uri: firstMedia.uri }}
+        <VideoView
+          player={videoPlayer}
           style={styles.video}
-          resizeMode={ResizeMode.COVER}
-          shouldPlay
-          isLooping
-          isMuted={false}
+          contentFit="cover"
+          nativeControls={false}
         />
       ) : (
         <Image

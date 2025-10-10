@@ -15,9 +15,25 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ResizeMode, Video } from 'expo-av';
+import { VideoView, useVideoPlayer } from 'expo-video';
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
+
+function VideoThumbnail({ uri, style }: { uri: string; style: any }) {
+  const player = useVideoPlayer(uri, (player) => {
+    player.muted = true;
+    // Don't autoplay thumbnails
+  });
+  
+  return (
+    <VideoView
+      player={player}
+      style={style}
+      contentFit="cover"
+      nativeControls={false}
+    />
+  );
+}
 
 export default function ComposerScreen() {
   const router = useRouter();
@@ -125,12 +141,9 @@ export default function ComposerScreen() {
                     {mediaUris.map((media, index) => (
                       <View key={index} style={styles.mediaPreview}>
                         {media.type === 'video' ? (
-                          <Video
-                            source={{ uri: media.uri }}
+                          <VideoThumbnail
+                            uri={media.uri}
                             style={styles.mediaThumbnail}
-                            resizeMode={ResizeMode.COVER}
-                            shouldPlay={false}
-                            isLooping
                           />
                         ) : (
                           <Image
