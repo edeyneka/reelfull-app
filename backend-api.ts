@@ -31,6 +31,12 @@ export type PublicApiType = {
       { id: Id<"projects"> },
       any
     >;
+    completeProject: FunctionReference<
+      "mutation",
+      "public",
+      { id: Id<"projects"> },
+      any
+    >;
   };
   render: {
     render: FunctionReference<"action", "public", { projectId: string }, any>;
