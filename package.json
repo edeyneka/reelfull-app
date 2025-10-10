@@ -6,6 +6,7 @@
     "start": "bunx rork start -p qk9zn8ilqyx530aaemb0i --tunnel",
     "start-web": "bunx rork start -p qk9zn8ilqyx530aaemb0i --web --tunnel",
     "start-web-dev": "DEBUG=expo* bunx rork start -p qk9zn8ilqyx530aaemb0i --web --tunnel",
+    "sync-api": "cp /Users/aleks/Documents/GitHub/makosst/sorah/api.ts ./backend-api.ts",
     "lint": "expo lint"
   },
   "dependencies": {
