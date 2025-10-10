@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Plus, Trash2 } from 'lucide-react-native';
+import { Plus, Trash2, Download } from 'lucide-react-native';
 import { useState } from 'react';
 import {
   Dimensions,
@@ -9,9 +9,12 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Alert,
 } from 'react-native';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as MediaLibrary from 'expo-media-library';
+import * as FileSystem from 'expo-file-system';
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
 import { Video as VideoType } from '@/types';
@@ -95,11 +98,36 @@ export default function FeedScreen() {
     }
   };
 
+  const handleDownload = async () => {
+    if (!selectedVideo) return;
+
+    try {
+      // Request permissions
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'Please grant permission to save videos to your library.'
+        );
+        return;
+      }
+
+      // Save the video to media library
+      const asset = await MediaLibrary.createAssetAsync(selectedVideo.uri);
+      await MediaLibrary.createAlbumAsync('Reelfull', asset, false);
+      
+      Alert.alert('Success', 'Video saved to your gallery!');
+    } catch (error) {
+      console.error('Error downloading video:', error);
+      Alert.alert('Error', 'Failed to save video. Please try again.');
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <Text style={styles.headerTitle}>Reelfull</Text>
-        <Text style={styles.headerSubtitle}>Your Story Gallery</Text>
+        <Text style={styles.headerSubtitle}>Your Video Gallery</Text>
       </View>
 
       <FlatList
@@ -135,6 +163,13 @@ export default function FeedScreen() {
               nativeControls={true}
             />
             <View style={[styles.modalButtons, { top: insets.top + 16 }]}>
+              <TouchableOpacity
+                style={styles.downloadButton}
+                onPress={handleDownload}
+                activeOpacity={0.8}
+              >
+                <Download size={24} color={Colors.white} strokeWidth={2} />
+              </TouchableOpacity>
               <TouchableOpacity
                 style={styles.deleteButton}
                 onPress={handleDelete}
@@ -276,6 +311,16 @@ const styles = StyleSheet.create({
     right: 24,
     flexDirection: 'row',
     gap: 12,
+  },
+  downloadButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: Colors.white,
   },
   deleteButton: {
     width: 44,
