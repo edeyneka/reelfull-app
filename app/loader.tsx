@@ -1,11 +1,11 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Sparkles } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Asset } from 'expo-asset';
 import Colors from '@/constants/colors';
-import { useQuery } from 'convex/react';
+import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/backend-api';
 
 const simulateVideoGeneration = async (
@@ -40,6 +40,8 @@ export default function LoaderScreen() {
   const project = useQuery(api.tasks.getProject, 
     params.projectId ? { id: params.projectId as any } : 'skip'
   );
+
+  const completeProject = useMutation(api.tasks.completeProject);
 
   console.log('loader: project data:', project);
 
@@ -89,6 +91,16 @@ export default function LoaderScreen() {
     }
   }, [project]);
 
+  const handleSimulate = async () => {
+    if (params.projectId) {
+      try {
+        await completeProject({ id: params.projectId as any });
+      } catch (error) {
+        console.error('simulate failed:', error);
+      }
+    }
+  };
+
   const rotate = rotateAnim.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg'],
@@ -125,6 +137,14 @@ export default function LoaderScreen() {
           </View>
           <Text style={styles.progressText}>{Math.round(progress)}%</Text>
         </View>
+
+        <TouchableOpacity
+          style={styles.simulateButton}
+          onPress={handleSimulate}
+          activeOpacity={0.5}
+        >
+          <Text style={styles.simulateText}>simulate</Text>
+        </TouchableOpacity>
       </LinearGradient>
     </View>
   );
@@ -180,5 +200,20 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700' as const,
     color: Colors.orange,
+  },
+  simulateButton: {
+    position: 'absolute',
+    bottom: 40,
+    right: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 8,
+    opacity: 0.3,
+  },
+  simulateText: {
+    fontSize: 10,
+    color: Colors.grayLight,
+    fontWeight: '400' as const,
   },
 });

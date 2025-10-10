@@ -24,6 +24,12 @@ import { useApp } from '@/contexts/AppContext';
 import { useMutation } from 'convex/react';
 import { api } from '@/backend-api';
 
+const PROMPT_PRESETS = [
+  "had great weather yesterday!",
+  "just finished an amazing workout session",
+  "caught up with old friends today"
+];
+
 function VideoThumbnail({ uri, style }: { uri: string; style: any }) {
   const player = useVideoPlayer(uri, (player) => {
     player.muted = true;
@@ -193,6 +199,25 @@ export default function ComposerScreen() {
             <View style={styles.form}>
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Tell your story</Text>
+                
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.presetContainer}
+                  contentContainerStyle={{ gap: 8 }}
+                >
+                  {PROMPT_PRESETS.map((preset, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={styles.presetChip}
+                      onPress={() => setPrompt(preset)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.presetText}>{preset}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+
                 <TextInput
                   style={styles.input}
                   placeholder="Describe your day..."
@@ -336,6 +361,23 @@ const styles = StyleSheet.create({
     fontWeight: '600' as const,
     color: Colors.white,
     marginBottom: 10,
+  },
+  presetContainer: {
+    marginBottom: 10,
+    maxHeight: 32,
+  },
+  presetChip: {
+    backgroundColor: 'rgba(255, 107, 53, 0.15)',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 107, 53, 0.3)',
+  },
+  presetText: {
+    fontSize: 12,
+    color: Colors.orange,
+    fontWeight: '500' as const,
   },
   input: {
     backgroundColor: Colors.gray,
