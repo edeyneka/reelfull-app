@@ -164,6 +164,16 @@ export default function ComposerScreen() {
                 />
               </View>
 
+              <View style={styles.exampleContainer}>
+                <View style={styles.exampleHeader}>
+                  <LucideImage size={16} color={Colors.orange} />
+                  <Text style={styles.exampleTitle}>Example Story</Text>
+                </View>
+                <Text style={styles.exampleText}>
+                  &quot;I went to the a16z Tech Week in SF - met inspiring founders and caught up with old friends. The focus was on pre-seed fundraising. My three main takeaways: storytelling wins, community opens doors, and clarity beats buzzwords.&quot;
+                </Text>
+              </View>
+
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Upload Media</Text>
                 {mediaUris.length > 0 && (
@@ -207,17 +217,6 @@ export default function ComposerScreen() {
                     {mediaUris.length > 0 ? 'Add more' : 'Tap to upload photos/videos'}
                   </Text>
                 </TouchableOpacity>
-              </View>
-
-              <View style={styles.exampleContainer}>
-                <View style={styles.exampleHeader}>
-                  <LucideImage size={20} color={Colors.orange} />
-                  <Text style={styles.exampleTitle}>Example Story</Text>
-                </View>
-                <Text style={styles.exampleText}>
-                  &quot;Had an amazing morning coffee at the new cafe downtown. The
-                  sunset views were incredible!&quot;
-                </Text>
               </View>
 
               <TouchableOpacity
@@ -348,7 +347,7 @@ const styles = StyleSheet.create({
   exampleContainer: {
     backgroundColor: 'rgba(255, 107, 53, 0.1)',
     borderRadius: 12,
-    padding: 16,
+    padding: 12,
     marginBottom: 24,
     borderWidth: 1,
     borderColor: 'rgba(255, 107, 53, 0.3)',
@@ -356,18 +355,18 @@ const styles = StyleSheet.create({
   exampleHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
+    gap: 6,
+    marginBottom: 6,
   },
   exampleTitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600' as const,
     color: Colors.orange,
   },
   exampleText: {
-    fontSize: 14,
+    fontSize: 11,
     color: Colors.grayLight,
-    lineHeight: 20,
+    lineHeight: 16,
     fontStyle: 'italic' as const,
   },
   button: {
