@@ -6,12 +6,15 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
+import { useQuery } from 'convex/react';
+import { api } from '@/backend-api';
 
 export default function IntroScreen() {
   const router = useRouter();
   const { user, isLoading } = useApp();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const tasks = useQuery(api.tasks.get);
   
   const videoSource = require('../assets/intro-video.mov');
   const player = useVideoPlayer(videoSource, (player) => {
