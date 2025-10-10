@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Check, Download, Home } from 'lucide-react-native';
+import { Check, Download } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
@@ -15,6 +15,7 @@ import * as MediaLibrary from 'expo-media-library';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
 
@@ -25,9 +26,17 @@ export default function ResultScreen() {
   const { addVideo } = useApp();
   const [isSaved, setIsSaved] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [isPromptExpanded, setIsPromptExpanded] = useState(false);
 
   console.log('Result screen params:', params);
+
+  // Swipe down gesture to go to feed
+  const panGesture = Gesture.Pan()
+    .onEnd((event) => {
+      // If swiped down (positive Y velocity) and moved more than 100 pixels
+      if (event.velocityY > 500 || event.translationY > 150) {
+        handleGoHome();
+      }
+    });
 
   const mediaUris = useMemo(() => {
     return params.videoData ? JSON.parse(params.videoData) : [];
@@ -126,87 +135,56 @@ export default function ResultScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      {firstMedia.type === 'video' ? (
-        <VideoView
-          player={videoPlayer}
-          style={styles.video}
-          contentFit="cover"
-          nativeControls={false}
-        />
-      ) : (
-        <Image
-          source={{ uri: firstMedia.uri }}
-          style={styles.video}
-        />
-      )}
+    <GestureDetector gesture={panGesture}>
+      <View style={styles.container}>
+        {firstMedia.type === 'video' ? (
+          <VideoView
+            player={videoPlayer}
+            style={styles.video}
+            contentFit="cover"
+            nativeControls={false}
+          />
+        ) : (
+          <Image
+            source={{ uri: firstMedia.uri }}
+            style={styles.video}
+          />
+        )}
 
-      <LinearGradient
-        colors={['transparent', 'rgba(0,0,0,0.8)', Colors.black]}
-        style={[styles.overlay, { paddingBottom: insets.bottom + 20 }]}
-      >
-        <View style={styles.content}>
-          <View style={styles.header}>
-            <Check size={32} color={Colors.orange} strokeWidth={3} />
-            <Text style={styles.title}>Your reel is ready!</Text>
-          </View>
-          
-          <View style={styles.promptWrapper}>
-            <TouchableOpacity
-              onPress={() => setIsPromptExpanded(!isPromptExpanded)}
-              activeOpacity={0.7}
-              style={styles.promptContainer}
-            >
-              <Text
-                style={styles.subtitle}
-                numberOfLines={isPromptExpanded ? undefined : 2}
-              >
-                {params.prompt}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.actions}>
-            <TouchableOpacity
-              style={styles.secondaryButton}
-              onPress={handleDownload}
-              disabled={isDownloading}
-              activeOpacity={0.8}
-            >
-              <Download size={24} color={Colors.white} strokeWidth={2} />
-              <Text style={styles.secondaryButtonText}>
-                {isDownloading ? 'Downloading...' : 'Download'}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.primaryButton}
-              onPress={handleGoHome}
-              activeOpacity={0.8}
-            >
-              <LinearGradient
-                colors={[Colors.orange, Colors.orangeLight]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.buttonGradient}
-              >
-                <Home size={24} color={Colors.white} strokeWidth={2} />
-                <Text style={styles.primaryButtonText}>
-                  {isSaved ? 'Go to Feed' : 'Save & Go to Feed'}
-                </Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
-
-          {isSaved && (
-            <View style={styles.savedBadge}>
-              <Check size={16} color={Colors.orange} strokeWidth={3} />
-              <Text style={styles.savedText}>Saved to feed</Text>
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.8)', Colors.black]}
+          style={[styles.overlay, { paddingBottom: insets.bottom + 20 }]}
+        >
+          <View style={styles.content}>
+            <View style={styles.header}>
+              <Check size={32} color={Colors.orange} strokeWidth={3} />
+              <Text style={styles.title}>Your reel is ready!</Text>
             </View>
-          )}
-        </View>
-      </LinearGradient>
-    </View>
+
+            <View style={styles.actions}>
+              <TouchableOpacity
+                style={styles.secondaryButton}
+                onPress={handleDownload}
+                disabled={isDownloading}
+                activeOpacity={0.8}
+              >
+                <Download size={24} color={Colors.white} strokeWidth={2} />
+                <Text style={styles.secondaryButtonText}>
+                  {isDownloading ? 'Downloading...' : 'Download'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {isSaved && (
+              <View style={styles.savedBadge}>
+                <Check size={16} color={Colors.orange} strokeWidth={3} />
+                <Text style={styles.savedText}>Saved to feed</Text>
+              </View>
+            )}
+          </View>
+        </LinearGradient>
+      </View>
+    </GestureDetector>
   );
 }
 
@@ -231,16 +209,7 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 12,
-  },
-  promptWrapper: {
-    marginHorizontal: -24,
-    marginBottom: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    paddingVertical: 12,
-  },
-  promptContainer: {
-    paddingHorizontal: 24,
+    marginBottom: 24,
   },
   title: {
     fontSize: 28,
@@ -249,13 +218,6 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 4,
     textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 12,
-    color: Colors.grayLight,
-    textAlign: 'left',
-    lineHeight: 18,
-    marginTop: 8,
   },
   actions: {
     gap: 12,
@@ -274,22 +236,6 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     fontSize: 18,
     fontWeight: '600' as const,
-    color: Colors.white,
-  },
-  primaryButton: {
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  buttonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    padding: 18,
-  },
-  primaryButtonText: {
-    fontSize: 18,
-    fontWeight: '700' as const,
     color: Colors.white,
   },
   savedBadge: {
