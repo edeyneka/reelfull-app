@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Plus, Trash2, Download, Settings } from 'lucide-react-native';
+import { Plus, Trash2, Download, Settings, Loader2 } from 'lucide-react-native';
 import { useState, useRef } from 'react';
 import {
   Dimensions,
@@ -11,6 +11,7 @@ import {
   View,
   Alert,
   Animated,
+  Image,
 } from 'react-native';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,7 +20,7 @@ import * as MediaLibrary from 'expo-media-library';
 import * as FileSystem from 'expo-file-system';
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
-import { Video as VideoType } from '@/types';
+import { Video as VideoType, Project } from '@/types';
 import { useQuery } from 'convex/react';
 import { api } from '@/backend-api';
 
@@ -27,7 +28,30 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const ITEM_SPACING = 8;
 const ITEM_WIDTH = (SCREEN_WIDTH - ITEM_SPACING * 3) / 2;
 
-function VideoThumbnail({ item, onPress }: { item: VideoType; onPress: () => void }) {
+function VideoThumbnail({ item, onPress }: { item: any; onPress: () => void }) {
+  if (item.status && item.status !== 'completed') {
+    return (
+      <View style={styles.thumbnailContainer}>
+        {item.previewImage ? (
+          <Image source={{ uri: item.previewImage }} style={styles.thumbnail} />
+        ) : (
+          <View style={styles.thumbnail} />
+        )}
+        <View style={styles.processingOverlay}>
+          <Loader2 size={32} color={Colors.orange} />
+        </View>
+        <View style={styles.thumbnailOverlay}>
+          <Text style={styles.thumbnailStatus}>
+            {item.status === 'pending' ? 'queued' : 'processing'}
+          </Text>
+          <Text style={styles.thumbnailPrompt} numberOfLines={2}>
+            {item.prompt}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   if (!item.uri || item.uri.length === 0) {
     return (
       <View style={styles.thumbnailContainer}>
@@ -69,23 +93,31 @@ export default function FeedScreen() {
   const { videos: localVideos, deleteVideo } = useApp();
   const [selectedVideo, setSelectedVideo] = useState<VideoType | null>(null);
   const [isPromptExpanded, setIsPromptExpanded] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   
-  const projects = useQuery(api.tasks.getProjects);
+  const projects = useQuery(api.tasks.getProjects) as Project[] | undefined;
   
-  const videos = [
+  const allItems = [
     ...localVideos,
-    ...(projects?.filter(p => p.status === 'completed' && p.videoUrl).map(p => ({
+    ...(projects?.map((p: Project) => ({
       id: p._id,
-      uri: p.videoUrl!,
+      uri: p.status === 'completed' ? p.videoUrl : undefined,
       prompt: p.prompt,
       createdAt: p._creationTime,
+      status: p.status,
+      previewImage: p.files?.[0],
     })) || [])
   ];
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    setTimeout(() => setRefreshing(false), 1000);
+  };
   
   const modalPlayer = useVideoPlayer(
-    selectedVideo?.uri || null,
+    selectedVideo?.uri ?? null,
     (player) => {
-      if (player && selectedVideo) {
+      if (player && selectedVideo?.uri) {
         player.loop = true;
         player.muted = false;
         player.play();
@@ -164,7 +196,7 @@ export default function FeedScreen() {
   };
 
   const handleDownload = async () => {
-    if (!selectedVideo) return;
+    if (!selectedVideo?.uri) return;
 
     try {
       const { status } = await MediaLibrary.requestPermissionsAsync();
@@ -205,7 +237,7 @@ export default function FeedScreen() {
       </View>
 
       <FlatList
-        data={videos}
+        data={allItems}
         renderItem={renderVideoThumbnail}
         keyExtractor={(item) => item.id}
         numColumns={2}
@@ -213,6 +245,8 @@ export default function FeedScreen() {
         contentContainerStyle={styles.grid}
         columnWrapperStyle={styles.row}
         ListEmptyComponent={renderEmpty}
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
       />
 
       <TouchableOpacity
@@ -437,5 +471,62 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontWeight: '500' as const,
     lineHeight: 20,
+  },
+  processingSection: {
+    paddingHorizontal: 24,
+    paddingBottom: 16,
+    backgroundColor: Colors.black,
+  },
+  processingSectionTitle: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: Colors.grayLight,
+    marginBottom: 12,
+  },
+  processingList: {
+    gap: 8,
+  },
+  processingContainer: {
+    backgroundColor: 'rgba(255, 138, 0, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 138, 0, 0.3)',
+  },
+  processingContent: {
+    flexDirection: 'row' as const,
+    alignItems: 'center',
+    gap: 12,
+  },
+  processingText: {
+    flex: 1,
+  },
+  processingStatus: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    color: Colors.orange,
+    marginBottom: 4,
+  },
+  processingPrompt: {
+    fontSize: 14,
+    color: Colors.white,
+    fontWeight: '500' as const,
+  },
+  processingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  thumbnailStatus: {
+    fontSize: 10,
+    fontWeight: '700' as const,
+    color: Colors.orange,
+    marginBottom: 4,
+    textTransform: 'uppercase' as const,
   },
 });
