@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   View,
   PanResponder,
+  Alert,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,11 +21,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
+import { useMutation } from 'convex/react';
+import { api } from '@/backend-api';
 
 function VideoThumbnail({ uri, style }: { uri: string; style: any }) {
   const player = useVideoPlayer(uri, (player) => {
     player.muted = true;
-    // Don't autoplay thumbnails
   });
   
   return (
@@ -43,6 +45,10 @@ export default function ComposerScreen() {
   const { user } = useApp();
   const [prompt, setPrompt] = useState('');
   const [mediaUris, setMediaUris] = useState<{ uri: string; type: 'video' | 'image' }[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  
+  const generateUploadUrl = useMutation(api.tasks.generateUploadUrl);
+  const createProject = useMutation(api.tasks.createProject);
   
   const pan = useRef(new Animated.Value(0)).current;
   
@@ -96,19 +102,51 @@ export default function ComposerScreen() {
     setMediaUris(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = () => {
+  const uploadFile = async (uri: string): Promise<string> => {
+    const uploadUrl = await generateUploadUrl();
+    
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    
+    const result = await fetch(uploadUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': blob.type },
+      body: blob,
+    });
+
+    const { storageId } = await result.json();
+    return storageId;
+  };
+
+  const handleSubmit = async () => {
     if (prompt.trim() && mediaUris.length > 0) {
-      console.log('=== COMPOSER: Generate Reel pressed ===');
-      console.log('Prompt:', prompt.trim());
-      console.log('Media count:', mediaUris.length);
-      console.log('Navigating to loader...');
-      router.replace({
-        pathname: '/loader',
-        params: { 
-          prompt: prompt.trim(), 
-          mediaUris: JSON.stringify(mediaUris),
-        },
-      });
+      try {
+        setIsUploading(true);
+        console.log('uploading files to convex...');
+        
+        const storageIds = await Promise.all(
+          mediaUris.map(media => uploadFile(media.uri))
+        );
+        
+        console.log('creating project with files:', storageIds);
+        const projectId = await createProject({
+          files: storageIds,
+          prompt: prompt.trim(),
+        });
+        
+        console.log('project created:', projectId);
+        router.replace({
+          pathname: '/loader',
+          params: { 
+            projectId,
+          },
+        });
+      } catch (error) {
+        console.error('upload failed:', error);
+        Alert.alert('Upload Failed', 'Could not upload files. Please try again.');
+      } finally {
+        setIsUploading(false);
+      }
     }
   };
 
@@ -223,14 +261,14 @@ export default function ComposerScreen() {
               </View>
 
               <TouchableOpacity
-                style={[styles.button, !isValid && styles.buttonDisabled]}
+                style={[styles.button, (!isValid || isUploading) && styles.buttonDisabled]}
                 onPress={handleSubmit}
-                disabled={!isValid}
+                disabled={!isValid || isUploading}
                 activeOpacity={0.8}
               >
                 <LinearGradient
                   colors={
-                    isValid
+                    isValid && !isUploading
                       ? [Colors.orange, Colors.orangeLight]
                       : [Colors.gray, Colors.grayLight]
                   }
@@ -238,7 +276,9 @@ export default function ComposerScreen() {
                   end={{ x: 1, y: 0 }}
                   style={styles.buttonGradient}
                 >
-                  <Text style={styles.buttonText}>Generate Reel</Text>
+                  <Text style={styles.buttonText}>
+                    {isUploading ? 'Uploading...' : 'Generate Reel'}
+                  </Text>
                 </LinearGradient>
               </TouchableOpacity>
             </View>

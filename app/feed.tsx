@@ -20,6 +20,8 @@ import * as FileSystem from 'expo-file-system';
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
 import { Video as VideoType } from '@/types';
+import { useQuery } from 'convex/react';
+import { api } from '@/backend-api';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const ITEM_SPACING = 8;
@@ -38,7 +40,6 @@ function VideoThumbnail({ item, onPress }: { item: VideoType; onPress: () => voi
 
   const thumbnailPlayer = useVideoPlayer(item.uri, (player) => {
     player.muted = true;
-    // Don't autoplay thumbnails
   });
 
   return (
@@ -65,9 +66,21 @@ function VideoThumbnail({ item, onPress }: { item: VideoType; onPress: () => voi
 export default function FeedScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { videos, deleteVideo } = useApp();
+  const { videos: localVideos, deleteVideo } = useApp();
   const [selectedVideo, setSelectedVideo] = useState<VideoType | null>(null);
   const [isPromptExpanded, setIsPromptExpanded] = useState(false);
+  
+  const projects = useQuery(api.tasks.getProjects);
+  
+  const videos = [
+    ...localVideos,
+    ...(projects?.filter(p => p.status === 'completed' && p.videoUrl).map(p => ({
+      id: p._id,
+      uri: p.videoUrl!,
+      prompt: p.prompt,
+      createdAt: p._creationTime,
+    })) || [])
+  ];
   
   const modalPlayer = useVideoPlayer(
     selectedVideo?.uri || null,
@@ -80,7 +93,6 @@ export default function FeedScreen() {
     }
   );
 
-  // Animated values for slide gesture
   const translateY = useRef(new Animated.Value(0)).current;
   const opacity = useRef(new Animated.Value(1)).current;
 
@@ -90,20 +102,15 @@ export default function FeedScreen() {
     opacity.setValue(1);
   };
 
-  // Slide down gesture to close modal
   const panGesture = Gesture.Pan()
     .onUpdate((event) => {
-      // Only allow downward drag
       if (event.translationY > 0) {
         translateY.setValue(event.translationY);
-        // Gradually fade out as user drags down
         opacity.setValue(Math.max(0.5, 1 - event.translationY / 400));
       }
     })
     .onEnd((event) => {
-      // If swiped down far enough or with velocity, close modal
       if (event.translationY > 150 || event.velocityY > 500) {
-        // Fast animate out before closing
         Animated.parallel([
           Animated.timing(translateY, {
             toValue: 800,
@@ -119,7 +126,6 @@ export default function FeedScreen() {
           closeModal();
         });
       } else {
-        // Quickly spring back to original position
         Animated.parallel([
           Animated.spring(translateY, {
             toValue: 0,
@@ -161,7 +167,6 @@ export default function FeedScreen() {
     if (!selectedVideo) return;
 
     try {
-      // Request permissions
       const { status } = await MediaLibrary.requestPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert(
@@ -171,7 +176,6 @@ export default function FeedScreen() {
         return;
       }
 
-      // Save the video to media library
       const asset = await MediaLibrary.createAssetAsync(selectedVideo.uri);
       await MediaLibrary.createAlbumAsync('Reelful', asset, false);
       

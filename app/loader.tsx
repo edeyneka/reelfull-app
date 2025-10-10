@@ -5,6 +5,8 @@ import { Animated, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Asset } from 'expo-asset';
 import Colors from '@/constants/colors';
+import { useQuery } from 'convex/react';
+import { api } from '@/backend-api';
 
 const simulateVideoGeneration = async (
   mediaUris: { uri: string; type: 'video' | 'image' }[],
@@ -13,7 +15,7 @@ const simulateVideoGeneration = async (
   // Load the hardcoded intro video asset first
   const [asset] = await Asset.loadAsync(require('@/assets/video.mp4'));
   const hardcodedVideo = [{ uri: asset.localUri || asset.uri, type: 'video' as const }];
-  
+
   return new Promise((resolve) => {
     let progress = 0;
     const interval = setInterval(() => {
@@ -21,23 +23,25 @@ const simulateVideoGeneration = async (
       if (progress >= 100) {
         progress = 100;
         clearInterval(interval);
-        // Wait a bit before resolving to show 100%
-        setTimeout(() => resolve(JSON.stringify(hardcodedVideo)), 300);
-      } else {
-        onProgress(Math.min(progress, 100));
+        setTimeout(() => resolve(JSON.stringify(mediaUris)), 300);
       }
+      onProgress(Math.min(progress, 100));
     }, 200);
   });
 };
 
 export default function LoaderScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ prompt: string; mediaUris: string }>();
+  const params = useLocalSearchParams<{ projectId: string }>();
   const [progress, setProgress] = useState(0);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
 
-  console.log('=== LOADER: Screen mounted ===');
+  const project = useQuery(api.tasks.getProject, 
+    params.projectId ? { id: params.projectId as any } : 'skip'
+  );
+
+  console.log('loader: project data:', project);
 
   useEffect(() => {
     Animated.loop(
@@ -65,33 +69,25 @@ export default function LoaderScreen() {
   }, [pulseAnim, rotateAnim]);
 
   useEffect(() => {
-    if (params.mediaUris && params.prompt) {
-      console.log('Loader received params:', { prompt: params.prompt, mediaUris: params.mediaUris });
-      try {
-        const mediaUris = JSON.parse(params.mediaUris);
-        console.log('Parsed mediaUris:', mediaUris);
-        
-        simulateVideoGeneration(mediaUris, setProgress).then((videoData) => {
-          console.log('Generation complete, navigating to result');
-          router.replace({
-            pathname: '/result',
-            params: { prompt: params.prompt, videoData },
-          });
-        }).catch((error) => {
-          console.error('Error during video generation:', error);
-          router.replace('/feed');
+    if (project) {
+      if (project.status === 'completed' && project.videoUrl) {
+        console.log('project completed, navigating to result');
+        router.replace({
+          pathname: '/result',
+          params: { 
+            prompt: project.prompt,
+            videoUrl: project.videoUrl,
+          },
         });
-      } catch (error) {
-        console.error('Error parsing mediaUris:', error);
+      } else if (project.status === 'failed') {
+        console.error('project failed');
         router.replace('/feed');
+      } else {
+        const simulatedProgress = Math.min((Date.now() - project._creationTime) / 200, 100);
+        setProgress(simulatedProgress);
       }
-    } else {
-      console.error('Missing params:', { mediaUris: params.mediaUris, prompt: params.prompt });
-      setTimeout(() => {
-        router.replace('/feed');
-      }, 2000);
     }
-  }, [params.mediaUris, params.prompt]);
+  }, [project]);
 
   const rotate = rotateAnim.interpolate({
     inputRange: [0, 1],
