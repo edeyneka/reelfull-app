@@ -94,7 +94,7 @@ export default function ResultScreen() {
         });
 
         const asset = await MediaLibrary.createAssetAsync(fileUri);
-        await MediaLibrary.createAlbumAsync('Reelfull', asset, false);
+        await MediaLibrary.createAlbumAsync('Reelful', asset, false);
 
         Alert.alert('Success', `${firstMedia.type === 'video' ? 'Video' : 'Image'} saved to your gallery!`);
       }

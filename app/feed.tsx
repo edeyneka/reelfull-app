@@ -114,7 +114,7 @@ export default function FeedScreen() {
 
       // Save the video to media library
       const asset = await MediaLibrary.createAssetAsync(selectedVideo.uri);
-      await MediaLibrary.createAlbumAsync('Reelfull', asset, false);
+      await MediaLibrary.createAlbumAsync('Reelful', asset, false);
       
       Alert.alert('Success', 'Video saved to your gallery!');
     } catch (error) {
@@ -126,7 +126,7 @@ export default function FeedScreen() {
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-        <Text style={styles.headerTitle}>Reelfull</Text>
+        <Text style={styles.headerTitle}>Reelful</Text>
         <Text style={styles.headerSubtitle}>Your Video Gallery</Text>
       </View>
 

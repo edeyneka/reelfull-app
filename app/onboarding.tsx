@@ -56,7 +56,7 @@ export default function OnboardingScreen() {
               <View style={styles.iconContainer}>
                 <Sparkles size={40} color={Colors.orange} strokeWidth={2} />
               </View>
-              <Text style={styles.title}>Welcome to Reelfull</Text>
+              <Text style={styles.title}>Welcome to Reelful</Text>
               <Text style={styles.subtitle}>
                 Let&apos;s personalize your experience
               </Text>

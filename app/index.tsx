@@ -74,7 +74,7 @@ export default function IntroScreen() {
           <View style={styles.iconContainer}>
             <Film size={80} color={Colors.orange} strokeWidth={2} />
           </View>
-          <Text style={styles.title}>Reelfull</Text>
+          <Text style={styles.title}>Reelful</Text>
           <Text style={styles.subtitle}>Your stories, reimagined</Text>
         </Animated.View>
       </LinearGradient>
