@@ -24,8 +24,8 @@ export default function RootLayout() {
             <Stack.Screen name="onboarding" />
             <Stack.Screen name="feed" />
             <Stack.Screen name="composer" options={{ presentation: "fullScreenModal" }} />
-            <Stack.Screen name="loader" />
-            <Stack.Screen name="result" />
+            <Stack.Screen name="loader" options={{ gestureEnabled: false }} />
+            <Stack.Screen name="result" options={{ gestureEnabled: false }} />
           </Stack>
         </AppProvider>
       </GestureHandlerRootView>

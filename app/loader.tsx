@@ -30,6 +30,8 @@ export default function LoaderScreen() {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
 
+  console.log('=== LOADER: Screen mounted ===');
+
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
@@ -57,19 +59,32 @@ export default function LoaderScreen() {
 
   useEffect(() => {
     if (params.mediaUris && params.prompt) {
-      console.log('Loader received mediaUris:', params.mediaUris);
-      const mediaUris = JSON.parse(params.mediaUris);
-      simulateVideoGeneration(mediaUris, setProgress).then((videoData) => {
-        console.log('Generation complete, videoData:', videoData);
-        router.replace({
-          pathname: '/result',
-          params: { prompt: params.prompt, videoData },
+      console.log('Loader received params:', { prompt: params.prompt, mediaUris: params.mediaUris });
+      try {
+        const mediaUris = JSON.parse(params.mediaUris);
+        console.log('Parsed mediaUris:', mediaUris);
+        
+        simulateVideoGeneration(mediaUris, setProgress).then((videoData) => {
+          console.log('Generation complete, navigating to result');
+          router.replace({
+            pathname: '/result',
+            params: { prompt: params.prompt, videoData },
+          });
+        }).catch((error) => {
+          console.error('Error during video generation:', error);
+          router.replace('/feed');
         });
-      });
+      } catch (error) {
+        console.error('Error parsing mediaUris:', error);
+        router.replace('/feed');
+      }
     } else {
       console.error('Missing params:', { mediaUris: params.mediaUris, prompt: params.prompt });
+      setTimeout(() => {
+        router.replace('/feed');
+      }, 2000);
     }
-  }, [params.mediaUris, params.prompt, router]);
+  }, [params.mediaUris, params.prompt]);
 
   const rotate = rotateAnim.interpolate({
     inputRange: [0, 1],

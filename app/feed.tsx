@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Plus } from 'lucide-react-native';
+import { Plus, Trash2 } from 'lucide-react-native';
 import { useState } from 'react';
 import {
   Dimensions,
@@ -60,7 +60,7 @@ function VideoThumbnail({ item, onPress }: { item: VideoType; onPress: () => voi
 export default function FeedScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { videos } = useApp();
+  const { videos, deleteVideo } = useApp();
   const [selectedVideo, setSelectedVideo] = useState<VideoType | null>(null);
   const [isPromptExpanded, setIsPromptExpanded] = useState(false);
   
@@ -87,6 +87,13 @@ export default function FeedScreen() {
       </Text>
     </View>
   );
+
+  const handleDelete = () => {
+    if (selectedVideo) {
+      deleteVideo(selectedVideo.id);
+      setSelectedVideo(null);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -127,13 +134,22 @@ export default function FeedScreen() {
               contentFit="contain"
               nativeControls={true}
             />
-            <TouchableOpacity
-              style={[styles.closeButton, { top: insets.top + 16 }]}
-              onPress={() => setSelectedVideo(null)}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.closeButtonText}>✕</Text>
-            </TouchableOpacity>
+            <View style={[styles.modalButtons, { top: insets.top + 16 }]}>
+              <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={handleDelete}
+                activeOpacity={0.8}
+              >
+                <Trash2 size={24} color={Colors.white} strokeWidth={2} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setSelectedVideo(null)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.closeButtonText}>✕</Text>
+              </TouchableOpacity>
+            </View>
             <TouchableOpacity
               style={styles.modalOverlay}
               onPress={() => setIsPromptExpanded(!isPromptExpanded)}
@@ -255,9 +271,23 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  closeButton: {
+  modalButtons: {
     position: 'absolute',
     right: 24,
+    flexDirection: 'row',
+    gap: 12,
+  },
+  deleteButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: Colors.white,
+  },
+  closeButton: {
     width: 44,
     height: 44,
     borderRadius: 22,

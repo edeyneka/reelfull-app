@@ -98,8 +98,11 @@ export default function ComposerScreen() {
 
   const handleSubmit = () => {
     if (prompt.trim() && mediaUris.length > 0) {
-      console.log('Submitting with media:', mediaUris);
-      router.push({
+      console.log('=== COMPOSER: Generate Reel pressed ===');
+      console.log('Prompt:', prompt.trim());
+      console.log('Media count:', mediaUris.length);
+      console.log('Navigating to loader...');
+      router.replace({
         pathname: '/loader',
         params: { 
           prompt: prompt.trim(), 

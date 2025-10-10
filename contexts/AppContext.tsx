@@ -78,6 +78,20 @@ export const [AppProvider, useApp] = createContextHook(() => {
     }
   }, []);
 
+  const deleteVideo = useCallback(async (videoId: string) => {
+    try {
+      setVideos((prevVideos) => {
+        const updatedVideos = prevVideos.filter(video => video.id !== videoId);
+        AsyncStorage.setItem(VIDEOS_KEY, JSON.stringify(updatedVideos)).catch((err) => {
+          console.error('Error saving videos to storage:', err);
+        });
+        return updatedVideos;
+      });
+    } catch (error) {
+      console.error('Error deleting video:', error);
+    }
+  }, []);
+
   const clearData = useCallback(async () => {
     try {
       await AsyncStorage.multiRemove([USER_KEY, VIDEOS_KEY]);
@@ -94,6 +108,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
     isLoading,
     saveUser,
     addVideo,
+    deleteVideo,
     clearData,
-  }), [user, videos, isLoading, saveUser, addVideo, clearData]);
+  }), [user, videos, isLoading, saveUser, addVideo, deleteVideo, clearData]);
 });
