@@ -169,7 +169,7 @@ export default function ComposerScreen() {
 
               <View style={styles.exampleContainer}>
                 <View style={styles.exampleHeader}>
-                  <LucideImage size={16} color={Colors.orange} />
+                  <LucideImage size={14} color={Colors.orange} />
                   <Text style={styles.exampleTitle}>Example Story</Text>
                 </View>
                 <Text style={styles.exampleText}>
@@ -215,7 +215,7 @@ export default function ComposerScreen() {
                   onPress={pickMedia}
                   activeOpacity={0.7}
                 >
-                  <Upload size={32} color={Colors.orange} strokeWidth={2} />
+                  <Upload size={28} color={Colors.orange} strokeWidth={2} />
                   <Text style={styles.uploadText}>
                     {mediaUris.length > 0 ? 'Add more' : 'Tap to upload photos/videos'}
                   </Text>
@@ -270,8 +270,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   header: {
-    marginBottom: 32,
-    paddingTop: 50,
+    marginBottom: 20,
+    paddingTop: 40,
   },
   closeButton: {
     position: 'absolute',
@@ -280,59 +280,59 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   title: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700' as const,
     color: Colors.white,
-    lineHeight: 32,
+    lineHeight: 28,
   },
   form: {
     flex: 1,
   },
   inputGroup: {
-    marginBottom: 24,
+    marginBottom: 16,
   },
   label: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600' as const,
     color: Colors.white,
-    marginBottom: 12,
+    marginBottom: 10,
   },
   input: {
     backgroundColor: Colors.gray,
     borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
+    padding: 14,
+    fontSize: 15,
     color: Colors.white,
     borderWidth: 2,
     borderColor: 'transparent',
-    minHeight: 120,
+    minHeight: 90,
   },
   uploadButton: {
     backgroundColor: Colors.gray,
     borderRadius: 12,
-    padding: 40,
+    padding: 28,
     alignItems: 'center',
     borderWidth: 2,
     borderColor: Colors.orange,
     borderStyle: 'dashed',
   },
   uploadText: {
-    marginTop: 12,
-    fontSize: 16,
+    marginTop: 8,
+    fontSize: 14,
     color: Colors.orange,
     fontWeight: '600' as const,
   },
   mediaScroll: {
-    marginBottom: 12,
+    marginBottom: 10,
   },
   mediaScrollContent: {
-    gap: 12,
+    gap: 10,
   },
   mediaPreview: {
-    borderRadius: 12,
+    borderRadius: 10,
     overflow: 'hidden',
-    width: 120,
-    height: 120,
+    width: 100,
+    height: 100,
     backgroundColor: Colors.gray,
   },
   mediaThumbnail: {
@@ -349,42 +349,43 @@ const styles = StyleSheet.create({
   },
   exampleContainer: {
     backgroundColor: 'rgba(255, 107, 53, 0.1)',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 24,
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: 'rgba(255, 107, 53, 0.3)',
   },
   exampleHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 6,
+    gap: 5,
+    marginBottom: 5,
   },
   exampleTitle: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600' as const,
     color: Colors.orange,
   },
   exampleText: {
-    fontSize: 11,
+    fontSize: 10,
     color: Colors.grayLight,
-    lineHeight: 16,
+    lineHeight: 14,
     fontStyle: 'italic' as const,
   },
   button: {
     borderRadius: 12,
     overflow: 'hidden',
+    marginTop: 8,
   },
   buttonDisabled: {
     opacity: 0.5,
   },
   buttonGradient: {
-    padding: 18,
+    padding: 16,
     alignItems: 'center',
   },
   buttonText: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700' as const,
     color: Colors.white,
   },
