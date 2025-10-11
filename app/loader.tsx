@@ -3,12 +3,17 @@ import { Sparkles } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Asset } from 'expo-asset';
 import Colors from '@/constants/colors';
 
 const simulateVideoGeneration = async (
   mediaUris: { uri: string; type: 'video' | 'image' }[],
   onProgress: (progress: number) => void
 ): Promise<string> => {
+  // Load the hardcoded intro video asset first
+  const [asset] = await Asset.loadAsync(require('@/assets/video.mp4'));
+  const hardcodedVideo = [{ uri: asset.localUri || asset.uri, type: 'video' as const }];
+  
   return new Promise((resolve) => {
     let progress = 0;
     const interval = setInterval(() => {
@@ -16,9 +21,11 @@ const simulateVideoGeneration = async (
       if (progress >= 100) {
         progress = 100;
         clearInterval(interval);
-        setTimeout(() => resolve(JSON.stringify(mediaUris)), 300);
+        // Wait a bit before resolving to show 100%
+        setTimeout(() => resolve(JSON.stringify(hardcodedVideo)), 300);
+      } else {
+        onProgress(Math.min(progress, 100));
       }
-      onProgress(Math.min(progress, 100));
     }, 200);
   });
 };
