@@ -16,7 +16,11 @@ export type PublicApiType = {
     createProject: FunctionReference<
       "mutation",
       "public",
-      { files: Array<Id<"_storage">>; prompt: string },
+      {
+        files: Array<Id<"_storage">>;
+        prompt: string;
+        thumbnail?: Id<"_storage">;
+      },
       any
     >;
     getProjects: FunctionReference<

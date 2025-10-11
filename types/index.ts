@@ -23,4 +23,7 @@ export interface Project {
   videoUrl?: string;
   error?: string;
   files?: Array<string>;
+  thumbnail?: string;
+  thumbnailUrl?: string;
+  fileUrls?: Array<string>;
 }

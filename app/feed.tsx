@@ -30,6 +30,11 @@ const ITEM_WIDTH = (SCREEN_WIDTH - ITEM_SPACING * 3) / 2;
 
 function VideoThumbnail({ item, onPress }: { item: any; onPress: () => void }) {
   if (item.status && item.status !== 'completed') {
+    console.log('Rendering processing item:', {
+      id: item.id,
+      status: item.status,
+      previewImage: item.previewImage,
+    });
     return (
       <TouchableOpacity
         style={styles.thumbnailContainer}
@@ -37,7 +42,12 @@ function VideoThumbnail({ item, onPress }: { item: any; onPress: () => void }) {
         activeOpacity={0.9}
       >
         {item.previewImage ? (
-          <Image source={{ uri: item.previewImage }} style={styles.thumbnail} />
+          <Image 
+            source={{ uri: item.previewImage }} 
+            style={styles.thumbnail}
+            onError={(e) => console.log('Image load error:', e.nativeEvent.error)}
+            onLoad={() => console.log('Image loaded:', item.previewImage)}
+          />
         ) : (
           <View style={styles.thumbnail} />
         )}
@@ -58,11 +68,24 @@ function VideoThumbnail({ item, onPress }: { item: any; onPress: () => void }) {
 
   if (!item.uri || item.uri.length === 0) {
     return (
-      <View style={styles.thumbnailContainer}>
-        <View style={styles.errorThumbnail}>
-          <Text style={styles.errorText}>Unavailable</Text>
+      <TouchableOpacity
+        style={styles.thumbnailContainer}
+        onPress={onPress}
+        activeOpacity={0.9}
+      >
+        {item.previewImage ? (
+          <Image source={{ uri: item.previewImage }} style={styles.thumbnail} />
+        ) : (
+          <View style={styles.errorThumbnail}>
+            <Text style={styles.errorText}>Unavailable</Text>
+          </View>
+        )}
+        <View style={styles.thumbnailOverlay}>
+          <Text style={styles.thumbnailPrompt} numberOfLines={2}>
+            {item.prompt}
+          </Text>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   }
 
@@ -101,16 +124,35 @@ export default function FeedScreen() {
   
   const projects = useQuery(api.tasks.getProjects) as Project[] | undefined;
   
+  useEffect(() => {
+    if (projects) {
+      console.log('Projects:', JSON.stringify(projects, null, 2));
+      projects.forEach(p => {
+        console.log(`Project ${p._id}:`, {
+          status: p.status,
+          thumbnail: p.thumbnail,
+          thumbnailUrl: p.thumbnailUrl,
+          files: p.files,
+          videoUrl: p.videoUrl
+        });
+      });
+    }
+  }, [projects]);
+  
   const allItems = [
     ...localVideos,
-    ...(projects?.map((p: Project) => ({
-      id: p._id,
-      uri: p.status === 'completed' ? p.videoUrl : undefined,
-      prompt: p.prompt,
-      createdAt: p._creationTime,
-      status: p.status,
-      previewImage: p.files?.[0],
-    })) || [])
+    ...(projects?.map((p: Project) => {
+      const item = {
+        id: p._id,
+        uri: p.status === 'completed' ? p.videoUrl : undefined,
+        prompt: p.prompt,
+        createdAt: p._creationTime,
+        status: p.status,
+        previewImage: p.thumbnailUrl || p.fileUrls?.[0],
+      };
+      console.log('Mapped item:', item);
+      return item;
+    }) || [])
   ];
 
   const handleRefresh = async () => {
