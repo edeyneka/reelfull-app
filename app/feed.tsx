@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Plus, Trash2, Download } from 'lucide-react-native';
+import { Plus, Trash2, Download, Settings } from 'lucide-react-native';
 import { useState, useRef } from 'react';
 import {
   Dimensions,
@@ -185,8 +185,19 @@ export default function FeedScreen() {
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-        <Text style={styles.headerTitle}>Reelful</Text>
-        <Text style={styles.headerSubtitle}>Your Video Gallery</Text>
+        <View style={styles.headerContent}>
+          <View>
+            <Text style={styles.headerTitle}>Reelful</Text>
+            <Text style={styles.headerSubtitle}>Your Video Gallery</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.settingsButton}
+            onPress={() => router.push('/settings')}
+            activeOpacity={0.7}
+          >
+            <Settings size={24} color={Colors.white} strokeWidth={2} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <FlatList
@@ -276,6 +287,11 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     backgroundColor: Colors.black,
   },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   headerTitle: {
     fontSize: 32,
     fontWeight: '700' as const,
@@ -286,6 +302,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.orange,
     fontWeight: '600' as const,
+  },
+  settingsButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.gray,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   grid: {
     padding: ITEM_SPACING,
