@@ -31,7 +31,11 @@ const ITEM_WIDTH = (SCREEN_WIDTH - ITEM_SPACING * 3) / 2;
 function VideoThumbnail({ item, onPress }: { item: any; onPress: () => void }) {
   if (item.status && item.status !== 'completed') {
     return (
-      <View style={styles.thumbnailContainer}>
+      <TouchableOpacity
+        style={styles.thumbnailContainer}
+        onPress={onPress}
+        activeOpacity={0.9}
+      >
         {item.previewImage ? (
           <Image source={{ uri: item.previewImage }} style={styles.thumbnail} />
         ) : (
@@ -48,7 +52,7 @@ function VideoThumbnail({ item, onPress }: { item: any; onPress: () => void }) {
             {item.prompt}
           </Text>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   }
 
