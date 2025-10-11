@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Sparkles } from 'lucide-react-native';
+import { Sparkles, ArrowRight, ChevronLeft } from 'lucide-react-native';
 import { useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
 import { StylePreference } from '@/types';
+import VoiceRecorder from '@/components/VoiceRecorder';
 
 const STYLE_OPTIONS: StylePreference[] = ['Playful', 'Professional', 'Dreamy'];
 
@@ -23,17 +24,40 @@ export default function OnboardingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { saveUser } = useApp();
+  const [step, setStep] = useState(1);
   const [name, setName] = useState('');
   const [selectedStyle, setSelectedStyle] = useState<StylePreference | null>(null);
+  const [voiceRecordingUri, setVoiceRecordingUri] = useState<string | undefined>();
 
-  const handleSubmit = async () => {
-    if (name.trim() && selectedStyle) {
-      await saveUser({ name: name.trim(), style: selectedStyle });
-      router.replace('/feed');
+  const handleNext = () => {
+    if (step === 1 && name.trim() && selectedStyle) {
+      setStep(2);
     }
   };
 
-  const isValid = name.trim().length > 0 && selectedStyle !== null;
+  const handleBack = () => {
+    if (step === 2) {
+      setStep(1);
+    }
+  };
+
+  const handleVoiceRecordingComplete = async (uri: string) => {
+    setVoiceRecordingUri(uri);
+    // Auto-save and proceed
+    await saveUser({ 
+      name: name.trim(), 
+      style: selectedStyle!, 
+      voiceRecordingUri: uri 
+    });
+    router.replace('/feed');
+  };
+
+  const handleSkipVoice = async () => {
+    await saveUser({ name: name.trim(), style: selectedStyle! });
+    router.replace('/feed');
+  };
+
+  const isStep1Valid = name.trim().length > 0 && selectedStyle !== null;
 
   return (
     <View style={styles.container}>
@@ -41,6 +65,16 @@ export default function OnboardingScreen() {
         colors={[Colors.black, Colors.grayDark]}
         style={styles.gradient}
       >
+        {step === 2 && (
+          <TouchableOpacity
+            style={[styles.backButton, { top: insets.top + 20 }]}
+            onPress={handleBack}
+            activeOpacity={0.7}
+          >
+            <ChevronLeft size={28} color={Colors.white} strokeWidth={2} />
+          </TouchableOpacity>
+        )}
+
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.keyboardView}
@@ -56,71 +90,95 @@ export default function OnboardingScreen() {
               <View style={styles.iconContainer}>
                 <Sparkles size={40} color={Colors.orange} strokeWidth={2} />
               </View>
-              <Text style={styles.title}>Welcome to Reelful</Text>
+              <Text style={styles.title}>
+                {step === 1 ? 'Welcome to Reelful' : 'Record Your Voice'}
+              </Text>
               <Text style={styles.subtitle}>
-                Let&apos;s personalize your experience
+                {step === 1
+                  ? "Let's personalize your experience"
+                  : 'This helps us create more personalized content'}
               </Text>
             </View>
 
             <View style={styles.form}>
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>What&apos;s your name?</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter your name"
-                  placeholderTextColor={Colors.grayLight}
-                  value={name}
-                  onChangeText={setName}
-                  autoCapitalize="words"
-                  autoCorrect={false}
-                />
-              </View>
+              {step === 1 ? (
+                <>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>What&apos;s your name?</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Enter your name"
+                      placeholderTextColor={Colors.grayLight}
+                      value={name}
+                      onChangeText={setName}
+                      autoCapitalize="words"
+                      autoCorrect={false}
+                    />
+                  </View>
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Choose your style</Text>
-                <View style={styles.optionsContainer}>
-                  {STYLE_OPTIONS.map((style) => (
-                    <TouchableOpacity
-                      key={style}
-                      style={[
-                        styles.option,
-                        selectedStyle === style && styles.optionSelected,
-                      ]}
-                      onPress={() => setSelectedStyle(style)}
-                      activeOpacity={0.7}
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Choose your style</Text>
+                    <View style={styles.optionsContainer}>
+                      {STYLE_OPTIONS.map((style) => (
+                        <TouchableOpacity
+                          key={style}
+                          style={[
+                            styles.option,
+                            selectedStyle === style && styles.optionSelected,
+                          ]}
+                          onPress={() => setSelectedStyle(style)}
+                          activeOpacity={0.7}
+                        >
+                          <Text
+                            style={[
+                              styles.optionText,
+                              selectedStyle === style && styles.optionTextSelected,
+                            ]}
+                          >
+                            {style}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+
+                  <TouchableOpacity
+                    style={[styles.button, !isStep1Valid && styles.buttonDisabled]}
+                    onPress={handleNext}
+                    disabled={!isStep1Valid}
+                    activeOpacity={0.8}
+                  >
+                    <LinearGradient
+                      colors={
+                        isStep1Valid
+                          ? [Colors.orange, Colors.orangeLight]
+                          : [Colors.gray, Colors.grayLight]
+                      }
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.buttonGradient}
                     >
-                      <Text
-                        style={[
-                          styles.optionText,
-                          selectedStyle === style && styles.optionTextSelected,
-                        ]}
-                      >
-                        {style}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-
-              <TouchableOpacity
-                style={[styles.button, !isValid && styles.buttonDisabled]}
-                onPress={handleSubmit}
-                disabled={!isValid}
-                activeOpacity={0.8}
-              >
-                <LinearGradient
-                  colors={
-                    isValid
-                      ? [Colors.orange, Colors.orangeLight]
-                      : [Colors.gray, Colors.grayLight]
-                  }
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.buttonGradient}
-                >
-                  <Text style={styles.buttonText}>Get Started</Text>
-                </LinearGradient>
-              </TouchableOpacity>
+                      <Text style={styles.buttonText}>Next</Text>
+                      <ArrowRight size={20} color={Colors.white} strokeWidth={2.5} />
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  <VoiceRecorder
+                    onRecordingComplete={handleVoiceRecordingComplete}
+                    showScript={true}
+                  />
+                  
+                  <TouchableOpacity
+                    style={styles.skipButton}
+                    onPress={handleSkipVoice}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.skipButtonText}>Skip for now</Text>
+                  </TouchableOpacity>
+                </>
+              )}
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -136,6 +194,12 @@ const styles = StyleSheet.create({
   },
   gradient: {
     flex: 1,
+  },
+  backButton: {
+    position: 'absolute',
+    left: 20,
+    zIndex: 10,
+    padding: 8,
   },
   keyboardView: {
     flex: 1,
@@ -219,12 +283,26 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   buttonGradient: {
+    flexDirection: 'row',
     padding: 18,
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
   buttonText: {
     fontSize: 18,
     fontWeight: '700' as const,
     color: Colors.white,
+  },
+  skipButton: {
+    marginTop: 20,
+    padding: 16,
+    alignItems: 'center',
+  },
+  skipButtonText: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: Colors.grayLight,
+    textDecorationLine: 'underline',
   },
 });

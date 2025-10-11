@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { ArrowLeft, User, Palette, Edit2, Check, X } from 'lucide-react-native';
+import { ArrowLeft, User, Palette, Edit2, Check, X, Mic } from 'lucide-react-native';
 import { useState } from 'react';
 import {
   ScrollView,
@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
 import { StylePreference } from '@/types';
+import VoiceRecorder from '@/components/VoiceRecorder';
 
 const STYLE_OPTIONS: StylePreference[] = ['Playful', 'Professional', 'Dreamy'];
 
@@ -24,6 +25,7 @@ export default function SettingsScreen() {
   
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingStyle, setIsEditingStyle] = useState(false);
+  const [isEditingVoice, setIsEditingVoice] = useState(false);
   const [editedName, setEditedName] = useState(user?.name || '');
   const [editedStyle, setEditedStyle] = useState<StylePreference | null>(user?.style || null);
 
@@ -59,6 +61,22 @@ export default function SettingsScreen() {
   const handleCancelStyle = () => {
     setEditedStyle(user?.style || null);
     setIsEditingStyle(false);
+  };
+
+  const handleVoiceRecordingComplete = async (uri: string) => {
+    if (user && editedName && editedStyle) {
+      await saveUser({ 
+        name: editedName.trim(), 
+        style: editedStyle,
+        voiceRecordingUri: uri 
+      });
+      setIsEditingVoice(false);
+      Alert.alert('Success', 'Voice recording saved successfully!');
+    }
+  };
+
+  const handleCancelVoice = () => {
+    setIsEditingVoice(false);
   };
 
   return (
@@ -200,6 +218,53 @@ export default function SettingsScreen() {
               </View>
             </View>
           </View>
+
+          {/* Voice Recording Card */}
+          <View style={styles.card}>
+            {isEditingVoice ? (
+              <View style={styles.voiceRecorderContainer}>
+                <View style={styles.cardHeader}>
+                  <View style={styles.iconContainer}>
+                    <Mic size={20} color={Colors.orange} strokeWidth={2} />
+                  </View>
+                  <Text style={styles.cardLabel}>Voice Recording</Text>
+                  <TouchableOpacity
+                    style={styles.iconButton}
+                    onPress={handleCancelVoice}
+                    activeOpacity={0.7}
+                  >
+                    <X size={20} color={Colors.grayLight} strokeWidth={2} />
+                  </TouchableOpacity>
+                </View>
+                <VoiceRecorder
+                  onRecordingComplete={handleVoiceRecordingComplete}
+                  initialRecordingUri={user?.voiceRecordingUri}
+                  showScript={true}
+                />
+              </View>
+            ) : (
+              <View style={styles.cardRow}>
+                <View style={styles.iconContainer}>
+                  <Mic size={20} color={Colors.orange} strokeWidth={2} />
+                </View>
+                <View style={styles.cardContent}>
+                  <Text style={styles.cardLabel}>Voice Recording</Text>
+                  <Text style={styles.cardValue}>
+                    {user?.voiceRecordingUri ? 'Recorded' : 'Not recorded'}
+                  </Text>
+                </View>
+                <View style={styles.actionButtons}>
+                  <TouchableOpacity
+                    style={styles.iconButton}
+                    onPress={() => setIsEditingVoice(true)}
+                    activeOpacity={0.7}
+                  >
+                    <Edit2 size={18} color={Colors.orange} strokeWidth={2} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+          </View>
         </View>
       </ScrollView>
     </View>
@@ -329,5 +394,12 @@ const styles = StyleSheet.create({
   styleOptionTextSelected: {
     color: Colors.orange,
   },
+  voiceRecorderContainer: {
+    width: '100%',
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
 });
-
