@@ -72,15 +72,19 @@ export default function LoaderScreen() {
 
   useEffect(() => {
     if (project) {
-      if (project.status === 'completed' && project.videoUrl) {
-        console.log('project completed, navigating to result');
-        router.replace({
-          pathname: '/result',
-          params: { 
-            prompt: project.prompt,
-            videoUrl: project.videoUrl,
-          },
-        });
+      if (project.status === 'completed') {
+        console.log('project completed, navigating to result/feed');
+        if (project.videoUrl) {
+          router.replace({
+            pathname: '/result',
+            params: { 
+              prompt: project.prompt,
+              videoUrl: project.videoUrl,
+            },
+          });
+        } else {
+          router.replace('/feed');
+        }
       } else if (project.status === 'failed') {
         console.error('project failed');
         router.replace('/feed');
