@@ -79,6 +79,10 @@ export default function SettingsScreen() {
     setIsEditingVoice(false);
   };
 
+  const handleDoneVoice = () => {
+    setIsEditingVoice(false);
+  };
+
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
@@ -227,14 +231,25 @@ export default function SettingsScreen() {
                   <View style={styles.iconContainer}>
                     <Mic size={20} color={Colors.orange} strokeWidth={2} />
                   </View>
-                  <Text style={styles.cardLabel}>Voice Recording</Text>
-                  <TouchableOpacity
-                    style={styles.iconButton}
-                    onPress={handleCancelVoice}
-                    activeOpacity={0.7}
-                  >
-                    <X size={20} color={Colors.grayLight} strokeWidth={2} />
-                  </TouchableOpacity>
+                  <View style={styles.headerContent}>
+                    <Text style={styles.cardLabel}>Voice Recording</Text>
+                  </View>
+                  <View style={styles.actionButtons}>
+                    <TouchableOpacity
+                      style={styles.iconButton}
+                      onPress={handleDoneVoice}
+                      activeOpacity={0.7}
+                    >
+                      <Check size={20} color={Colors.orange} strokeWidth={2} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.iconButton}
+                      onPress={handleCancelVoice}
+                      activeOpacity={0.7}
+                    >
+                      <X size={20} color={Colors.grayLight} strokeWidth={2} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
                 <VoiceRecorder
                   onRecordingComplete={handleVoiceRecordingComplete}
@@ -400,6 +415,10 @@ const styles = StyleSheet.create({
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
+  },
+  headerContent: {
+    flex: 1,
+    marginLeft: 16,
   },
 });

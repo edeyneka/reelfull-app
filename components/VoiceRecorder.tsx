@@ -266,10 +266,10 @@ export default function VoiceRecorder({
 
 const styles = StyleSheet.create({
   container: {
-    gap: 24,
+    gap: 16,
   },
   scriptContainer: {
-    gap: 12,
+    gap: 8,
   },
   scriptTitle: {
     fontSize: 16,
@@ -279,19 +279,19 @@ const styles = StyleSheet.create({
   scriptBox: {
     backgroundColor: 'rgba(255, 107, 53, 0.05)',
     borderRadius: 12,
-    padding: 16,
+    padding: 12,
     borderWidth: 1,
     borderColor: 'rgba(255, 107, 53, 0.2)',
   },
   scriptText: {
-    fontSize: 14,
-    lineHeight: 22,
+    fontSize: 12,
+    lineHeight: 18,
     color: Colors.grayLight,
   },
   recorderContainer: {
     alignItems: 'center',
-    gap: 16,
-    paddingVertical: 20,
+    gap: 12,
+    paddingVertical: 12,
   },
   recordButton: {
     width: 100,
@@ -312,11 +312,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.grayLight,
     textAlign: 'center',
-    marginTop: 8,
+    marginTop: 4,
   },
   playbackControls: {
     flexDirection: 'row',
-    gap: 20,
+    gap: 16,
     alignItems: 'center',
   },
   controlButton: {
@@ -330,7 +330,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.grayLight,
   },
   confirmButton: {
-    marginTop: 16,
+    marginTop: 12,
     borderRadius: 12,
     overflow: 'hidden',
     width: '100%',
