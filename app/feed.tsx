@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { Plus, Trash2, Download, Settings, Loader2 } from 'lucide-react-native';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Dimensions,
   FlatList,
