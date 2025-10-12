@@ -17,7 +17,6 @@ import { VideoView, useVideoPlayer } from 'expo-video';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import * as MediaLibrary from 'expo-media-library';
-import * as FileSystem from 'expo-file-system';
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
 import { Video as VideoType, Project } from '@/types';
@@ -29,6 +28,17 @@ const ITEM_SPACING = 8;
 const ITEM_WIDTH = (SCREEN_WIDTH - ITEM_SPACING * 3) / 2;
 
 function VideoThumbnail({ item, onPress }: { item: any; onPress: () => void }) {
+  const hasValidVideo = item.uri && item.uri.length > 0 && item.status === 'completed';
+  
+  const thumbnailPlayer = useVideoPlayer(
+    hasValidVideo ? item.uri : null,
+    (player) => {
+      if (player) {
+        player.muted = true;
+      }
+    }
+  );
+
   if (item.status && item.status !== 'completed') {
     console.log('Rendering processing item:', {
       id: item.id,
@@ -66,7 +76,7 @@ function VideoThumbnail({ item, onPress }: { item: any; onPress: () => void }) {
     );
   }
 
-  if (!item.uri || item.uri.length === 0) {
+  if (!hasValidVideo) {
     return (
       <TouchableOpacity
         style={styles.thumbnailContainer}
@@ -88,10 +98,6 @@ function VideoThumbnail({ item, onPress }: { item: any; onPress: () => void }) {
       </TouchableOpacity>
     );
   }
-
-  const thumbnailPlayer = useVideoPlayer(item.uri, (player) => {
-    player.muted = true;
-  });
 
   return (
     <TouchableOpacity

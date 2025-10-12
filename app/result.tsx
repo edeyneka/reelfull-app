@@ -22,7 +22,7 @@ import { useApp } from '@/contexts/AppContext';
 export default function ResultScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ prompt: string; videoData: string }>();
+  const params = useLocalSearchParams<{ prompt: string; videoData?: string; videoUrl?: string }>();
   const { addVideo } = useApp();
   const [isSaved, setIsSaved] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -39,8 +39,11 @@ export default function ResultScreen() {
     });
 
   const mediaUris = useMemo(() => {
+    if (params.videoUrl) {
+      return [{ uri: params.videoUrl, type: 'video' as const }];
+    }
     return params.videoData ? JSON.parse(params.videoData) : [];
-  }, [params.videoData]);
+  }, [params.videoData, params.videoUrl]);
   
   const firstMedia = useMemo(() => mediaUris[0], [mediaUris]);
   
@@ -57,7 +60,7 @@ export default function ResultScreen() {
 
   useEffect(() => {
     const handleSaveToFeed = async () => {
-      if (!params.videoData || !params.prompt || isSaved) return;
+      if ((!params.videoData && !params.videoUrl) || !params.prompt || isSaved) return;
 
       const video = {
         id: Date.now().toString(),
@@ -72,7 +75,7 @@ export default function ResultScreen() {
     };
 
     handleSaveToFeed();
-  }, [params.videoData, params.prompt, isSaved, addVideo, firstMedia, mediaUris]);
+  }, [params.videoData, params.videoUrl, params.prompt, isSaved, addVideo, firstMedia, mediaUris]);
 
   const handleDownload = async () => {
     if (!firstMedia?.uri || isDownloading) return;
