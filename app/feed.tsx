@@ -231,7 +231,7 @@ export default function FeedScreen() {
     <VideoThumbnail 
       item={item} 
       onPress={() => {
-        if (item.status === 'completed' && item.uri) {
+        if (item.uri && (!item.status || item.status === 'completed')) {
           setSelectedVideo(item);
         }
       }} 
