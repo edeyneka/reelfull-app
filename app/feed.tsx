@@ -150,7 +150,7 @@ export default function FeedScreen() {
     ...(projects?.map((p: Project) => {
       const item = {
         id: p._id,
-        uri: p.status === 'completed' ? p.videoUrl : undefined,
+        uri: p.renderedVideoUrl || p.videoUrl,
         prompt: p.prompt,
         createdAt: p._creationTime,
         status: p.status,
@@ -160,6 +160,8 @@ export default function FeedScreen() {
       return item;
     }) || [])
   ];
+
+  console.log('All items count:', allItems.length, 'local:', localVideos.length, 'projects:', projects?.length);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -231,8 +233,12 @@ export default function FeedScreen() {
     <VideoThumbnail 
       item={item} 
       onPress={() => {
+        console.log('item tapped:', { uri: item.uri, status: item.status, id: item.id });
         if (item.uri && (!item.status || item.status === 'completed')) {
+          console.log('opening modal for item:', item.id);
           setSelectedVideo(item);
+        } else {
+          console.log('blocked opening modal - no uri or wrong status');
         }
       }} 
     />
