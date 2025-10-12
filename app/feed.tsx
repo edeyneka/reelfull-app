@@ -228,7 +228,14 @@ export default function FeedScreen() {
     });
 
   const renderVideoThumbnail = ({ item }: { item: VideoType }) => (
-    <VideoThumbnail item={item} onPress={() => setSelectedVideo(item)} />
+    <VideoThumbnail 
+      item={item} 
+      onPress={() => {
+        if (item.status === 'completed' && item.uri) {
+          setSelectedVideo(item);
+        }
+      }} 
+    />
   );
 
   const renderEmpty = () => (
@@ -310,11 +317,11 @@ export default function FeedScreen() {
       </TouchableOpacity>
 
       <Modal
-        visible={selectedVideo !== null}
+        visible={selectedVideo !== null && !!selectedVideo?.uri}
         animationType="none"
         onRequestClose={closeModal}
       >
-        {selectedVideo && (
+        {selectedVideo && selectedVideo.uri && (
           <GestureDetector gesture={panGesture}>
             <Animated.View
               style={[
