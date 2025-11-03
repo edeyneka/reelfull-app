@@ -1,43 +1,124 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Sparkles } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import { Animated, StyleSheet, Text, View, Alert, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Asset } from 'expo-asset';
+import { useQuery, useAction } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import Colors from '@/constants/colors';
-
-const simulateVideoGeneration = async (
-  mediaUris: { uri: string; type: 'video' | 'image' }[],
-  onProgress: (progress: number) => void
-): Promise<string> => {
-  // Load the hardcoded intro video asset first
-  const [asset] = await Asset.loadAsync(require('@/assets/video.mp4'));
-  const hardcodedVideo = [{ uri: asset.localUri || asset.uri, type: 'video' as const }];
-  
-  return new Promise((resolve) => {
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += Math.random() * 15;
-      if (progress >= 100) {
-        progress = 100;
-        clearInterval(interval);
-        // Wait a bit before resolving to show 100%
-        setTimeout(() => resolve(JSON.stringify(hardcodedVideo)), 300);
-      } else {
-        onProgress(Math.min(progress, 100));
-      }
-    }, 200);
-  });
-};
 
 export default function LoaderScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ prompt: string; mediaUris: string }>();
-  const [progress, setProgress] = useState(0);
+  const params = useLocalSearchParams<{ projectId: string }>();
+  const projectId = params.projectId as any;
+
+  // Get project data
+  const project = useQuery(api.tasks.getProject, projectId ? { id: projectId } : "skip");
+  const renderVideo = useAction(api.render.renderVideo);
+
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
+  const renderTriggeredRef = useRef(false);
 
-  console.log('=== LOADER: Screen mounted ===');
+  // Timer effect
+  useEffect(() => {
+    if (project?.submittedAt) {
+      const interval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - project.submittedAt) / 1000);
+        setElapsedSeconds(elapsed);
+      }, 1000);
+      return () => clearInterval(interval);
+    } else {
+      setElapsedSeconds(0);
+    }
+  }, [project?.submittedAt]);
+
+  // Auto-trigger render when ALL media assets are ready (matches studio page logic)
+  useEffect(() => {
+    if (!project || !projectId) {
+      return;
+    }
+
+    // Check if all required media assets are ready
+    const hasAllMediaAssets = !!(
+      project.audioUrl && 
+      project.musicUrl
+    );
+
+    console.log('[loader] Asset check:', {
+      hasAudio: !!project.audioUrl,
+      hasMusic: !!project.musicUrl,
+      hasAnimations: !!(project.videoUrls && project.videoUrls.length > 0),
+      animationCount: project.videoUrls?.length || 0,
+      status: project.status,
+      hasRenderedVideoUrl: !!project.renderedVideoUrl,
+      hasRenderProgress: !!project.renderProgress,
+      renderTriggered: renderTriggeredRef.current,
+    });
+
+    // Only trigger render when status is completed AND all media assets exist
+    if (
+      project.status === "completed" && 
+      hasAllMediaAssets &&
+      !project.renderedVideoUrl && 
+      !project.renderProgress && 
+      !renderTriggeredRef.current
+    ) {
+      console.log('[loader] ✅ All media assets ready! Triggering render...');
+      console.log('[loader]   - audioUrl:', project.audioUrl ? "✓" : "✗");
+      console.log('[loader]   - musicUrl:', project.musicUrl ? "✓" : "✗");
+      console.log('[loader]   - videoUrls:', project.videoUrls?.length || 0, "videos");
+      
+      renderTriggeredRef.current = true;
+      
+      renderVideo({ projectId }).catch((error) => {
+        console.error('[loader] render error:', error);
+        Alert.alert('Error', `Render failed: ${error}`);
+        renderTriggeredRef.current = false; // Reset on error so user can retry
+      });
+    } else if (project.status === "completed" && !hasAllMediaAssets && !renderTriggeredRef.current) {
+      console.log('[loader] ⏳ Waiting for all media assets...');
+      console.log('[loader]   - audioUrl:', project.audioUrl ? "✓" : "✗");
+      console.log('[loader]   - musicUrl:', project.musicUrl ? "✓" : "✗");
+      console.log('[loader]   - videoUrls:', project.videoUrls?.length || 0, "videos");
+    }
+  }, [project, projectId, renderVideo]);
+
+  // Check if video is ready or if render failed
+  useEffect(() => {
+    if (project?.renderedVideoUrl) {
+      console.log('[loader] Video ready, navigating to result');
+      router.replace({
+        pathname: '/result',
+        params: { projectId: projectId.toString() },
+      });
+    } else if (project?.status === 'failed') {
+      const errorMessage = project.error || 'Video generation failed. Please try again.';
+      console.error('[loader] Render failed:', errorMessage);
+      
+      // Extract a user-friendly error message
+      let friendlyMessage = errorMessage;
+      if (errorMessage.includes('delayRender') || errorMessage.includes('timeout')) {
+        friendlyMessage = 'Render timed out. This usually happens when processing takes too long. Please try again with fewer or smaller media files.';
+      } else if (errorMessage.includes('exit status 1')) {
+        friendlyMessage = 'Render failed during video processing. Please try again.';
+      }
+      
+      Alert.alert(
+        'Render Failed',
+        friendlyMessage,
+        [
+          {
+            text: 'Go to Feed',
+            onPress: () => router.replace('/feed'),
+            style: 'default',
+          },
+        ],
+        { cancelable: false }
+      );
+    }
+  }, [project?.renderedVideoUrl, project?.status, project?.error, projectId, router]);
 
   useEffect(() => {
     Animated.loop(
@@ -64,39 +145,24 @@ export default function LoaderScreen() {
     ).start();
   }, [pulseAnim, rotateAnim]);
 
-  useEffect(() => {
-    if (params.mediaUris && params.prompt) {
-      console.log('Loader received params:', { prompt: params.prompt, mediaUris: params.mediaUris });
-      try {
-        const mediaUris = JSON.parse(params.mediaUris);
-        console.log('Parsed mediaUris:', mediaUris);
-        
-        simulateVideoGeneration(mediaUris, setProgress).then((videoData) => {
-          console.log('Generation complete, navigating to result');
-          router.replace({
-            pathname: '/result',
-            params: { prompt: params.prompt, videoData },
-          });
-        }).catch((error) => {
-          console.error('Error during video generation:', error);
-          router.replace('/feed');
-        });
-      } catch (error) {
-        console.error('Error parsing mediaUris:', error);
-        router.replace('/feed');
-      }
-    } else {
-      console.error('Missing params:', { mediaUris: params.mediaUris, prompt: params.prompt });
-      setTimeout(() => {
-        router.replace('/feed');
-      }, 2000);
-    }
-  }, [params.mediaUris, params.prompt]);
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const rotate = rotateAnim.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg'],
   });
+
+  if (!projectId) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.errorText}>No project ID</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -118,17 +184,45 @@ export default function LoaderScreen() {
         <Text style={styles.title}>Creating your reel</Text>
         <Text style={styles.subtitle}>This will only take a moment...</Text>
 
-        <View style={styles.progressContainer}>
-          <View style={styles.progressBar}>
-            <LinearGradient
-              colors={[Colors.orange, Colors.orangeLight]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={[styles.progressFill, { width: `${progress}%` }]}
-            />
-          </View>
-          <Text style={styles.progressText}>{Math.round(progress)}%</Text>
+        <View style={styles.timerContainer}>
+          <Text style={styles.timerLabel}>Time elapsed</Text>
+          <Text style={styles.timerText}>{formatTime(elapsedSeconds)}</Text>
         </View>
+
+        {(project?.generationProgress || project?.renderProgress) && (
+          <Text style={styles.progressText}>
+            {project.renderProgress || project.generationProgress}
+          </Text>
+        )}
+        
+        {project?.renderStep && (
+          <Text style={styles.progressText}>
+            Step: {project.renderStep}
+            {project.renderStep === 'failed' && project.error && (
+              <Text style={styles.errorText}> - {project.error}</Text>
+            )}
+          </Text>
+        )}
+
+        {project?.status === 'failed' && project?.error && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorTitle}>Render Failed</Text>
+            <Text style={styles.errorMessage}>
+              {project.error.includes('delayRender') || project.error.includes('timeout')
+                ? 'Render timed out. This usually happens when processing takes too long. Please try again with fewer or smaller media files.'
+                : project.error.includes('exit status 1')
+                ? 'Render failed during video processing. Please try again.'
+                : project.error}
+            </Text>
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={() => router.replace('/feed')}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.retryButtonText}>Go to Feed</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </LinearGradient>
     </View>
   );
@@ -164,25 +258,63 @@ const styles = StyleSheet.create({
     marginBottom: 48,
     textAlign: 'center',
   },
-  progressContainer: {
+  timerContainer: {
+    width: '100%',
+    alignItems: 'center',
+    marginTop: 24,
+  },
+  timerLabel: {
+    fontSize: 14,
+    color: Colors.grayLight,
+    marginBottom: 8,
+  },
+  timerText: {
+    fontSize: 48,
+    fontWeight: '700' as const,
+    color: Colors.orange,
+    fontVariant: ['tabular-nums'],
+  },
+  progressText: {
+    fontSize: 14,
+    color: Colors.grayLight,
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  errorText: {
+    fontSize: 16,
+    color: Colors.white,
+  },
+  errorContainer: {
+    marginTop: 32,
+    padding: 20,
+    backgroundColor: 'rgba(220, 38, 38, 0.1)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(220, 38, 38, 0.3)',
     width: '100%',
     alignItems: 'center',
   },
-  progressBar: {
-    width: '100%',
-    height: 8,
-    backgroundColor: Colors.gray,
-    borderRadius: 4,
-    overflow: 'hidden',
+  errorTitle: {
+    fontSize: 18,
+    fontWeight: '700' as const,
+    color: '#EF4444',
+    marginBottom: 8,
+  },
+  errorMessage: {
+    fontSize: 14,
+    color: Colors.grayLight,
+    textAlign: 'center',
     marginBottom: 16,
   },
-  progressFill: {
-    height: '100%',
-    borderRadius: 4,
+  retryButton: {
+    backgroundColor: Colors.orange,
+    borderRadius: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
   },
-  progressText: {
-    fontSize: 24,
+  retryButtonText: {
+    fontSize: 16,
     fontWeight: '700' as const,
-    color: Colors.orange,
+    color: Colors.white,
   },
 });

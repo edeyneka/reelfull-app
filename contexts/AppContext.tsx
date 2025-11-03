@@ -1,13 +1,15 @@
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { UserProfile, Video } from '@/types';
+import { UserProfile, Video, ConvexId } from '@/types';
 
 const USER_KEY = '@reelfull_user';
+const USER_ID_KEY = '@reelfull_userId';
 const VIDEOS_KEY = '@reelfull_videos';
 
 export const [AppProvider, useApp] = createContextHook(() => {
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [userId, setUserId] = useState<ConvexId<"users"> | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -17,8 +19,9 @@ export const [AppProvider, useApp] = createContextHook(() => {
 
   const loadData = async () => {
     try {
-      const [userData, videosData] = await Promise.all([
+      const [userData, userIdData, videosData] = await Promise.all([
         AsyncStorage.getItem(USER_KEY),
+        AsyncStorage.getItem(USER_ID_KEY),
         AsyncStorage.getItem(VIDEOS_KEY),
       ]);
 
@@ -30,6 +33,16 @@ export const [AppProvider, useApp] = createContextHook(() => {
           await AsyncStorage.removeItem(USER_KEY);
         }
       }
+      
+      if (userIdData) {
+        try {
+          setUserId(userIdData as ConvexId<"users">);
+        } catch (e) {
+          console.error('Error parsing userId:', e);
+          await AsyncStorage.removeItem(USER_ID_KEY);
+        }
+      }
+      
       if (videosData) {
         try {
           const parsed = JSON.parse(videosData);
@@ -92,10 +105,20 @@ export const [AppProvider, useApp] = createContextHook(() => {
     }
   }, []);
 
+  const saveUserId = useCallback(async (id: ConvexId<"users">) => {
+    try {
+      await AsyncStorage.setItem(USER_ID_KEY, id);
+      setUserId(id);
+    } catch (error) {
+      console.error('Error saving userId:', error);
+    }
+  }, []);
+
   const clearData = useCallback(async () => {
     try {
-      await AsyncStorage.multiRemove([USER_KEY, VIDEOS_KEY]);
+      await AsyncStorage.multiRemove([USER_KEY, USER_ID_KEY, VIDEOS_KEY]);
       setUser(null);
+      setUserId(null);
       setVideos([]);
     } catch (error) {
       console.error('Error clearing data:', error);
@@ -104,11 +127,13 @@ export const [AppProvider, useApp] = createContextHook(() => {
 
   return useMemo(() => ({
     user,
+    userId,
     videos,
     isLoading,
     saveUser,
+    saveUserId,
     addVideo,
     deleteVideo,
     clearData,
-  }), [user, videos, isLoading, saveUser, addVideo, deleteVideo, clearData]);
+  }), [user, userId, videos, isLoading, saveUser, saveUserId, addVideo, deleteVideo, clearData]);
 });

@@ -13,13 +13,17 @@ import {
   TouchableOpacity,
   View,
   PanResponder,
+  ActivityIndicator,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { VideoView, useVideoPlayer } from 'expo-video';
+import { useMutation, useAction } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
+import { uploadMediaFiles } from '@/lib/api-helpers';
 
 function VideoThumbnail({ uri, style }: { uri: string; style: any }) {
   const player = useVideoPlayer(uri, (player) => {
@@ -40,9 +44,15 @@ function VideoThumbnail({ uri, style }: { uri: string; style: any }) {
 export default function ComposerScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { user } = useApp();
+  const { user, userId } = useApp();
   const [prompt, setPrompt] = useState('');
   const [mediaUris, setMediaUris] = useState<{ uri: string; type: 'video' | 'image' }[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  
+  // Convex hooks
+  const generateUploadUrl = useMutation(api.tasks.generateUploadUrl);
+  const createProject = useMutation(api.tasks.createProject);
+  const generateScriptOnly = useAction(api.tasks.generateScriptOnly);
   
   const pan = useRef(new Animated.Value(0)).current;
   
@@ -96,19 +106,51 @@ export default function ComposerScreen() {
     setMediaUris(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = () => {
-    if (prompt.trim() && mediaUris.length > 0) {
-      console.log('=== COMPOSER: Generate Reel pressed ===');
+  const handleSubmit = async () => {
+    if (!prompt.trim() || mediaUris.length === 0 || !userId) {
+      return;
+    }
+
+    setIsUploading(true);
+
+    try {
+      console.log('=== COMPOSER: Starting upload ===');
       console.log('Prompt:', prompt.trim());
       console.log('Media count:', mediaUris.length);
-      console.log('Navigating to loader...');
-      router.replace({
-        pathname: '/loader',
-        params: { 
-          prompt: prompt.trim(), 
-          mediaUris: JSON.stringify(mediaUris),
-        },
+
+      // Upload all media files to Convex
+      const uploads = await uploadMediaFiles(
+        generateUploadUrl,
+        mediaUris.map(m => ({ uri: m.uri, type: m.type }))
+      );
+
+      console.log('Uploads complete:', uploads.length);
+
+      // Create project
+      const projectId = await createProject({
+        userId,
+        prompt: prompt.trim(),
+        files: uploads.map(u => u.storageId),
+        fileMetadata: uploads,
+        thumbnail: uploads[0].storageId,
       });
+
+      console.log('Project created:', projectId);
+
+      // Start script generation
+      console.log('Starting script generation...');
+      await generateScriptOnly({ projectId });
+
+      // Navigate to script review
+      router.replace({
+        pathname: '/script-review',
+        params: { projectId: projectId.toString() },
+      });
+    } catch (error) {
+      console.error('Error in composer:', error);
+      alert(`Failed to create project: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -223,14 +265,14 @@ export default function ComposerScreen() {
               </View>
 
               <TouchableOpacity
-                style={[styles.button, !isValid && styles.buttonDisabled]}
+                style={[styles.button, (!isValid || isUploading) && styles.buttonDisabled]}
                 onPress={handleSubmit}
-                disabled={!isValid}
+                disabled={!isValid || isUploading}
                 activeOpacity={0.8}
               >
                 <LinearGradient
                   colors={
-                    isValid
+                    isValid && !isUploading
                       ? [Colors.orange, Colors.orangeLight]
                       : [Colors.gray, Colors.grayLight]
                   }
@@ -238,7 +280,14 @@ export default function ComposerScreen() {
                   end={{ x: 1, y: 0 }}
                   style={styles.buttonGradient}
                 >
-                  <Text style={styles.buttonText}>Generate Reel</Text>
+                  {isUploading ? (
+                    <>
+                      <ActivityIndicator size="small" color={Colors.white} />
+                      <Text style={styles.buttonText}>Uploading...</Text>
+                    </>
+                  ) : (
+                    <Text style={styles.buttonText}>Generate Reel</Text>
+                  )}
                 </LinearGradient>
               </TouchableOpacity>
             </View>

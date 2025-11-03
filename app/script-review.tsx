@@ -1,0 +1,478 @@
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { ArrowLeft, Edit2, Check, X, RotateCcw, Play } from 'lucide-react-native';
+import { useState, useEffect } from 'react';
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useQuery, useMutation, useAction } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { LinearGradient } from 'expo-linear-gradient';
+import Colors from '@/constants/colors';
+
+export default function ScriptReviewScreen() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const params = useLocalSearchParams<{ projectId: string }>();
+  const projectId = params.projectId as any;
+
+  // Convex hooks
+  const project = useQuery(api.tasks.getProject, projectId ? { id: projectId } : "skip");
+  const updateProjectScript = useMutation(api.tasks.updateProjectScript);
+  const regenerateScript = useAction(api.tasks.regenerateScript);
+  const markProjectSubmitted = useMutation(api.tasks.markProjectSubmitted);
+  const generateMediaAssets = useAction(api.tasks.generateMediaAssets);
+
+  // Local state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedScript, setEditedScript] = useState('');
+  const [isRegenerating, setIsRegenerating] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Initialize script from project
+  useEffect(() => {
+    if (project?.script && !editedScript) {
+      setEditedScript(project.script);
+    }
+  }, [project?.script]);
+
+  const handleSaveEdit = async () => {
+    if (!projectId || !editedScript.trim()) {
+      Alert.alert('Error', 'Script cannot be empty');
+      return;
+    }
+
+    try {
+      await updateProjectScript({
+        id: projectId,
+        script: editedScript.trim(),
+      });
+      setIsEditing(false);
+      Alert.alert('Success', 'Script updated');
+    } catch (error) {
+      console.error('Update script error:', error);
+      Alert.alert('Error', 'Failed to update script');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditedScript(project?.script || '');
+    setIsEditing(false);
+  };
+
+  const handleRegenerate = async () => {
+    if (!projectId) return;
+
+    setIsRegenerating(true);
+    try {
+      await regenerateScript({ projectId });
+      Alert.alert('Success', 'New script is being generated');
+    } catch (error) {
+      console.error('Regenerate script error:', error);
+      Alert.alert('Error', 'Failed to regenerate script');
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
+
+  const handleApprove = async () => {
+    if (!projectId || !project?.script) {
+      Alert.alert('Error', 'No script available');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Save any edits (replace ? with ??? before saving, matching studio behavior)
+      const scriptToSave = editedScript !== project.script 
+        ? editedScript.trim().replace(/\?(?!\?\?)/g, "???")
+        : project.script.replace(/\?(?!\?\?)/g, "???");
+      
+      if (editedScript !== project.script || scriptToSave !== project.script) {
+        console.log('[script-review] Saving edited script...');
+        await updateProjectScript({
+          id: projectId,
+          script: scriptToSave,
+        });
+      }
+
+      // Mark as submitted (sets submittedAt timestamp)
+      console.log('[script-review] Marking project as submitted...');
+      await markProjectSubmitted({ id: projectId });
+
+      // Start media generation (Phase 2: voice, music, animations)
+      console.log('[script-review] Starting media asset generation...');
+      await generateMediaAssets({ projectId });
+
+      // Navigate to loader
+      router.replace({
+        pathname: '/loader',
+        params: { projectId: projectId.toString() },
+      });
+    } catch (error) {
+      console.error('[script-review] Approve error:', error);
+      Alert.alert('Error', `Failed to start generation: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!projectId) {
+    return (
+      <View style={styles.container}>
+        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+            activeOpacity={0.7}
+          >
+            <ArrowLeft size={24} color={Colors.white} strokeWidth={2} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Script Review</Text>
+          <View style={styles.placeholder} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>No project ID</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (!project) {
+    return (
+      <View style={styles.container}>
+        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+            activeOpacity={0.7}
+          >
+            <ArrowLeft size={24} color={Colors.white} strokeWidth={2} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Script Review</Text>
+          <View style={styles.placeholder} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.orange} />
+        </View>
+      </View>
+    );
+  }
+
+  const hasScript = !!project.script;
+  const isLoadingScript = project.status === 'processing' && !hasScript;
+
+  return (
+    <View style={styles.container}>
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+          activeOpacity={0.7}
+        >
+          <ArrowLeft size={24} color={Colors.white} strokeWidth={2} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Review Script</Text>
+        <View style={styles.placeholder} />
+      </View>
+
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {isLoadingScript ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={Colors.orange} />
+            <Text style={styles.loadingText}>Generating script...</Text>
+          </View>
+        ) : hasScript ? (
+          <>
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Generated Script</Text>
+                {!isEditing && (
+                  <View style={styles.actions}>
+                    <TouchableOpacity
+                      style={styles.iconButton}
+                      onPress={() => setIsEditing(true)}
+                      activeOpacity={0.7}
+                    >
+                      <Edit2 size={18} color={Colors.orange} strokeWidth={2} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.iconButton}
+                      onPress={handleRegenerate}
+                      activeOpacity={0.7}
+                      disabled={isRegenerating}
+                    >
+                      {isRegenerating ? (
+                        <ActivityIndicator size="small" color={Colors.orange} />
+                      ) : (
+                        <RotateCcw size={18} color={Colors.orange} strokeWidth={2} />
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+
+              {isEditing ? (
+                <View style={styles.editingContainer}>
+                  <TextInput
+                    style={styles.scriptInput}
+                    value={editedScript}
+                    onChangeText={setEditedScript}
+                    multiline
+                    textAlignVertical="top"
+                    placeholder="Enter script..."
+                    placeholderTextColor={Colors.grayLight}
+                    autoFocus
+                  />
+                  <View style={styles.editActions}>
+                    <TouchableOpacity
+                      style={styles.editButton}
+                      onPress={handleSaveEdit}
+                      activeOpacity={0.7}
+                    >
+                      <Check size={18} color={Colors.white} strokeWidth={2} />
+                      <Text style={styles.editButtonText}>Save</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.cancelButton}
+                      onPress={handleCancelEdit}
+                      activeOpacity={0.7}
+                    >
+                      <X size={18} color={Colors.grayLight} strokeWidth={2} />
+                      <Text style={styles.cancelButtonText}>Cancel</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.scriptContainer}>
+                  <Text style={styles.scriptText}>{editedScript || project.script}</Text>
+                </View>
+              )}
+            </View>
+
+            <TouchableOpacity
+              style={[styles.approveButton, isSubmitting && styles.approveButtonDisabled]}
+              onPress={handleApprove}
+              disabled={isSubmitting}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={
+                  isSubmitting
+                    ? [Colors.gray, Colors.grayLight]
+                    : [Colors.orange, Colors.orangeLight]
+                }
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.approveButtonGradient}
+              >
+                {isSubmitting ? (
+                  <>
+                    <ActivityIndicator size="small" color={Colors.white} />
+                    <Text style={styles.approveButtonText}>Starting...</Text>
+                  </>
+                ) : (
+                  <>
+                    <Play size={20} color={Colors.white} strokeWidth={2.5} />
+                    <Text style={styles.approveButtonText}>Approve & Generate</Text>
+                  </>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>No script available</Text>
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={handleRegenerate}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.retryButtonText}>Generate Script</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </ScrollView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.black,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingBottom: 16,
+    backgroundColor: Colors.black,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.gray,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700' as const,
+    color: Colors.white,
+  },
+  placeholder: {
+    width: 40,
+  },
+  content: {
+    padding: 24,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 16,
+  },
+  loadingText: {
+    color: Colors.grayLight,
+    fontSize: 16,
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700' as const,
+    color: Colors.white,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  iconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.gray,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  scriptContainer: {
+    backgroundColor: Colors.grayDark,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.gray,
+  },
+  scriptText: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: Colors.white,
+  },
+  editingContainer: {
+    gap: 12,
+  },
+  scriptInput: {
+    backgroundColor: Colors.grayDark,
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    color: Colors.white,
+    borderWidth: 2,
+    borderColor: Colors.orange,
+    minHeight: 200,
+    textAlignVertical: 'top',
+  },
+  editActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  editButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: Colors.orange,
+    borderRadius: 12,
+    padding: 16,
+  },
+  editButtonText: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+    color: Colors.white,
+  },
+  cancelButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: Colors.gray,
+    borderRadius: 12,
+    padding: 16,
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+    color: Colors.grayLight,
+  },
+  approveButton: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginTop: 24,
+  },
+  approveButtonDisabled: {
+    opacity: 0.5,
+  },
+  approveButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    padding: 18,
+  },
+  approveButtonText: {
+    fontSize: 18,
+    fontWeight: '700' as const,
+    color: Colors.white,
+  },
+  errorContainer: {
+    alignItems: 'center',
+    gap: 16,
+    paddingVertical: 40,
+  },
+  errorText: {
+    fontSize: 16,
+    color: Colors.grayLight,
+  },
+  retryButton: {
+    backgroundColor: Colors.orange,
+    borderRadius: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+  },
+  retryButtonText: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+    color: Colors.white,
+  },
+});
+

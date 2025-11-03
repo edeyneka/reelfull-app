@@ -9,7 +9,7 @@ import { useApp } from '@/contexts/AppContext';
 
 export default function IntroScreen() {
   const router = useRouter();
-  const { user, isLoading } = useApp();
+  const { userId, isLoading } = useApp();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   
@@ -39,16 +39,18 @@ export default function IntroScreen() {
   useEffect(() => {
     if (!isLoading) {
       const timer = setTimeout(() => {
-        if (user) {
+        if (userId) {
+          // User is authenticated, go to feed
           router.replace('/feed');
         } else {
-          router.replace('/onboarding');
+          // No user, go to auth
+          router.replace('/auth');
         }
       }, 2000);
 
       return () => clearTimeout(timer);
     }
-  }, [isLoading, user, router]);
+  }, [isLoading, userId, router]);
 
   return (
     <View style={styles.container}>
