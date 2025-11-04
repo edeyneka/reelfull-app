@@ -72,22 +72,57 @@ export const [AppProvider, useApp] = createContextHook(() => {
   const addVideo = useCallback(async (video: Video) => {
     try {
       console.log('Adding video to storage:', video);
-      if (!video.uri || video.uri.length === 0) {
-        console.error('Cannot add video with empty URI');
-        return;
-      }
       
       setVideos((prevVideos) => {
-        const updatedVideos = [video, ...prevVideos];
+        // Check if video already exists and update it
+        const existingIndex = prevVideos.findIndex(v => v.id === video.id);
+        let updatedVideos;
+        
+        if (existingIndex !== -1) {
+          // Update existing video
+          updatedVideos = [...prevVideos];
+          updatedVideos[existingIndex] = video;
+          console.log('Updated existing video:', video.id);
+        } else {
+          // Add new video
+          updatedVideos = [video, ...prevVideos];
+          console.log('Added new video:', video.id);
+        }
+        
         AsyncStorage.setItem(VIDEOS_KEY, JSON.stringify(updatedVideos)).catch((err) => {
           console.error('Error saving videos to storage:', err);
         });
         return updatedVideos;
       });
       
-      console.log('Video added successfully');
+      console.log('Video operation successful');
     } catch (error) {
       console.error('Error adding video:', error);
+    }
+  }, []);
+
+  const updateVideoStatus = useCallback(async (videoId: string, status: Video['status'], uri?: string, error?: string) => {
+    try {
+      setVideos((prevVideos) => {
+        const updatedVideos = prevVideos.map(video => {
+          if (video.id === videoId) {
+            return {
+              ...video,
+              status,
+              ...(uri && { uri }),
+              ...(error && { error }),
+            };
+          }
+          return video;
+        });
+        
+        AsyncStorage.setItem(VIDEOS_KEY, JSON.stringify(updatedVideos)).catch((err) => {
+          console.error('Error saving videos to storage:', err);
+        });
+        return updatedVideos;
+      });
+    } catch (error) {
+      console.error('Error updating video status:', error);
     }
   }, []);
 
@@ -133,7 +168,8 @@ export const [AppProvider, useApp] = createContextHook(() => {
     saveUser,
     saveUserId,
     addVideo,
+    updateVideoStatus,
     deleteVideo,
     clearData,
-  }), [user, userId, videos, isLoading, saveUser, saveUserId, addVideo, deleteVideo, clearData]);
+  }), [user, userId, videos, isLoading, saveUser, saveUserId, addVideo, updateVideoStatus, deleteVideo, clearData]);
 });

@@ -16,12 +16,14 @@ import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { LinearGradient } from 'expo-linear-gradient';
 import Colors from '@/constants/colors';
+import { useApp } from '@/contexts/AppContext';
 
 export default function ScriptReviewScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ projectId: string }>();
   const projectId = params.projectId as any;
+  const { addVideo } = useApp();
 
   // Convex hooks
   const project = useQuery(api.tasks.getProject, projectId ? { id: projectId } : "skip");
@@ -107,15 +109,27 @@ export default function ScriptReviewScreen() {
       console.log('[script-review] Marking project as submitted...');
       await markProjectSubmitted({ id: projectId });
 
-      // Start media generation (Phase 2: voice, music, animations)
-      console.log('[script-review] Starting media asset generation...');
-      await generateMediaAssets({ projectId });
-
-      // Navigate to loader
-      router.replace({
-        pathname: '/loader',
-        params: { projectId: projectId.toString() },
+      // Create a pending video entry in the feed
+      console.log('[script-review] Adding pending video to feed...');
+      await addVideo({
+        id: projectId,
+        uri: '', // Empty until video is ready
+        prompt: project.prompt,
+        createdAt: Date.now(),
+        status: 'pending',
+        projectId: projectId,
       });
+
+      // Start media generation (Phase 2: voice, music, animations) - async in background
+      console.log('[script-review] Starting media asset generation...');
+      generateMediaAssets({ projectId }).catch((error) => {
+        console.error('[script-review] Media generation error:', error);
+        // Don't block navigation - the error will be reflected in project status
+      });
+
+      // Navigate to feed immediately
+      console.log('[script-review] Navigating to feed...');
+      router.replace('/feed');
     } catch (error) {
       console.error('[script-review] Approve error:', error);
       Alert.alert('Error', `Failed to start generation: ${error instanceof Error ? error.message : 'Unknown error'}`);

@@ -66,6 +66,8 @@ export default function ResultScreen() {
         uri: videoUrl,
         prompt: project.prompt,
         createdAt: project.createdAt,
+        status: 'ready' as const,
+        projectId: project._id,
       };
 
       await addVideo(video);

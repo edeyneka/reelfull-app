@@ -14,6 +14,9 @@ export interface Video {
   uri: string;
   prompt: string;
   createdAt: number;
+  status: 'pending' | 'processing' | 'ready' | 'failed';
+  projectId?: string;
+  error?: string;
 }
 
 // Convex types placeholder - will be replaced with generated types

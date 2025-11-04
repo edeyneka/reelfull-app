@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
-import { Plus, Trash2, Download, Settings } from 'lucide-react-native';
-import { useState, useRef } from 'react';
+import { Plus, Trash2, Download, Settings, Loader2, AlertCircle } from 'lucide-react-native';
+import { useState, useRef, useEffect } from 'react';
 import {
   Dimensions,
   FlatList,
@@ -11,21 +11,97 @@ import {
   View,
   Alert,
   Animated,
+  ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import * as MediaLibrary from 'expo-media-library';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
 import { Video as VideoType } from '@/types';
+import { useVideoPolling, registerForPushNotificationsAsync } from '@/lib/videoPollingService';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const ITEM_SPACING = 8;
 const ITEM_WIDTH = (SCREEN_WIDTH - ITEM_SPACING * 3) / 2;
 
 function VideoThumbnail({ item, onPress }: { item: VideoType; onPress: () => void }) {
+  const spinAnim = useRef(new Animated.Value(0)).current;
+
+  // Always call hooks in the same order - create player even if not used
+  const hasValidUri = item.uri && item.uri.length > 0 && item.status === 'ready';
+  const thumbnailPlayer = useVideoPlayer(
+    hasValidUri ? item.uri : null,
+    (player) => {
+      if (player && hasValidUri) {
+        player.muted = true;
+        // Don't autoplay thumbnails
+      }
+    }
+  );
+
+  useEffect(() => {
+    if (item.status === 'pending' || item.status === 'processing') {
+      Animated.loop(
+        Animated.timing(spinAnim, {
+          toValue: 1,
+          duration: 2000,
+          useNativeDriver: true,
+        })
+      ).start();
+    }
+  }, [item.status, spinAnim]);
+
+  const spin = spinAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  // Show placeholder for pending/processing videos
+  if (item.status === 'pending' || item.status === 'processing') {
+    return (
+      <View style={styles.thumbnailContainer}>
+        <View style={styles.processingThumbnail}>
+          <Animated.View style={{ transform: [{ rotate: spin }] }}>
+            <Loader2 size={40} color={Colors.orange} strokeWidth={2} />
+          </Animated.View>
+          <Text style={styles.processingText}>
+            {item.status === 'pending' ? 'Queued...' : 'Generating...'}
+          </Text>
+        </View>
+        <View style={styles.thumbnailOverlay}>
+          <Text style={styles.thumbnailPrompt} numberOfLines={2}>
+            {item.prompt}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  // Show error state for failed videos
+  if (item.status === 'failed') {
+    return (
+      <TouchableOpacity
+        style={styles.thumbnailContainer}
+        onPress={() => Alert.alert('Generation Failed', item.error || 'Video generation failed. Please try again.')}
+        activeOpacity={0.9}
+      >
+        <View style={styles.errorThumbnail}>
+          <AlertCircle size={32} color={Colors.white} strokeWidth={2} />
+          <Text style={styles.errorText}>Failed</Text>
+        </View>
+        <View style={styles.thumbnailOverlay}>
+          <Text style={styles.thumbnailPrompt} numberOfLines={2}>
+            {item.prompt}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  }
+
   if (!item.uri || item.uri.length === 0) {
     return (
       <View style={styles.thumbnailContainer}>
@@ -35,11 +111,6 @@ function VideoThumbnail({ item, onPress }: { item: VideoType; onPress: () => voi
       </View>
     );
   }
-
-  const thumbnailPlayer = useVideoPlayer(item.uri, (player) => {
-    player.muted = true;
-    // Don't autoplay thumbnails
-  });
 
   return (
     <TouchableOpacity
@@ -68,11 +139,20 @@ export default function FeedScreen() {
   const { videos, deleteVideo } = useApp();
   const [selectedVideo, setSelectedVideo] = useState<VideoType | null>(null);
   const [isPromptExpanded, setIsPromptExpanded] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  
+  // Enable video polling for pending videos
+  useVideoPolling();
+
+  // Request notification permissions on mount
+  useEffect(() => {
+    registerForPushNotificationsAsync();
+  }, []);
   
   const modalPlayer = useVideoPlayer(
-    selectedVideo?.uri || null,
+    selectedVideo?.uri && selectedVideo?.status === 'ready' ? selectedVideo.uri : null,
     (player) => {
-      if (player && selectedVideo) {
+      if (player && selectedVideo && selectedVideo.uri) {
         player.loop = true;
         player.muted = false;
         player.play();
@@ -138,7 +218,19 @@ export default function FeedScreen() {
     });
 
   const renderVideoThumbnail = ({ item }: { item: VideoType }) => (
-    <VideoThumbnail item={item} onPress={() => setSelectedVideo(item)} />
+    <VideoThumbnail 
+      item={item} 
+      onPress={() => {
+        // Only allow opening ready videos with valid URIs
+        if (item.status === 'ready' && item.uri && item.uri.length > 0) {
+          setSelectedVideo(item);
+        } else if (item.status === 'ready' && (!item.uri || item.uri.length === 0)) {
+          Alert.alert('Error', 'Video is not available. Please try again or contact support.');
+        } else if (item.status === 'pending' || item.status === 'processing') {
+          Alert.alert('Video Processing', 'Your video is still being generated. You\'ll receive a notification when it\'s ready!');
+        }
+      }} 
+    />
   );
 
   const renderEmpty = () => (
@@ -158,9 +250,22 @@ export default function FeedScreen() {
   };
 
   const handleDownload = async () => {
-    if (!selectedVideo) return;
+    if (!selectedVideo || isDownloading) return;
+
+    // Validate video URI
+    if (!selectedVideo.uri || selectedVideo.uri.length === 0) {
+      Alert.alert('Error', 'Video is not available for download.');
+      return;
+    }
+
+    if (selectedVideo.status !== 'ready') {
+      Alert.alert('Error', 'Please wait until the video is ready before downloading.');
+      return;
+    }
 
     try {
+      setIsDownloading(true);
+
       // Request permissions
       const { status } = await MediaLibrary.requestPermissionsAsync();
       if (status !== 'granted') {
@@ -171,14 +276,37 @@ export default function FeedScreen() {
         return;
       }
 
-      // Save the video to media library
-      const asset = await MediaLibrary.createAssetAsync(selectedVideo.uri);
-      await MediaLibrary.createAlbumAsync('Reelful', asset, false);
-      
-      Alert.alert('Success', 'Video saved to your gallery!');
+      if (Platform.OS === 'web') {
+        // Web: trigger browser download
+        const link = document.createElement('a');
+        link.href = selectedVideo.uri;
+        link.download = `reelfull_${Date.now()}.mp4`;
+        link.click();
+        Alert.alert('Success', 'Video download started!');
+      } else {
+        // Mobile: download to local file first, then save to media library
+        const fileUri = `${FileSystem.documentDirectory}reelfull_${Date.now()}.mp4`;
+        
+        console.log('[Download] Downloading video from:', selectedVideo.uri);
+        console.log('[Download] To local path:', fileUri);
+        
+        // Download from remote URL to local file
+        const downloadResult = await FileSystem.downloadAsync(selectedVideo.uri, fileUri);
+        
+        if (downloadResult.status === 200) {
+          console.log('[Download] Download complete, saving to media library...');
+          const asset = await MediaLibrary.createAssetAsync(downloadResult.uri);
+          await MediaLibrary.createAlbumAsync('Reelful', asset, false);
+          Alert.alert('Success', 'Video saved to your gallery!');
+        } else {
+          throw new Error(`Download failed with status: ${downloadResult.status}`);
+        }
+      }
     } catch (error) {
       console.error('Error downloading video:', error);
-      Alert.alert('Error', 'Failed to save video. Please try again.');
+      Alert.alert('Error', 'Failed to download video. Please try again.');
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -246,8 +374,13 @@ export default function FeedScreen() {
                   style={styles.downloadButton}
                   onPress={handleDownload}
                   activeOpacity={0.8}
+                  disabled={isDownloading}
                 >
-                  <Download size={24} color={Colors.white} strokeWidth={2} />
+                  {isDownloading ? (
+                    <ActivityIndicator size="small" color={Colors.white} />
+                  ) : (
+                    <Download size={24} color={Colors.white} strokeWidth={2} />
+                  )}
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.deleteButton}
@@ -351,6 +484,20 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 12,
     color: Colors.grayLight,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  processingThumbnail: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.grayDark,
+    gap: 12,
+  },
+  processingText: {
+    fontSize: 13,
+    color: Colors.orange,
+    fontWeight: '600' as const,
   },
   emptyContainer: {
     justifyContent: 'center',
