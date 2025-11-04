@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
-import { ArrowLeft, User, Palette, Edit2, Check, X, Mic } from 'lucide-react-native';
-import { useState } from 'react';
+import { ArrowLeft, User, Palette, Edit2, Check, X, Mic, Volume2, Headphones } from 'lucide-react-native';
+import { useState, useEffect, useCallback } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -9,35 +9,128 @@ import {
   TouchableOpacity,
   View,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useQuery, useMutation, useAction } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Audio } from 'expo-av';
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
-import { StylePreference } from '@/types';
+import { StylePreference, BackendStyle } from '@/types';
 import VoiceRecorder from '@/components/VoiceRecorder';
+import { uploadFileToConvex, mapStyleToBackend, mapStyleToApp } from '@/lib/api-helpers';
 
 const STYLE_OPTIONS: StylePreference[] = ['Playful', 'Professional', 'Dreamy'];
 
 export default function SettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { user, saveUser } = useApp();
+  const { userId, saveUser } = useApp();
   
+  // Convex queries
+  const user = useQuery(api.users.getCurrentUser, userId ? { userId } : "skip");
+  const defaultVoices = useQuery(api.users.getDefaultVoices);
+  
+  // Convex mutations and actions
+  const generateUploadUrl = useMutation(api.users.generateUploadUrl);
+  const updateProfile = useAction(api.users.updateProfile);
+  const updateSelectedVoice = useMutation(api.users.updateSelectedVoice);
+  
+  // Local state
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingStyle, setIsEditingStyle] = useState(false);
   const [isEditingVoice, setIsEditingVoice] = useState(false);
-  const [editedName, setEditedName] = useState(user?.name || '');
-  const [editedStyle, setEditedStyle] = useState<StylePreference | null>(user?.style || null);
+  const [isSelectingVoice, setIsSelectingVoice] = useState(false);
+  const [editedName, setEditedName] = useState('');
+  const [editedStyle, setEditedStyle] = useState<StylePreference | null>(null);
+  const [playingPreviewId, setPlayingPreviewId] = useState<string | null>(null);
+  const [previewStorageId, setPreviewStorageId] = useState<string | null>(null);
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Get preview URL for the voice being previewed
+  const previewUrl = useQuery(
+    api.users.getVoicePreviewUrl,
+    previewStorageId ? { storageId: previewStorageId as any } : "skip"
+  );
+
+  // Initialize edited values from user data
+  useEffect(() => {
+    if (user) {
+      setEditedName(user.name || '');
+      setEditedStyle(user.preferredStyle ? mapStyleToApp(user.preferredStyle) : null);
+    }
+  }, [user]);
+
+  // Cleanup sound on unmount
+  useEffect(() => {
+    return () => {
+      if (sound) {
+        sound.unloadAsync().catch(console.error);
+      }
+    };
+  }, [sound]);
+
+  const playPreviewAudio = useCallback(async (url: string) => {
+    try {
+      // Load and play preview
+      const { sound: newSound } = await Audio.Sound.createAsync(
+        { uri: url },
+        { shouldPlay: true }
+      );
+
+      setSound(newSound);
+
+      newSound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          setPlayingPreviewId(null);
+          setPreviewStorageId(null);
+          setSound(null);
+        }
+      });
+    } catch (error) {
+      console.error('Play preview error:', error);
+      Alert.alert('Error', 'Failed to play preview');
+      setPlayingPreviewId(null);
+      setPreviewStorageId(null);
+    }
+  }, []);
+
+  // Play preview when URL is available
+  useEffect(() => {
+    if (previewUrl && previewStorageId && playingPreviewId) {
+      playPreviewAudio(previewUrl);
+    }
+  }, [previewUrl, previewStorageId, playingPreviewId, playPreviewAudio]);
 
   const handleSaveName = async () => {
-    if (editedName.trim().length === 0) {
+    if (!userId || !editedName.trim()) {
       Alert.alert('Error', 'Name cannot be empty');
       return;
     }
-    
-    if (user && editedStyle) {
-      await saveUser({ name: editedName.trim(), style: editedStyle });
+
+    setIsLoading(true);
+    try {
+      await updateProfile({
+        userId,
+        name: editedName.trim(),
+      });
+      
+      // Update local context
+      await saveUser({ 
+        name: editedName.trim(), 
+        style: editedStyle || 'Professional',
+        voiceRecordingUri: user?.voiceRecordingUrl 
+      });
+      
       setIsEditingName(false);
+      Alert.alert('Success', 'Name updated successfully');
+    } catch (error) {
+      console.error('Update name error:', error);
+      Alert.alert('Error', 'Failed to update name');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -47,41 +140,176 @@ export default function SettingsScreen() {
   };
 
   const handleSaveStyle = async () => {
-    if (!editedStyle) {
+    if (!userId || !editedStyle) {
       Alert.alert('Error', 'Please select a style');
       return;
     }
-    
-    if (user && editedName) {
-      await saveUser({ name: editedName.trim(), style: editedStyle });
+
+    setIsLoading(true);
+    try {
+      await updateProfile({
+        userId,
+        preferredStyle: mapStyleToBackend(editedStyle),
+      });
+      
+      // Update local context
+      await saveUser({ 
+        name: editedName.trim() || user?.name || '', 
+        style: editedStyle,
+        voiceRecordingUri: user?.voiceRecordingUrl 
+      });
+      
       setIsEditingStyle(false);
+      Alert.alert('Success', 'Style preference updated');
+    } catch (error) {
+      console.error('Update style error:', error);
+      Alert.alert('Error', 'Failed to update style');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleCancelStyle = () => {
-    setEditedStyle(user?.style || null);
+    setEditedStyle(user?.preferredStyle ? mapStyleToApp(user.preferredStyle) : null);
     setIsEditingStyle(false);
   };
 
   const handleVoiceRecordingComplete = async (uri: string) => {
-    if (user && editedName && editedStyle) {
-      await saveUser({ 
-        name: editedName.trim(), 
-        style: editedStyle,
-        voiceRecordingUri: uri 
+    if (!userId) {
+      Alert.alert('Error', 'User not found');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Upload voice recording to Convex
+      const storageId = await uploadFileToConvex(
+        generateUploadUrl,
+        uri,
+        'audio/mp3'
+      );
+
+      // Update profile - this will create ElevenLabs voice clone
+      await updateProfile({
+        userId,
+        voiceRecordingStorageId: storageId,
       });
+
+      // Also set as selected voice (will be set after ElevenLabs creates it)
+      // Note: This happens async, so we'll need to refresh user data
+
       setIsEditingVoice(false);
-      Alert.alert('Success', 'Voice recording saved successfully!');
+      Alert.alert(
+        'Success', 
+        'Voice recording uploaded! Your voice clone is being created. This may take a few moments.'
+      );
+    } catch (error) {
+      console.error('Voice upload error:', error);
+      Alert.alert('Error', 'Failed to upload voice recording');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleCancelVoice = () => {
-    setIsEditingVoice(false);
+  const handleSelectVoice = async (voiceId: string) => {
+    if (!userId) {
+      Alert.alert('Error', 'User not found');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await updateSelectedVoice({
+        userId,
+        voiceId,
+      });
+
+      setIsSelectingVoice(false);
+      Alert.alert('Success', 'Voice selected successfully');
+    } catch (error) {
+      console.error('Select voice error:', error);
+      Alert.alert('Error', 'Failed to select voice');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleDoneVoice = () => {
-    setIsEditingVoice(false);
+  const playVoicePreview = (storageId: string, voiceId: string) => {
+    // Stop current preview if playing
+    if (sound) {
+      sound.unloadAsync().catch(console.error);
+      setSound(null);
+    }
+
+    if (playingPreviewId === voiceId) {
+      // Stop if already playing this one
+      setPlayingPreviewId(null);
+      setPreviewStorageId(null);
+      return;
+    }
+
+    // Set preview storage ID to trigger useQuery
+    setPreviewStorageId(storageId);
+    setPlayingPreviewId(voiceId);
   };
+
+
+  const getCurrentVoiceName = () => {
+    if (!user?.selectedVoiceId) return 'Not selected';
+    
+    // Check if it's a default voice
+    const defaultVoice = defaultVoices?.find(v => v.voiceId === user.selectedVoiceId);
+    if (defaultVoice) return defaultVoice.name;
+    
+    // Check if it's custom voice
+    if (user.elevenlabsVoiceId === user.selectedVoiceId) {
+      return user.name ? `${user.name}'s Voice` : 'Your Voice';
+    }
+    
+    return 'Custom Voice';
+  };
+
+  if (!userId) {
+    return (
+      <View style={styles.container}>
+        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+            activeOpacity={0.7}
+          >
+            <ArrowLeft size={24} color={Colors.white} strokeWidth={2} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Settings</Text>
+          <View style={styles.placeholder} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Please log in to access settings</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (!user) {
+    return (
+      <View style={styles.container}>
+        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+            activeOpacity={0.7}
+          >
+            <ArrowLeft size={24} color={Colors.white} strokeWidth={2} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Settings</Text>
+          <View style={styles.placeholder} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.orange} />
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -121,9 +349,10 @@ export default function SettingsScreen() {
                     placeholderTextColor={Colors.grayLight}
                     autoCapitalize="words"
                     autoFocus
+                    editable={!isLoading}
                   />
                 ) : (
-                  <Text style={styles.cardValue}>{user?.name || 'Not set'}</Text>
+                  <Text style={styles.cardValue}>{user.name || 'Not set'}</Text>
                 )}
               </View>
               <View style={styles.actionButtons}>
@@ -133,13 +362,19 @@ export default function SettingsScreen() {
                       style={styles.iconButton}
                       onPress={handleSaveName}
                       activeOpacity={0.7}
+                      disabled={isLoading}
                     >
-                      <Check size={20} color={Colors.orange} strokeWidth={2} />
+                      {isLoading ? (
+                        <ActivityIndicator size="small" color={Colors.orange} />
+                      ) : (
+                        <Check size={20} color={Colors.orange} strokeWidth={2} />
+                      )}
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.iconButton}
                       onPress={handleCancelName}
                       activeOpacity={0.7}
+                      disabled={isLoading}
                     >
                       <X size={20} color={Colors.grayLight} strokeWidth={2} />
                     </TouchableOpacity>
@@ -189,7 +424,9 @@ export default function SettingsScreen() {
                     ))}
                   </View>
                 ) : (
-                  <Text style={styles.cardValue}>{user?.style || 'Not set'}</Text>
+                  <Text style={styles.cardValue}>
+                    {user.preferredStyle ? mapStyleToApp(user.preferredStyle) : 'Not set'}
+                  </Text>
                 )}
               </View>
               <View style={styles.actionButtons}>
@@ -199,13 +436,19 @@ export default function SettingsScreen() {
                       style={styles.iconButton}
                       onPress={handleSaveStyle}
                       activeOpacity={0.7}
+                      disabled={isLoading}
                     >
-                      <Check size={20} color={Colors.orange} strokeWidth={2} />
+                      {isLoading ? (
+                        <ActivityIndicator size="small" color={Colors.orange} />
+                      ) : (
+                        <Check size={20} color={Colors.orange} strokeWidth={2} />
+                      )}
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.iconButton}
                       onPress={handleCancelStyle}
                       activeOpacity={0.7}
+                      disabled={isLoading}
                     >
                       <X size={20} color={Colors.grayLight} strokeWidth={2} />
                     </TouchableOpacity>
@@ -223,7 +466,32 @@ export default function SettingsScreen() {
             </View>
           </View>
 
-          {/* Voice Recording Card */}
+          {/* Voice Selection Card */}
+          <View style={styles.card}>
+            <View style={styles.cardRow}>
+              <View style={styles.iconContainer}>
+                <Headphones size={20} color={Colors.orange} strokeWidth={2} />
+              </View>
+              <View style={styles.cardContent}>
+                <Text style={styles.cardLabel}>Voice</Text>
+                <Text style={styles.cardValue}>{getCurrentVoiceName()}</Text>
+                {user.elevenlabsVoiceId && (
+                  <Text style={styles.cardSubtext}>Custom voice available</Text>
+                )}
+              </View>
+              <View style={styles.actionButtons}>
+                <TouchableOpacity
+                  style={styles.iconButton}
+                  onPress={() => setIsSelectingVoice(true)}
+                  activeOpacity={0.7}
+                >
+                  <Edit2 size={18} color={Colors.orange} strokeWidth={2} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+
+          {/* Voice Recording Card (Create Clone) */}
           <View style={styles.card}>
             {isEditingVoice ? (
               <View style={styles.voiceRecorderContainer}>
@@ -232,20 +500,17 @@ export default function SettingsScreen() {
                     <Mic size={20} color={Colors.orange} strokeWidth={2} />
                   </View>
                   <View style={styles.headerContent}>
-                    <Text style={styles.cardLabel}>Voice Recording</Text>
+                    <Text style={styles.cardLabel}>Record Voice Clone</Text>
+                    <Text style={styles.cardSubtext}>
+                      Record a sample to create your AI voice clone
+                    </Text>
                   </View>
                   <View style={styles.actionButtons}>
                     <TouchableOpacity
                       style={styles.iconButton}
-                      onPress={handleDoneVoice}
+                      onPress={() => setIsEditingVoice(false)}
                       activeOpacity={0.7}
-                    >
-                      <Check size={20} color={Colors.orange} strokeWidth={2} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.iconButton}
-                      onPress={handleCancelVoice}
-                      activeOpacity={0.7}
+                      disabled={isLoading}
                     >
                       <X size={20} color={Colors.grayLight} strokeWidth={2} />
                     </TouchableOpacity>
@@ -253,7 +518,7 @@ export default function SettingsScreen() {
                 </View>
                 <VoiceRecorder
                   onRecordingComplete={handleVoiceRecordingComplete}
-                  initialRecordingUri={user?.voiceRecordingUri}
+                  initialRecordingUri={user.voiceRecordingUrl}
                   showScript={true}
                 />
               </View>
@@ -263,9 +528,12 @@ export default function SettingsScreen() {
                   <Mic size={20} color={Colors.orange} strokeWidth={2} />
                 </View>
                 <View style={styles.cardContent}>
-                  <Text style={styles.cardLabel}>Voice Recording</Text>
+                  <Text style={styles.cardLabel}>Voice Clone</Text>
                   <Text style={styles.cardValue}>
-                    {user?.voiceRecordingUri ? 'Recorded' : 'Not recorded'}
+                    {user.elevenlabsVoiceId ? 'Created' : 'Not created'}
+                  </Text>
+                  <Text style={styles.cardSubtext}>
+                    Record your voice to create an AI clone
                   </Text>
                 </View>
                 <View style={styles.actionButtons}>
@@ -281,6 +549,92 @@ export default function SettingsScreen() {
             )}
           </View>
         </View>
+
+        {/* Voice Selection Modal */}
+        {isSelectingVoice && (
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Voice</Text>
+                <TouchableOpacity
+                  onPress={() => setIsSelectingVoice(false)}
+                  activeOpacity={0.7}
+                >
+                  <X size={24} color={Colors.white} strokeWidth={2} />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={styles.voicesList}>
+                {/* Custom Voice Option */}
+                {user.elevenlabsVoiceId && (
+                  <TouchableOpacity
+                    style={[
+                      styles.voiceOption,
+                      user.selectedVoiceId === user.elevenlabsVoiceId && styles.voiceOptionSelected,
+                    ]}
+                    onPress={() => handleSelectVoice(user.elevenlabsVoiceId)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.voiceOptionContent}>
+                      <Headphones size={24} color={Colors.orange} strokeWidth={2} />
+                      <View style={styles.voiceOptionText}>
+                        <Text style={styles.voiceOptionName}>
+                          {user.name ? `${user.name}'s Voice` : 'Your Voice'}
+                        </Text>
+                        <Text style={styles.voiceOptionDesc}>Custom AI voice clone</Text>
+                      </View>
+                    </View>
+                    {user.selectedVoiceId === user.elevenlabsVoiceId && (
+                      <Check size={20} color={Colors.orange} strokeWidth={3} />
+                    )}
+                  </TouchableOpacity>
+                )}
+
+                {/* Default Voices */}
+                {defaultVoices?.map((voice) => (
+                  <TouchableOpacity
+                    key={voice._id}
+                    style={[
+                      styles.voiceOption,
+                      user.selectedVoiceId === voice.voiceId && styles.voiceOptionSelected,
+                    ]}
+                    onPress={() => handleSelectVoice(voice.voiceId)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.voiceOptionContent}>
+                      <Volume2 size={24} color={Colors.orange} strokeWidth={2} />
+                      <View style={styles.voiceOptionText}>
+                        <Text style={styles.voiceOptionName}>{voice.name}</Text>
+                        <Text style={styles.voiceOptionDesc}>
+                          {voice.description || 'Default voice'}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.voiceOptionActions}>
+                      {voice.previewStorageId && (
+                        <TouchableOpacity
+                          style={styles.previewButton}
+                          onPress={() => playVoicePreview(voice.previewStorageId!, voice.voiceId)}
+                          activeOpacity={0.7}
+                          disabled={playingPreviewId === voice.voiceId && !previewUrl}
+                        >
+                          {playingPreviewId === voice.voiceId && !previewUrl ? (
+                            <ActivityIndicator size="small" color={Colors.orange} />
+                          ) : (
+                            <Volume2 size={18} color={Colors.orange} strokeWidth={2} />
+                          )}
+                        </TouchableOpacity>
+                      )}
+                      {user.selectedVoiceId === voice.voiceId && (
+                        <Check size={20} color={Colors.orange} strokeWidth={3} />
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -317,6 +671,15 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 24,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: Colors.grayLight,
+    fontSize: 16,
   },
   section: {
     marginBottom: 32,
@@ -362,6 +725,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600' as const,
     color: Colors.white,
+  },
+  cardSubtext: {
+    fontSize: 12,
+    color: Colors.grayLight,
+    marginTop: 2,
   },
   input: {
     backgroundColor: Colors.gray,
@@ -420,5 +788,86 @@ const styles = StyleSheet.create({
   headerContent: {
     flex: 1,
     marginLeft: 16,
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  modalContent: {
+    backgroundColor: Colors.grayDark,
+    borderRadius: 16,
+    padding: 24,
+    width: '90%',
+    maxHeight: '80%',
+    borderWidth: 1,
+    borderColor: Colors.gray,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: '700' as const,
+    color: Colors.white,
+  },
+  voicesList: {
+    maxHeight: 400,
+  },
+  voiceOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: Colors.gray,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  voiceOptionSelected: {
+    borderColor: Colors.orange,
+    backgroundColor: 'rgba(255, 107, 53, 0.1)',
+  },
+  voiceOptionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 12,
+  },
+  voiceOptionText: {
+    flex: 1,
+  },
+  voiceOptionName: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: Colors.white,
+    marginBottom: 4,
+  },
+  voiceOptionDesc: {
+    fontSize: 12,
+    color: Colors.grayLight,
+  },
+  voiceOptionActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  previewButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.grayDark,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

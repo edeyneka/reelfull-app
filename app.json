@@ -15,10 +15,9 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "app.rork.reelfull-app",
+      "bundleIdentifier": "app.rork.reelfull",
       "infoPlist": {
         "UIBackgroundModes": [
-          "audio",
           "audio"
         ],
         "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to access your microphone",
@@ -33,18 +32,8 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "app.rork.reelfullapp",
+      "package": "app.rork.reelfull",
       "permissions": [
-        "android.permission.RECORD_AUDIO",
-        "android.permission.CAMERA",
-        "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.INTERNET",
-        "android.permission.READ_MEDIA_IMAGES",
-        "android.permission.READ_MEDIA_VIDEO",
-        "android.permission.READ_MEDIA_AUDIO",
-        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
-        "android.permission.ACCESS_MEDIA_LOCATION",
         "android.permission.RECORD_AUDIO",
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
@@ -65,6 +54,12 @@
         "expo-router",
         {
           "origin": "https://rork.com/"
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#FF6B35"
         }
       ],
       [
@@ -93,14 +88,8 @@
         "origin": "https://rork.com/"
       },
       "eas": {
-        "projectId": "25134ce1-0433-4599-847f-4808c38666e9"
+        "projectId": "b3b0f220-6056-4d93-8503-cb9798c67f3f"
       }
-    },
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
-    "updates": {
-      "url": "https://u.expo.dev/25134ce1-0433-4599-847f-4808c38666e9"
     }
   }
 }

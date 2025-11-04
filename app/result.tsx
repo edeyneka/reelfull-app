@@ -1,9 +1,9 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Check, Download } from 'lucide-react-native';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Alert,
-  Image,
+  ActivityIndicator,
   Platform,
   StyleSheet,
   Text,
@@ -16,18 +16,24 @@ import { VideoView, useVideoPlayer } from 'expo-video';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
 
 export default function ResultScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ prompt: string; videoData: string }>();
+  const params = useLocalSearchParams<{ projectId: string }>();
+  const projectId = params.projectId as any;
   const { addVideo } = useApp();
   const [isSaved, setIsSaved] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
-  console.log('Result screen params:', params);
+  // Get project data
+  const project = useQuery(api.tasks.getProject, projectId ? { id: projectId } : "skip");
+
+  console.log('Result screen project:', project);
 
   // Swipe down gesture to go to feed
   const panGesture = Gesture.Pan()
@@ -38,16 +44,12 @@ export default function ResultScreen() {
       }
     });
 
-  const mediaUris = useMemo(() => {
-    return params.videoData ? JSON.parse(params.videoData) : [];
-  }, [params.videoData]);
-  
-  const firstMedia = useMemo(() => mediaUris[0], [mediaUris]);
-  
+  const videoUrl = project?.renderedVideoUrl;
+
   const videoPlayer = useVideoPlayer(
-    firstMedia?.type === 'video' && firstMedia?.uri ? firstMedia.uri : null,
+    videoUrl || null,
     (player) => {
-      if (player && firstMedia?.type === 'video') {
+      if (player && videoUrl) {
         player.loop = true;
         player.muted = false;
         player.play();
@@ -57,14 +59,15 @@ export default function ResultScreen() {
 
   useEffect(() => {
     const handleSaveToFeed = async () => {
-      if (!params.videoData || !params.prompt || isSaved) return;
+      if (!project || !videoUrl || isSaved) return;
 
       const video = {
-        id: Date.now().toString(),
-        uri: firstMedia?.uri || '',
-        prompt: params.prompt,
-        createdAt: Date.now(),
-        mediaUris: mediaUris,
+        id: project._id,
+        uri: videoUrl,
+        prompt: project.prompt,
+        createdAt: project.createdAt,
+        status: 'ready' as const,
+        projectId: project._id,
       };
 
       await addVideo(video);
@@ -72,10 +75,10 @@ export default function ResultScreen() {
     };
 
     handleSaveToFeed();
-  }, [params.videoData, params.prompt, isSaved, addVideo, firstMedia, mediaUris]);
+  }, [project, videoUrl, isSaved, addVideo]);
 
   const handleDownload = async () => {
-    if (!firstMedia?.uri || isDownloading) return;
+    if (!videoUrl || isDownloading) return;
 
     try {
       setIsDownloading(true);
@@ -91,21 +94,22 @@ export default function ResultScreen() {
 
       if (Platform.OS === 'web') {
         const link = document.createElement('a');
-        link.href = firstMedia.uri;
-        link.download = `reelfull_${Date.now()}.${firstMedia.type === 'video' ? 'mp4' : 'jpg'}`;
+        link.href = videoUrl;
+        link.download = `reelfull_${Date.now()}.mp4`;
         link.click();
       } else {
-        const ext = firstMedia.type === 'video' ? 'mp4' : 'jpg';
-        const fileUri = `${FileSystem.documentDirectory}reelfull_${Date.now()}.${ext}`;
-        await FileSystem.copyAsync({
-          from: firstMedia.uri,
-          to: fileUri,
-        });
-
-        const asset = await MediaLibrary.createAssetAsync(fileUri);
-        await MediaLibrary.createAlbumAsync('Reelful', asset, false);
-
-        Alert.alert('Success', `${firstMedia.type === 'video' ? 'Video' : 'Image'} saved to your gallery!`);
+        const fileUri = `${FileSystem.documentDirectory}reelfull_${Date.now()}.mp4`;
+        
+        // Download from URL
+        const downloadResult = await FileSystem.downloadAsync(videoUrl, fileUri);
+        
+        if (downloadResult.status === 200) {
+          const asset = await MediaLibrary.createAssetAsync(downloadResult.uri);
+          await MediaLibrary.createAlbumAsync('Reelful', asset, false);
+          Alert.alert('Success', 'Video saved to your gallery!');
+        } else {
+          throw new Error('Download failed');
+        }
       }
     } catch (error) {
       console.error('Download error:', error);
@@ -119,11 +123,33 @@ export default function ResultScreen() {
     router.replace('/feed');
   };
 
-  if (!firstMedia?.uri) {
-    console.error('Invalid media in result screen');
+  if (!projectId) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={{ color: Colors.white, fontSize: 18 }}>Error: No media available</Text>
+        <Text style={{ color: Colors.white, fontSize: 18 }}>Error: No project ID</Text>
+        <TouchableOpacity
+          style={{ marginTop: 20, padding: 16, backgroundColor: Colors.orange, borderRadius: 12 }}
+          onPress={() => router.replace('/feed')}
+        >
+          <Text style={{ color: Colors.white, fontWeight: '700' as const }}>Go to Feed</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (!project) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={Colors.orange} />
+        <Text style={{ color: Colors.white, fontSize: 18, marginTop: 16 }}>Loading...</Text>
+      </View>
+    );
+  }
+
+  if (!videoUrl) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={{ color: Colors.white, fontSize: 18 }}>Video not ready yet</Text>
         <TouchableOpacity
           style={{ marginTop: 20, padding: 16, backgroundColor: Colors.orange, borderRadius: 12 }}
           onPress={() => router.replace('/feed')}
@@ -137,19 +163,12 @@ export default function ResultScreen() {
   return (
     <GestureDetector gesture={panGesture}>
       <View style={styles.container}>
-        {firstMedia.type === 'video' ? (
-          <VideoView
-            player={videoPlayer}
-            style={styles.video}
-            contentFit="cover"
-            nativeControls={false}
-          />
-        ) : (
-          <Image
-            source={{ uri: firstMedia.uri }}
-            style={styles.video}
-          />
-        )}
+        <VideoView
+          player={videoPlayer}
+          style={styles.video}
+          contentFit="cover"
+          nativeControls={false}
+        />
 
         <LinearGradient
           colors={['transparent', 'rgba(0,0,0,0.8)', Colors.black]}
