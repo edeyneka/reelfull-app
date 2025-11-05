@@ -19,6 +19,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import * as MediaLibrary from 'expo-media-library';
 import * as FileSystem from 'expo-file-system/legacy';
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
 import { Video as VideoType } from '@/types';
@@ -136,10 +138,24 @@ function VideoThumbnail({ item, onPress }: { item: VideoType; onPress: () => voi
 export default function FeedScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { videos, deleteVideo } = useApp();
+  const { videos, deleteVideo, userId, syncedFromBackend, syncVideosFromBackend } = useApp();
   const [selectedVideo, setSelectedVideo] = useState<VideoType | null>(null);
   const [isPromptExpanded, setIsPromptExpanded] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  
+  // Fetch user's projects from backend
+  const backendProjects = useQuery(
+    api.tasks.getProjects,
+    userId ? { userId } : "skip"
+  );
+
+  // Sync videos from backend when projects are loaded
+  useEffect(() => {
+    if (backendProjects && !syncedFromBackend && userId) {
+      console.log('[feed] Backend projects loaded, syncing...');
+      syncVideosFromBackend(backendProjects);
+    }
+  }, [backendProjects, syncedFromBackend, userId, syncVideosFromBackend]);
   
   // Enable video polling for pending videos
   useVideoPolling();

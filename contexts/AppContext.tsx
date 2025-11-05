@@ -12,6 +12,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
   const [userId, setUserId] = useState<ConvexId<"users"> | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [syncedFromBackend, setSyncedFromBackend] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -59,6 +60,79 @@ export const [AppProvider, useApp] = createContextHook(() => {
       setIsLoading(false);
     }
   };
+
+  const syncVideosFromBackend = useCallback(async (backendProjects: any[]) => {
+    try {
+      console.log('[sync] Syncing videos from backend, count:', backendProjects.length);
+      
+      // Convert backend projects to Video format
+      const backendVideos: Video[] = backendProjects
+        .filter(project => project.status === 'completed' && project.renderedVideoUrl)
+        .map(project => ({
+          id: project._id,
+          uri: project.renderedVideoUrl || '',
+          prompt: project.prompt,
+          createdAt: project.createdAt,
+          status: 'ready' as const,
+          projectId: project._id,
+        }));
+
+      // Add pending/processing videos
+      const processingVideos: Video[] = backendProjects
+        .filter(project => 
+          (project.status === 'processing' || project.status === 'rendering') && 
+          !project.renderedVideoUrl
+        )
+        .map(project => ({
+          id: project._id,
+          uri: '',
+          prompt: project.prompt,
+          createdAt: project.createdAt,
+          status: project.status === 'rendering' ? 'processing' as const : 'pending' as const,
+          projectId: project._id,
+        }));
+
+      // Add failed videos
+      const failedVideos: Video[] = backendProjects
+        .filter(project => project.status === 'failed')
+        .map(project => ({
+          id: project._id,
+          uri: '',
+          prompt: project.prompt,
+          createdAt: project.createdAt,
+          status: 'failed' as const,
+          projectId: project._id,
+          error: project.error || project.renderError || 'Generation failed',
+        }));
+
+      const backendVideoList = [...backendVideos, ...processingVideos, ...failedVideos];
+      
+      // Merge with existing local videos (in case there are any new ones not in backend yet)
+      setVideos(currentVideos => {
+        // Create a map of backend videos by ID for quick lookup
+        const backendVideoMap = new Map(backendVideoList.map(v => [v.id, v]));
+        
+        // Keep local videos that aren't in the backend yet
+        const localOnlyVideos = currentVideos.filter(v => !backendVideoMap.has(v.id));
+        
+        // Merge: backend videos take precedence, then add local-only videos
+        const mergedVideos = [...backendVideoList, ...localOnlyVideos];
+        
+        console.log('[sync] Merged videos - Backend:', backendVideoList.length, 'Local only:', localOnlyVideos.length, 'Total:', mergedVideos.length);
+        
+        // Save to AsyncStorage
+        AsyncStorage.setItem(VIDEOS_KEY, JSON.stringify(mergedVideos)).catch((err) => {
+          console.error('[sync] Error saving merged videos:', err);
+        });
+        
+        return mergedVideos;
+      });
+      
+      setSyncedFromBackend(true);
+    } catch (error) {
+      console.error('[sync] Error syncing videos from backend:', error);
+    }
+  }, []);
 
   const saveUser = useCallback(async (profile: UserProfile) => {
     try {
@@ -155,6 +229,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
       setUser(null);
       setUserId(null);
       setVideos([]);
+      setSyncedFromBackend(false);
     } catch (error) {
       console.error('Error clearing data:', error);
     }
@@ -165,11 +240,13 @@ export const [AppProvider, useApp] = createContextHook(() => {
     userId,
     videos,
     isLoading,
+    syncedFromBackend,
     saveUser,
     saveUserId,
     addVideo,
     updateVideoStatus,
     deleteVideo,
     clearData,
-  }), [user, userId, videos, isLoading, saveUser, saveUserId, addVideo, updateVideoStatus, deleteVideo, clearData]);
+    syncVideosFromBackend,
+  }), [user, userId, videos, isLoading, syncedFromBackend, saveUser, saveUserId, addVideo, updateVideoStatus, deleteVideo, clearData, syncVideosFromBackend]);
 });
