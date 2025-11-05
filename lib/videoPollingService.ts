@@ -49,33 +49,42 @@ export function useVideoPolling() {
           
           if (!project) continue;
 
-          const uniqueKey = `${video.id}-${project.status}`;
-          
           // Check if all media assets are ready but video not rendered yet
           const hasAllMediaAssets = !!(
             project.audioUrl && 
             project.musicUrl
           );
           
-          // Update status based on project state
-          if (project.status === 'completed' && project.renderedVideoUrl) {
-            // Video is ready! But validate the URL first
-            if (!checkedVideos.current.has(uniqueKey)) {
+          // ONLY mark as failed if backend explicitly sets status to 'failed'
+          // Otherwise, keep showing processing/generating state
+          
+          // Priority 1: Check if backend explicitly marked as failed
+          if (project.status === 'failed') {
+            if (video.status !== 'failed') {
+              console.log('[VideoPolling] ❌ Backend marked as FAILED:', video.id, 'Error:', project.error);
+              updateVideoStatus(video.id, 'failed', undefined, project.error);
+              
+              // Send failure notification
+              sendVideoFailedNotification(project.prompt || 'Your video');
+            }
+          }
+          // Priority 2: Check if video is completely ready (has renderedVideoUrl)
+          else if (project.status === 'completed' && project.renderedVideoUrl) {
+            // Video is ready! Update if not already marked as ready
+            if (video.status !== 'ready') {
               // Validate that we have a non-empty video URL
               if (project.renderedVideoUrl && project.renderedVideoUrl.trim().length > 0) {
-                console.log('[VideoPolling] Video ready:', video.id);
+                console.log('[VideoPolling] ✅ Video READY:', video.id);
                 console.log('[VideoPolling] Video URL:', project.renderedVideoUrl);
                 updateVideoStatus(video.id, 'ready', project.renderedVideoUrl);
-                checkedVideos.current.add(uniqueKey);
                 
                 // Send notification
                 sendVideoReadyNotification(project.prompt || 'Your video');
-              } else {
-                console.error('[VideoPolling] Video marked as ready but URL is empty:', video.id);
-                updateVideoStatus(video.id, 'failed', undefined, 'Video URL is empty');
               }
             }
-          } else if (
+          }
+          // Priority 3: Trigger rendering if media assets are ready but rendering not started
+          else if (
             project.status === 'completed' && 
             hasAllMediaAssets &&
             !project.renderedVideoUrl && 
@@ -90,29 +99,28 @@ export function useVideoPolling() {
             
             renderTriggered.current.add(video.id);
             
-            // Update to processing status
-            updateVideoStatus(video.id, 'processing');
-            
-            // Trigger render
-            renderVideo({ projectId: video.projectId as any }).catch((error) => {
-              console.error('[VideoPolling] Render error:', error);
-              renderTriggered.current.delete(video.id); // Allow retry
-              updateVideoStatus(video.id, 'failed', undefined, `Render failed: ${error}`);
-            });
-          } else if (project.status === 'failed') {
-            // Video generation failed
-            if (!checkedVideos.current.has(uniqueKey)) {
-              console.log('[VideoPolling] Video failed:', video.id);
-              updateVideoStatus(video.id, 'failed', undefined, project.error);
-              checkedVideos.current.add(uniqueKey);
-              
-              // Send failure notification
-              sendVideoFailedNotification(project.prompt || 'Your video');
-            }
-          } else if (project.status === 'processing' || project.status === 'rendering') {
-            // Update to processing if it was pending
+            // Keep as processing - don't mark as failed even if action throws
             if (video.status === 'pending') {
-              console.log('[VideoPolling] Video processing:', video.id);
+              updateVideoStatus(video.id, 'processing');
+            }
+            
+            // Trigger render - any errors are non-critical since rendering continues via scheduled steps
+            renderVideo({ projectId: video.projectId as any }).catch((error) => {
+              console.warn('[VideoPolling] Render trigger returned error (non-critical, pipeline continues):', error);
+              // Don't mark as failed - rendering continues in background via scheduled steps
+              // We'll only mark as failed if backend sets project.status to 'failed'
+            });
+          }
+          // Priority 4: Show processing for any intermediate states OR if completed but still rendering
+          else if (
+            project.status === 'processing' || 
+            project.status === 'rendering' || 
+            (project.status === 'completed' && !project.renderedVideoUrl)
+          ) {
+            // Keep showing processing state for all intermediate states
+            // This also recovers videos from 'failed' status if backend is actually still working
+            if (video.status === 'pending' || video.status === 'failed') {
+              console.log('[VideoPolling] ⏳ Video generating (recovering from incorrect failed status):', video.id, 'Backend status:', project.status);
               updateVideoStatus(video.id, 'processing');
             }
           }

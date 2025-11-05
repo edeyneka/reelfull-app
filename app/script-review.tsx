@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Edit2, Check, X, RotateCcw, Play } from 'lucide-react-native';
+import { ArrowLeft, Edit2, Check, X, RotateCcw, Play, TestTube } from 'lucide-react-native';
 import { useState, useEffect } from 'react';
 import {
   ScrollView,
@@ -17,12 +17,15 @@ import { api } from "@/convex/_generated/api";
 import { LinearGradient } from 'expo-linear-gradient';
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
+import { Asset } from 'expo-asset';
+import { uploadFileToConvex } from '@/lib/api-helpers';
 
 export default function ScriptReviewScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ projectId: string }>();
+  const params = useLocalSearchParams<{ projectId: string; testRun?: string }>();
   const projectId = params.projectId as any;
+  const isTestRun = params.testRun === 'true';
   const { addVideo } = useApp();
 
   // Convex hooks
@@ -31,6 +34,8 @@ export default function ScriptReviewScreen() {
   const regenerateScript = useAction(api.tasks.regenerateScript);
   const markProjectSubmitted = useMutation(api.tasks.markProjectSubmitted);
   const generateMediaAssets = useAction(api.tasks.generateMediaAssets);
+  const generateUploadUrl = useMutation(api.tasks.generateUploadUrl);
+  const setupTestRunProject = useAction(api.tasks.setupTestRunProject);
 
   // Local state
   const [isEditing, setIsEditing] = useState(false);
@@ -120,12 +125,61 @@ export default function ScriptReviewScreen() {
         projectId: projectId,
       });
 
-      // Start media generation (Phase 2: voice, music, animations) - async in background
-      console.log('[script-review] Starting media asset generation...');
-      generateMediaAssets({ projectId }).catch((error) => {
-        console.error('[script-review] Media generation error:', error);
-        // Don't block navigation - the error will be reflected in project status
-      });
+      if (isTestRun) {
+        // Test run mode: Upload sample voice, music, and SRT, skip AI generation
+        console.log('[script-review] Test run mode: Loading sample assets...');
+        
+        // Load and upload sample voice
+        const sampleVoiceAsset = Asset.fromModule(require('@/assets/media/sample_voice.mp3'));
+        await sampleVoiceAsset.downloadAsync();
+        console.log('[script-review] Uploading sample voice...');
+        const audioStorageId = await uploadFileToConvex(
+          generateUploadUrl,
+          sampleVoiceAsset.localUri || sampleVoiceAsset.uri,
+          'audio/mp3'
+        );
+        console.log('[script-review] Sample voice uploaded, storage ID:', audioStorageId);
+
+        // Load and upload sample music
+        const sampleMusicAsset = Asset.fromModule(require('@/assets/media/sample_music.mp3'));
+        await sampleMusicAsset.downloadAsync();
+        console.log('[script-review] Uploading sample music...');
+        const musicStorageId = await uploadFileToConvex(
+          generateUploadUrl,
+          sampleMusicAsset.localUri || sampleMusicAsset.uri,
+          'audio/mp3'
+        );
+        console.log('[script-review] Sample music uploaded, storage ID:', musicStorageId);
+
+        // Load sample SRT
+        const sampleSrtAsset = Asset.fromModule(require('@/assets/media/sample_srt.srt'));
+        await sampleSrtAsset.downloadAsync();
+        const srtResponse = await fetch(sampleSrtAsset.localUri || sampleSrtAsset.uri);
+        const srtContent = await srtResponse.text();
+        console.log('[script-review] Sample SRT loaded, length:', srtContent.length);
+
+        // Setup test run project with sample assets
+        console.log('[script-review] Setting up test run project...');
+        const result = await setupTestRunProject({
+          projectId,
+          audioStorageId,
+          srtContent,
+          musicStorageId,
+        });
+
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to setup test run');
+        }
+
+        console.log('[script-review] Test run setup complete! Rendering will start automatically.');
+      } else {
+        // Normal mode: Start media generation (Phase 2: voice, music, animations) - async in background
+        console.log('[script-review] Starting media asset generation...');
+        generateMediaAssets({ projectId }).catch((error) => {
+          console.error('[script-review] Media generation error:', error);
+          // Don't block navigation - the error will be reflected in project status
+        });
+      }
 
       // Navigate to feed immediately
       console.log('[script-review] Navigating to feed...');
@@ -195,6 +249,13 @@ export default function ScriptReviewScreen() {
         <Text style={styles.headerTitle}>Review Script</Text>
         <View style={styles.placeholder} />
       </View>
+
+      {isTestRun && (
+        <View style={styles.testModeBadge}>
+          <TestTube size={14} color={Colors.orange} />
+          <Text style={styles.testModeText}>Test Run Mode</Text>
+        </View>
+      )}
 
       <ScrollView
         contentContainerStyle={styles.content}
@@ -487,6 +548,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700' as const,
     color: Colors.white,
+  },
+  testModeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255, 107, 53, 0.15)',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    marginHorizontal: 24,
+    marginTop: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 107, 53, 0.3)',
+  },
+  testModeText: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    color: Colors.orange,
   },
 });
 

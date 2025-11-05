@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Image as LucideImage, Upload, X } from 'lucide-react-native';
+import { Image as LucideImage, Upload, X, TestTube } from 'lucide-react-native';
 import { useState, useRef } from 'react';
 import {
   Animated,
@@ -14,6 +14,7 @@ import {
   View,
   PanResponder,
   ActivityIndicator,
+  Switch,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -24,6 +25,7 @@ import { api } from "@/convex/_generated/api";
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
 import { uploadMediaFiles } from '@/lib/api-helpers';
+import { Asset } from 'expo-asset';
 
 function VideoThumbnail({ uri, style }: { uri: string; style: any }) {
   const player = useVideoPlayer(uri, (player) => {
@@ -48,11 +50,13 @@ export default function ComposerScreen() {
   const [prompt, setPrompt] = useState('');
   const [mediaUris, setMediaUris] = useState<{ uri: string; type: 'video' | 'image' }[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [isTestRun, setIsTestRun] = useState(false);
   
   // Convex hooks
   const generateUploadUrl = useMutation(api.tasks.generateUploadUrl);
   const createProject = useMutation(api.tasks.createProject);
   const generateScriptOnly = useAction(api.tasks.generateScriptOnly);
+  const updateProjectScript = useMutation(api.tasks.updateProjectScript);
   
   const pan = useRef(new Animated.Value(0)).current;
   
@@ -106,6 +110,29 @@ export default function ComposerScreen() {
     setMediaUris(prev => prev.filter((_, i) => i !== index));
   };
 
+  const loadSampleMedia = async () => {
+    try {
+      // Load sample videos from assets
+      const sampleAssets = [
+        require('@/assets/media/sample_video_1.MOV'),
+        require('@/assets/media/sample_video_2.MOV'),
+        require('@/assets/media/sample_video_3.MOV'),
+      ];
+
+      const assets = await Asset.loadAsync(sampleAssets);
+      const sampleMedia = assets.map(asset => ({
+        uri: asset.localUri || asset.uri,
+        type: 'video' as const,
+      }));
+
+      setMediaUris(sampleMedia);
+      console.log('Loaded sample media:', sampleMedia.length, 'files');
+    } catch (error) {
+      console.error('Failed to load sample media:', error);
+      alert('Failed to load sample media');
+    }
+  };
+
   const handleSubmit = async () => {
     if (!prompt.trim() || mediaUris.length === 0 || !userId) {
       return;
@@ -115,6 +142,7 @@ export default function ComposerScreen() {
 
     try {
       console.log('=== COMPOSER: Starting upload ===');
+      console.log('Test Run Mode:', isTestRun);
       console.log('Prompt:', prompt.trim());
       console.log('Media count:', mediaUris.length);
 
@@ -137,15 +165,40 @@ export default function ComposerScreen() {
 
       console.log('Project created:', projectId);
 
-      // Start script generation
-      console.log('Starting script generation...');
-      await generateScriptOnly({ projectId });
+      if (isTestRun) {
+        // Test run mode: Load sample script from assets
+        console.log('Test run mode: Loading sample script...');
+        const sampleScriptAsset = Asset.fromModule(require('@/assets/media/sample_script.txt'));
+        await sampleScriptAsset.downloadAsync();
+        const scriptResponse = await fetch(sampleScriptAsset.localUri || sampleScriptAsset.uri);
+        const sampleScript = await scriptResponse.text();
+        
+        // Update project with sample script directly
+        console.log('Setting sample script, length:', sampleScript.length);
+        await updateProjectScript({
+          id: projectId,
+          script: sampleScript.trim(),
+        });
+        
+        // Navigate to script review with test mode flag
+        router.replace({
+          pathname: '/script-review',
+          params: { 
+            projectId: projectId.toString(),
+            testRun: 'true',
+          },
+        });
+      } else {
+        // Normal mode: Start script generation
+        console.log('Starting script generation...');
+        await generateScriptOnly({ projectId });
 
-      // Navigate to script review
-      router.replace({
-        pathname: '/script-review',
-        params: { projectId: projectId.toString() },
-      });
+        // Navigate to script review
+        router.replace({
+          pathname: '/script-review',
+          params: { projectId: projectId.toString() },
+        });
+      }
     } catch (error) {
       console.error('Error in composer:', error);
       alert(`Failed to create project: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -219,6 +272,34 @@ export default function ComposerScreen() {
                 </Text>
               </View>
 
+              <View style={styles.testRunContainer}>
+                <View style={styles.testRunHeader}>
+                  <TestTube size={16} color={Colors.orange} />
+                  <Text style={styles.testRunLabel}>Test Run Mode</Text>
+                </View>
+                <Switch
+                  value={isTestRun}
+                  onValueChange={(value) => {
+                    setIsTestRun(value);
+                    if (value) {
+                      loadSampleMedia();
+                    } else {
+                      setMediaUris([]);
+                    }
+                  }}
+                  trackColor={{ false: Colors.gray, true: Colors.orangeLight }}
+                  thumbColor={isTestRun ? Colors.orange : Colors.grayLight}
+                  ios_backgroundColor={Colors.gray}
+                />
+              </View>
+              {isTestRun && (
+                <View style={styles.testRunInfo}>
+                  <Text style={styles.testRunInfoText}>
+                    ℹ️ Sample media, script, voice, and SRT will be used. Script generation and voice synthesis will be skipped.
+                  </Text>
+                </View>
+              )}
+
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Upload Media</Text>
                 {mediaUris.length > 0 && (
@@ -252,16 +333,18 @@ export default function ComposerScreen() {
                     ))}
                   </ScrollView>
                 )}
-                <TouchableOpacity
-                  style={styles.uploadButton}
-                  onPress={pickMedia}
-                  activeOpacity={0.7}
-                >
-                  <Upload size={28} color={Colors.orange} strokeWidth={2} />
-                  <Text style={styles.uploadText}>
-                    {mediaUris.length > 0 ? 'Add more' : 'Tap to upload photos/videos'}
-                  </Text>
-                </TouchableOpacity>
+                {!isTestRun && (
+                  <TouchableOpacity
+                    style={styles.uploadButton}
+                    onPress={pickMedia}
+                    activeOpacity={0.7}
+                  >
+                    <Upload size={28} color={Colors.orange} strokeWidth={2} />
+                    <Text style={styles.uploadText}>
+                      {mediaUris.length > 0 ? 'Add more' : 'Tap to upload photos/videos'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
 
               <TouchableOpacity
@@ -420,6 +503,40 @@ const styles = StyleSheet.create({
     color: Colors.grayLight,
     lineHeight: 14,
     fontStyle: 'italic' as const,
+  },
+  testRunContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: Colors.gray,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: Colors.orange + '40',
+  },
+  testRunHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  testRunLabel: {
+    fontSize: 15,
+    fontWeight: '600' as const,
+    color: Colors.white,
+  },
+  testRunInfo: {
+    backgroundColor: 'rgba(255, 107, 53, 0.15)',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 107, 53, 0.3)',
+  },
+  testRunInfoText: {
+    fontSize: 12,
+    color: Colors.grayLight,
+    lineHeight: 18,
   },
   button: {
     borderRadius: 12,
