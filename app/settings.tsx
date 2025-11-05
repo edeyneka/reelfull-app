@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { ArrowLeft, User, Palette, Edit2, Check, X, Mic, Volume2, Headphones } from 'lucide-react-native';
+import { ArrowLeft, User, Palette, Edit2, Check, X, Mic, Volume2, Headphones, LogOut } from 'lucide-react-native';
 import { useState, useEffect, useCallback } from 'react';
 import {
   ScrollView,
@@ -26,7 +26,7 @@ const STYLE_OPTIONS: StylePreference[] = ['Playful', 'Professional', 'Dreamy'];
 export default function SettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { userId, saveUser } = useApp();
+  const { userId, saveUser, clearData } = useApp();
   
   // Convex queries
   const user = useQuery(api.users.getCurrentUser, userId ? { userId } : "skip");
@@ -267,6 +267,32 @@ export default function SettingsScreen() {
     }
     
     return 'Custom Voice';
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await clearData();
+              router.replace('/auth');
+            } catch (error) {
+              console.error('Logout error:', error);
+              Alert.alert('Error', 'Failed to logout. Please try again.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   if (!userId) {
@@ -548,6 +574,24 @@ export default function SettingsScreen() {
               </View>
             )}
           </View>
+        </View>
+
+        {/* Account Actions Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Account Actions</Text>
+          
+          <TouchableOpacity
+            style={styles.logoutButton}
+            onPress={handleLogout}
+            activeOpacity={0.7}
+          >
+            <View style={styles.logoutContent}>
+              <View style={styles.logoutIconContainer}>
+                <LogOut size={20} color={Colors.white} strokeWidth={2} />
+              </View>
+              <Text style={styles.logoutText}>Logout</Text>
+            </View>
+          </TouchableOpacity>
         </View>
 
         {/* Voice Selection Modal */}
@@ -869,5 +913,31 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.grayDark,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  logoutButton: {
+    backgroundColor: 'rgba(255, 59, 48, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 59, 48, 0.3)',
+  },
+  logoutContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  logoutIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 59, 48, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logoutText: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: Colors.white,
   },
 });
