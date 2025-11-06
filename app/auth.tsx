@@ -18,6 +18,8 @@ import { useAction, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
+import CountrySelector from '@/components/CountrySelector';
+import { Country, DEFAULT_COUNTRY } from '@/constants/countries';
 
 export default function AuthScreen() {
   const router = useRouter();
@@ -34,29 +36,43 @@ export default function AuthScreen() {
   
   // State
   const [step, setStep] = useState<'phone' | 'code'>('phone');
+  const [selectedCountry, setSelectedCountry] = useState<Country>(DEFAULT_COUNTRY);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [code, setCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const formatPhoneNumber = (value: string) => {
+  const formatPhoneNumber = (value: string, country: Country) => {
     // Remove all non-digit characters
     const digits = value.replace(/\D/g, '');
     
-    // Format as (XXX) XXX-XXXX
+    // For US/Canada, format as (XXX) XXX-XXXX
+    if (country.code === 'US' || country.code === 'CA') {
+      if (digits.length <= 3) {
+        return digits;
+      } else if (digits.length <= 6) {
+        return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+      } else {
+        return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+      }
+    }
+    
+    // For other countries, just return digits with spaces every 3-4 digits
     if (digits.length <= 3) {
       return digits;
     } else if (digits.length <= 6) {
-      return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+      return `${digits.slice(0, 3)} ${digits.slice(3)}`;
     } else {
-      return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+      return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`;
     }
   };
 
   const handleSendCode = async () => {
     // Validate phone number
     const digits = phoneNumber.replace(/\D/g, '');
-    if (digits.length !== 10) {
-      Alert.alert('Invalid Phone', 'Please enter a valid 10-digit phone number');
+    const expectedLength = selectedCountry.phoneLength || 10;
+    
+    if (digits.length < expectedLength - 1 || digits.length > expectedLength + 1) {
+      Alert.alert('Invalid Phone', `Please enter a valid phone number for ${selectedCountry.name}`);
       return;
     }
 
@@ -64,7 +80,7 @@ export default function AuthScreen() {
 
     try {
       // Format as E.164 for backend
-      const formattedPhone = `+1${digits}`;
+      const formattedPhone = `${selectedCountry.dialCode}${digits}`;
       
       console.log('Sending OTP to:', formattedPhone);
       
@@ -109,7 +125,7 @@ export default function AuthScreen() {
 
     try {
       const digits = phoneNumber.replace(/\D/g, '');
-      const formattedPhone = `+1${digits}`;
+      const formattedPhone = `${selectedCountry.dialCode}${digits}`;
       
       console.log('Verifying OTP...');
       console.log('Using Twilio Verify:', useTwilioVerify);
@@ -156,7 +172,12 @@ export default function AuthScreen() {
     setUseTwilioVerify(false); // Reset when changing phone
   };
 
-  const isPhoneValid = phoneNumber.replace(/\D/g, '').length === 10;
+  const isPhoneValid = () => {
+    const digits = phoneNumber.replace(/\D/g, '');
+    const expectedLength = selectedCountry.phoneLength || 10;
+    return digits.length >= expectedLength - 1 && digits.length <= expectedLength + 1;
+  };
+  
   const isCodeValid = /^\d{6}$/.test(code);
 
   return (
@@ -185,7 +206,7 @@ export default function AuthScreen() {
               <Text style={styles.subtitle}>
                 {step === 'phone'
                   ? 'Enter your phone number to continue'
-                  : `We sent a code to ${formatPhoneNumber(phoneNumber)}`}
+                  : `We sent a code to ${selectedCountry.dialCode} ${formatPhoneNumber(phoneNumber, selectedCountry)}`}
               </Text>
             </View>
 
@@ -195,29 +216,35 @@ export default function AuthScreen() {
                   <View style={styles.inputGroup}>
                     <Text style={styles.label}>Phone Number</Text>
                     <View style={styles.phoneInputContainer}>
-                      <Text style={styles.countryCode}>+1</Text>
+                      <CountrySelector
+                        selectedCountry={selectedCountry}
+                        onSelectCountry={setSelectedCountry}
+                      />
+                      <View style={styles.divider} />
                       <TextInput
                         style={styles.phoneInput}
-                        placeholder="(555) 123-4567"
+                        placeholder={selectedCountry.code === 'US' || selectedCountry.code === 'CA' 
+                          ? '(555) 123-4567' 
+                          : 'Phone number'}
                         placeholderTextColor={Colors.grayLight}
                         value={phoneNumber}
-                        onChangeText={(text) => setPhoneNumber(formatPhoneNumber(text))}
+                        onChangeText={(text) => setPhoneNumber(formatPhoneNumber(text, selectedCountry))}
                         keyboardType="phone-pad"
-                        maxLength={14}
+                        maxLength={20}
                         autoFocus
                       />
                     </View>
                   </View>
 
                   <TouchableOpacity
-                    style={[styles.button, !isPhoneValid && styles.buttonDisabled]}
+                    style={[styles.button, !isPhoneValid() && styles.buttonDisabled]}
                     onPress={handleSendCode}
-                    disabled={!isPhoneValid || isLoading}
+                    disabled={!isPhoneValid() || isLoading}
                     activeOpacity={0.8}
                   >
                     <LinearGradient
                       colors={
-                        isPhoneValid && !isLoading
+                        isPhoneValid() && !isLoading
                           ? [Colors.orange, Colors.orangeLight]
                           : [Colors.gray, Colors.grayLight]
                       }
@@ -362,11 +389,11 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'transparent',
   },
-  countryCode: {
-    fontSize: 18,
-    fontWeight: '600' as const,
-    color: Colors.white,
-    paddingLeft: 16,
+  divider: {
+    width: 1,
+    height: 24,
+    backgroundColor: Colors.grayLight,
+    opacity: 0.3,
   },
   phoneInput: {
     flex: 1,
