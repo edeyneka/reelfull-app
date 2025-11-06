@@ -19,7 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import * as MediaLibrary from 'expo-media-library';
 import * as FileSystem from 'expo-file-system/legacy';
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
@@ -148,6 +148,9 @@ export default function FeedScreen() {
     api.tasks.getProjects,
     userId ? { userId } : "skip"
   );
+  
+  // Convex mutation for deleting projects
+  const deleteProjectMutation = useMutation(api.tasks.deleteProject);
 
   // Sync videos from backend when projects are loaded
   useEffect(() => {
@@ -258,10 +261,21 @@ export default function FeedScreen() {
     </View>
   );
 
-  const handleDelete = () => {
-    if (selectedVideo) {
+  const handleDelete = async () => {
+    if (!selectedVideo) return;
+
+    try {
+      // Delete from backend database first (if it has a projectId)
+      if (selectedVideo.projectId) {
+        await deleteProjectMutation({ id: selectedVideo.projectId as any });
+      }
+      
+      // Then delete from local state
       deleteVideo(selectedVideo.id);
       closeModal();
+    } catch (error) {
+      console.error('Error deleting video:', error);
+      Alert.alert('Error', 'Failed to delete video. Please try again.');
     }
   };
 
