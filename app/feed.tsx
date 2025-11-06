@@ -30,7 +30,15 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const ITEM_SPACING = 8;
 const ITEM_WIDTH = (SCREEN_WIDTH - ITEM_SPACING * 3) / 2;
 
-function VideoThumbnail({ item, onPress }: { item: VideoType; onPress: () => void }) {
+function VideoThumbnail({ 
+  item, 
+  onPress, 
+  onDelete 
+}: { 
+  item: VideoType; 
+  onPress: () => void;
+  onDelete: () => void;
+}) {
   const spinAnim = useRef(new Animated.Value(0)).current;
 
   // Always call hooks in the same order - create player even if not used
@@ -79,6 +87,13 @@ function VideoThumbnail({ item, onPress }: { item: VideoType; onPress: () => voi
             {item.prompt}
           </Text>
         </View>
+        <TouchableOpacity
+          style={styles.thumbnailDeleteButton}
+          onPress={onDelete}
+          activeOpacity={0.7}
+        >
+          <Trash2 size={18} color={Colors.white} strokeWidth={2} />
+        </TouchableOpacity>
       </View>
     );
   }
@@ -100,6 +115,16 @@ function VideoThumbnail({ item, onPress }: { item: VideoType; onPress: () => voi
             {item.prompt}
           </Text>
         </View>
+        <TouchableOpacity
+          style={styles.thumbnailDeleteButton}
+          onPress={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          activeOpacity={0.7}
+        >
+          <Trash2 size={18} color={Colors.white} strokeWidth={2} />
+        </TouchableOpacity>
       </TouchableOpacity>
     );
   }
@@ -131,6 +156,16 @@ function VideoThumbnail({ item, onPress }: { item: VideoType; onPress: () => voi
           {item.prompt}
         </Text>
       </View>
+      <TouchableOpacity
+        style={styles.thumbnailDeleteButton}
+        onPress={(e) => {
+          e.stopPropagation();
+          onDelete();
+        }}
+        activeOpacity={0.7}
+      >
+        <Trash2 size={18} color={Colors.white} strokeWidth={2} />
+      </TouchableOpacity>
     </TouchableOpacity>
   );
 }
@@ -236,6 +271,38 @@ export default function FeedScreen() {
       }
     });
 
+  const handleDeleteFromGallery = async (video: VideoType) => {
+    Alert.alert(
+      'Delete Video',
+      'Are you sure you want to delete this video?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Delete from backend database first (if it has a projectId)
+              if (video.projectId) {
+                await deleteProjectMutation({ id: video.projectId as any });
+              }
+              
+              // Then delete from local state
+              deleteVideo(video.id);
+            } catch (error) {
+              console.error('Error deleting video:', error);
+              Alert.alert('Error', 'Failed to delete video. Please try again.');
+            }
+          },
+        },
+      ],
+      { cancelable: true }
+    );
+  };
+
   const renderVideoThumbnail = ({ item }: { item: VideoType }) => (
     <VideoThumbnail 
       item={item} 
@@ -248,7 +315,8 @@ export default function FeedScreen() {
         } else if (item.status === 'pending' || item.status === 'processing') {
           Alert.alert('Video Processing', 'Your video is still being generated. You\'ll receive a notification when it\'s ready!');
         }
-      }} 
+      }}
+      onDelete={() => handleDeleteFromGallery(item)}
     />
   );
 
@@ -504,6 +572,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.white,
     fontWeight: '600' as const,
+  },
+  thumbnailDeleteButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: Colors.white,
   },
   errorThumbnail: {
     flex: 1,
