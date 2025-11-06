@@ -519,7 +519,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.black,
   },
   header: {
-    paddingHorizontal: 24,
+    paddingLeft: 24,
+    paddingRight: ITEM_SPACING,
     paddingBottom: 16,
     backgroundColor: Colors.black,
   },
@@ -546,8 +547,6 @@ const styles = StyleSheet.create({
   settingsButton: {
     width: 44,
     height: 44,
-    borderRadius: 22,
-    backgroundColor: Colors.gray,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -643,7 +642,7 @@ const styles = StyleSheet.create({
     right: 24,
     width: 64,
     height: 64,
-    borderRadius: 32,
+    borderRadius: 16,
     backgroundColor: Colors.orange,
     justifyContent: 'center',
     alignItems: 'center',
