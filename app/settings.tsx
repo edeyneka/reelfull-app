@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { User, Palette, Check, X, Mic, Volume2, Headphones, Info, ChevronRight } from 'lucide-react-native';
+import { User, Palette, X, Mic, Volume2, Headphones, Info, ChevronRight } from 'lucide-react-native';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   ScrollView,
@@ -301,9 +301,6 @@ export default function SettingsScreen() {
         userId,
         voiceId,
       });
-
-      setIsSelectingVoice(false);
-      Alert.alert('Success', 'Voice selected successfully');
     } catch (error) {
       console.error('Select voice error:', error);
       Alert.alert('Error', 'Failed to select voice');
@@ -587,7 +584,6 @@ export default function SettingsScreen() {
                     placeholder="Enter your name"
                     placeholderTextColor={Colors.grayLight}
                     autoCapitalize="words"
-                    autoFocus
                     editable={!isLoading}
                   />
                   <TouchableOpacity
@@ -743,9 +739,6 @@ export default function SettingsScreen() {
                             <Text style={styles.voiceOptionDesc}>Custom AI voice clone</Text>
                           </View>
                         </View>
-                        {user.selectedVoiceId === user.elevenlabsVoiceId && (
-                          <Check size={20} color={Colors.orange} strokeWidth={3} />
-                        )}
                       </TouchableOpacity>
                     )}
 
@@ -769,25 +762,20 @@ export default function SettingsScreen() {
                             </Text>
                           </View>
                         </View>
-                        <View style={styles.voiceOptionActions}>
-                          {voice.previewStorageId && (
-                            <TouchableOpacity
-                              style={styles.previewButton}
-                              onPress={() => playVoicePreview(voice.previewStorageId!, voice.voiceId)}
-                              activeOpacity={0.7}
-                              disabled={playingPreviewId === voice.voiceId && !previewUrl}
-                            >
-                              {playingPreviewId === voice.voiceId && !previewUrl ? (
-                                <ActivityIndicator size="small" color={Colors.orange} />
-                              ) : (
-                                <Volume2 size={18} color={Colors.orange} strokeWidth={2} />
-                              )}
-                            </TouchableOpacity>
-                          )}
-                          {user.selectedVoiceId === voice.voiceId && (
-                            <Check size={20} color={Colors.orange} strokeWidth={3} />
-                          )}
-                        </View>
+                        {voice.previewStorageId && (
+                          <TouchableOpacity
+                            style={styles.previewButton}
+                            onPress={() => playVoicePreview(voice.previewStorageId!, voice.voiceId)}
+                            activeOpacity={0.7}
+                            disabled={playingPreviewId === voice.voiceId && !previewUrl}
+                          >
+                            {playingPreviewId === voice.voiceId && !previewUrl ? (
+                              <ActivityIndicator size="small" color={Colors.orange} />
+                            ) : (
+                              <Volume2 size={18} color={Colors.orange} strokeWidth={2} />
+                            )}
+                          </TouchableOpacity>
+                        )}
                       </TouchableOpacity>
                     ))}
                   </ScrollView>
@@ -1093,11 +1081,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: Fonts.regular,
     color: '#8e8e93',
-  },
-  voiceOptionActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
   },
   previewButton: {
     width: 36,
