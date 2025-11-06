@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Plus, Trash2, Download, Settings, Loader2, AlertCircle } from 'lucide-react-native';
+import { Plus, Trash2, Download, Settings, Loader2, AlertCircle, X } from 'lucide-react-native';
 import { useState, useRef, useEffect } from 'react';
 import {
   Dimensions,
@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import * as MediaLibrary from 'expo-media-library';
 import * as FileSystem from 'expo-file-system/legacy';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Colors from '@/constants/colors';
@@ -179,6 +180,7 @@ export default function FeedScreen() {
   const [selectedVideo, setSelectedVideo] = useState<VideoType | null>(null);
   const [isPromptExpanded, setIsPromptExpanded] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadSuccess, setDownloadSuccess] = useState(false);
   
   // Fetch user's projects from backend
   const backendProjects = useQuery(
@@ -224,6 +226,7 @@ export default function FeedScreen() {
     setSelectedVideo(null);
     translateY.setValue(0);
     opacity.setValue(1);
+    setDownloadSuccess(false);
   };
 
   // Slide down gesture to close modal
@@ -382,7 +385,7 @@ export default function FeedScreen() {
         link.href = selectedVideo.uri;
         link.download = `reelfull_${Date.now()}.mp4`;
         link.click();
-        Alert.alert('Success', 'Video download started!');
+        setDownloadSuccess(true);
       } else {
         // Mobile: download to local file first, then save to media library
         const fileUri = `${FileSystem.documentDirectory}reelfull_${Date.now()}.mp4`;
@@ -397,7 +400,7 @@ export default function FeedScreen() {
           console.log('[Download] Download complete, saving to media library...');
           const asset = await MediaLibrary.createAssetAsync(downloadResult.uri);
           await MediaLibrary.createAlbumAsync('Reelful', asset, false);
-          Alert.alert('Success', 'Video saved to your gallery!');
+          setDownloadSuccess(true);
         } else {
           throw new Error(`Download failed with status: ${downloadResult.status}`);
         }
@@ -466,45 +469,61 @@ export default function FeedScreen() {
                 },
               ]}
             >
-              <VideoView
-                player={modalPlayer}
-                style={styles.fullVideo}
-                contentFit="contain"
-                nativeControls={true}
-              />
-              <View style={[styles.modalButtons, { top: insets.top + 16 }]}>
+              <View style={[styles.modalHeader, { paddingTop: insets.top + 16 }]}>
                 <TouchableOpacity
-                  style={styles.downloadButton}
-                  onPress={handleDownload}
-                  activeOpacity={0.8}
-                  disabled={isDownloading}
+                  style={styles.closeButton}
+                  onPress={closeModal}
+                  activeOpacity={0.7}
                 >
-                  {isDownloading ? (
-                    <ActivityIndicator size="small" color={Colors.white} />
-                  ) : (
-                    <Download size={24} color={Colors.white} strokeWidth={2} />
-                  )}
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.deleteButton}
-                  onPress={handleDelete}
-                  activeOpacity={0.8}
-                >
-                  <Trash2 size={24} color={Colors.white} strokeWidth={2} />
+                  <X size={24} color={Colors.white} strokeWidth={2.5} />
                 </TouchableOpacity>
               </View>
-              <TouchableOpacity
-                style={styles.modalOverlay}
-                onPress={() => setIsPromptExpanded(!isPromptExpanded)}
-                activeOpacity={0.9}
-              >
-                <Text
-                  style={styles.modalPrompt}
-                  numberOfLines={isPromptExpanded ? undefined : 2}
-                >
-                  {selectedVideo.prompt}
-                </Text>
-              </TouchableOpacity>
+
+              <View style={styles.modalContent}>
+                <View style={styles.modalTitleSection}>
+                  <Text style={styles.modalTitle}>Ready to share!</Text>
+                </View>
+
+                <View style={styles.videoPreviewContainer}>
+                  <VideoView
+                    player={modalPlayer}
+                    style={styles.videoPreview}
+                    contentFit="cover"
+                    nativeControls={false}
+                  />
+                </View>
+
+                <View style={styles.modalActions}>
+                  <TouchableOpacity
+                    style={styles.downloadGradientButton}
+                    onPress={handleDownload}
+                    activeOpacity={0.8}
+                    disabled={isDownloading}
+                  >
+                    <LinearGradient
+                      colors={[Colors.orangeLight, Colors.orange]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.downloadGradient}
+                    >
+                      {isDownloading ? (
+                        <ActivityIndicator size="small" color={Colors.white} />
+                      ) : (
+                        <>
+                          <Download size={20} color={Colors.white} strokeWidth={2.5} />
+                          <Text style={styles.downloadButtonText}>Download</Text>
+                        </>
+                      )}
+                    </LinearGradient>
+                  </TouchableOpacity>
+
+                  {downloadSuccess && (
+                    <Text style={styles.downloadSuccessText}>
+                      This video was saved to your camera roll.
+                    </Text>
+                  )}
+                </View>
+              </View>
             </Animated.View>
           </GestureDetector>
         )}
@@ -656,50 +675,73 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.black,
   },
-  fullVideo: {
-    width: '100%',
-    height: '100%',
-  },
-  modalButtons: {
-    position: 'absolute',
-    right: 24,
-    flexDirection: 'row',
-    gap: 12,
-  },
-  downloadButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: Colors.white,
-  },
-  deleteButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: Colors.white,
-  },
-  modalOverlay: {
-    position: 'absolute',
-    bottom: 40,
-    left: 0,
-    right: 0,
-    padding: 16,
+  modalHeader: {
     paddingHorizontal: 24,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    borderRadius: 0,
+    paddingBottom: 16,
+    alignItems: 'flex-start',
   },
-  modalPrompt: {
+  closeButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+  },
+  modalContent: {
+    flex: 1,
+    paddingHorizontal: 24,
+    justifyContent: 'flex-start',
+    paddingBottom: 40,
+    paddingTop: 20,
+  },
+  modalTitleSection: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  modalTitle: {
+    fontSize: 28,
+    fontFamily: Fonts.title,
+    color: Colors.white,
+    textAlign: 'center',
+  },
+  videoPreviewContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  videoPreview: {
+    width: '70%',
+    aspectRatio: 9 / 16,
+    maxHeight: 400,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: Colors.grayDark,
+  },
+  modalActions: {
+    alignItems: 'center',
+    gap: 16,
+  },
+  downloadGradientButton: {
+    width: '100%',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  downloadGradient: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 16,
+    gap: 8,
+  },
+  downloadButtonText: {
+    fontSize: 16,
+    fontFamily: Fonts.title,
+    color: Colors.white,
+  },
+  downloadSuccessText: {
     fontSize: 14,
     fontFamily: Fonts.regular,
     color: Colors.white,
-    lineHeight: 20,
+    textAlign: 'center',
+    opacity: 0.8,
   },
 });

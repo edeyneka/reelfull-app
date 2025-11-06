@@ -1,8 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, Image, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { VideoView, useVideoPlayer } from 'expo-video';
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
 import { Fonts } from '@/constants/typography';
@@ -12,12 +11,7 @@ export default function IntroScreen() {
   const { userId, isLoading } = useApp();
   const [hasNavigated, setHasNavigated] = useState(false);
   
-  const videoSource = require('../assets/intro-video.mp4');
-  const player = useVideoPlayer(videoSource, (player) => {
-    player.loop = false; // Play video only once
-    player.muted = true;
-    player.play();
-  });
+  const gifSource = require('../assets/intro-video.gif');
 
   // Navigate to the appropriate screen
   const navigateToNextScreen = () => {
@@ -33,33 +27,27 @@ export default function IntroScreen() {
     }
   };
 
-  // Listen for video ending and automatically navigate when it's done
+  // Auto-navigate after a few seconds (GIF loops indefinitely, so we use a timer)
   useEffect(() => {
-    if (!isLoading && player) {
-      const checkStatus = setInterval(() => {
-        // Check if video has finished: status is 'idle' and we've played through the video
-        const duration = player.duration || 0;
-        const currentTime = player.currentTime || 0;
-        
-        // Video is considered finished when we're at or very near the end
-        if (duration > 0 && currentTime > 0 && (currentTime >= duration - 0.1 || player.status === 'idle')) {
-          console.log('Video finished, auto-navigating...', { duration, currentTime, status: player.status });
-          navigateToNextScreen();
-          clearInterval(checkStatus);
-        }
-      }, 100);
+    if (!isLoading) {
+      const timer = setTimeout(() => {
+        navigateToNextScreen();
+      }, 3000); // Show intro for 3 seconds
 
-      return () => clearInterval(checkStatus);
+      return () => clearTimeout(timer);
     }
-  }, [isLoading, userId, player, navigateToNextScreen]);
+  }, [isLoading, userId, navigateToNextScreen]);
 
   return (
-    <View style={styles.container}>
-      <VideoView
-        player={player}
-        style={styles.video}
-        contentFit="cover"
-        nativeControls={false}
+    <TouchableOpacity 
+      style={styles.container} 
+      activeOpacity={1}
+      onPress={navigateToNextScreen}
+    >
+      <Image
+        source={gifSource}
+        style={styles.gif}
+        resizeMode="cover"
       />
       <LinearGradient
         colors={['rgba(0,0,0,0.6)', 'transparent', 'rgba(0,0,0,0.8)']}
@@ -67,7 +55,7 @@ export default function IntroScreen() {
       >
         <Text style={styles.title}>Reelful</Text>
       </LinearGradient>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -76,7 +64,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.black,
   },
-  video: {
+  gif: {
     position: 'absolute',
     top: 0,
     left: 0,
