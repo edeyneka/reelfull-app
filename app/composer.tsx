@@ -228,7 +228,7 @@ export default function ComposerScreen() {
           onPress={() => router.back()}
           activeOpacity={0.7}
         >
-          <X size={28} color={Colors.white} strokeWidth={2.5} />
+          <X size={28} color={Colors.white} strokeWidth={2} />
         </TouchableOpacity>
         
         <KeyboardAvoidingView

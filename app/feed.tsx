@@ -530,7 +530,7 @@ export default function FeedScreen() {
                     onPress={closeModal}
                     activeOpacity={0.7}
                   >
-                    <X size={24} color={Colors.white} strokeWidth={2.5} />
+                    <X size={24} color={Colors.white} strokeWidth={2} />
                   </TouchableOpacity>
                 </View>
 
@@ -544,7 +544,7 @@ export default function FeedScreen() {
                       player={modalPlayer}
                       style={styles.videoPreview}
                       contentFit="cover"
-                      nativeControls={true}
+                      nativeControls={false}
                     />
                   </View>
 

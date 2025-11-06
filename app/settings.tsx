@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { ArrowLeft, User, Palette, Edit2, Check, X, Mic, Volume2, Headphones, LogOut } from 'lucide-react-native';
+import { User, Palette, Check, X, Mic, Volume2, Headphones, Info, ChevronRight } from 'lucide-react-native';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   ScrollView,
@@ -385,16 +385,15 @@ export default function SettingsScreen() {
           onPress={closeModal}
         />
         <View style={styles.modalContainer}>
-          <View style={[styles.header, { paddingTop: 12 }]}>
+          <View style={styles.dragHandle} />
+          <View style={styles.closeButtonContainer}>
             <TouchableOpacity
-              style={styles.backButton}
+              style={styles.closeButton}
               onPress={closeModal}
               activeOpacity={0.7}
             >
               <X size={24} color={Colors.white} strokeWidth={2} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Settings</Text>
-            <View style={styles.placeholder} />
           </View>
           <View style={styles.loadingContainer}>
             <Text style={styles.loadingText}>Please log in to access settings</Text>
@@ -418,16 +417,15 @@ export default function SettingsScreen() {
           onPress={closeModal}
         />
         <View style={styles.modalContainer}>
-          <View style={[styles.header, { paddingTop: 12 }]}>
+          <View style={styles.dragHandle} />
+          <View style={styles.closeButtonContainer}>
             <TouchableOpacity
-              style={styles.backButton}
+              style={styles.closeButton}
               onPress={closeModal}
               activeOpacity={0.7}
             >
               <X size={24} color={Colors.white} strokeWidth={2} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Settings</Text>
-            <View style={styles.placeholder} />
           </View>
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={Colors.orange} />
@@ -461,36 +459,126 @@ export default function SettingsScreen() {
           {/* Drag Handle */}
           <View style={styles.dragHandle} />
 
-          <View style={[styles.header, { paddingTop: 12 }]}>
+          {/* Close Button */}
+          <View style={styles.closeButtonContainer}>
             <TouchableOpacity
-              style={styles.backButton}
+              style={styles.closeButton}
               onPress={closeModal}
               activeOpacity={0.7}
             >
-              <X size={24} color={Colors.white} strokeWidth={2.5} />
+              <X size={24} color={Colors.white} strokeWidth={2} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Settings</Text>
-            <View style={styles.placeholder} />
           </View>
 
           <ScrollView
             contentContainerStyle={styles.content}
             showsVerticalScrollIndicator={false}
           >
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Profile Information</Text>
-          
-          {/* Name Card */}
-          <View style={styles.card}>
-            <View style={styles.cardRow}>
-              <View style={styles.iconContainer}>
-                <User size={20} color={Colors.orange} strokeWidth={2} />
-              </View>
-              <View style={styles.cardContent}>
-                <Text style={styles.cardLabel}>Name</Text>
-                {isEditingName ? (
+            {/* Profile Section */}
+            <View style={styles.profileSection}>
+              <Text style={styles.profileName}>{user.name || 'User'}</Text>
+            </View>
+
+            {/* Divider */}
+            <View style={styles.divider} />
+
+            {/* Menu Items */}
+            <View style={styles.menuSection}>
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => setIsEditingName(true)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.menuItemLeft}>
+                  <View style={styles.menuIconContainer}>
+                    <User size={22} color={Colors.white} strokeWidth={2} />
+                  </View>
+                  <Text style={styles.menuItemText}>Account</Text>
+                </View>
+                <ChevronRight size={20} color={Colors.grayLight} strokeWidth={2} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => setIsEditingStyle(true)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.menuItemLeft}>
+                  <View style={styles.menuIconContainer}>
+                    <Palette size={22} color={Colors.white} strokeWidth={2} />
+                  </View>
+                  <Text style={styles.menuItemText}>Content Preferences</Text>
+                </View>
+                <ChevronRight size={20} color={Colors.grayLight} strokeWidth={2} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => setIsSelectingVoice(true)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.menuItemLeft}>
+                  <View style={styles.menuIconContainer}>
+                    <Headphones size={22} color={Colors.white} strokeWidth={2} />
+                  </View>
+                  <Text style={styles.menuItemText}>Voice Settings</Text>
+                </View>
+                <ChevronRight size={20} color={Colors.grayLight} strokeWidth={2} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => setIsEditingVoice(true)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.menuItemLeft}>
+                  <View style={styles.menuIconContainer}>
+                    <Mic size={22} color={Colors.white} strokeWidth={2} />
+                  </View>
+                  <Text style={styles.menuItemText}>Voice Clone</Text>
+                </View>
+                <ChevronRight size={20} color={Colors.grayLight} strokeWidth={2} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.menuItem}
+                activeOpacity={0.7}
+              >
+                <View style={styles.menuItemLeft}>
+                  <View style={styles.menuIconContainer}>
+                    <Info size={22} color={Colors.white} strokeWidth={2} />
+                  </View>
+                  <Text style={styles.menuItemText}>About</Text>
+                </View>
+                <ChevronRight size={20} color={Colors.grayLight} strokeWidth={2} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Logout Button */}
+            <TouchableOpacity
+              style={styles.logoutButton}
+              onPress={handleLogout}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.logoutText}>Log out</Text>
+            </TouchableOpacity>
+
+            {/* Edit Name Modal */}
+            {isEditingName && (
+              <View style={styles.editModalOverlay}>
+                <View style={styles.editModalContent}>
+                  <View style={styles.editModalHeader}>
+                    <Text style={styles.editModalTitle}>Edit Name</Text>
+                    <TouchableOpacity
+                      onPress={handleCancelName}
+                      activeOpacity={0.7}
+                      disabled={isLoading}
+                    >
+                      <X size={24} color={Colors.white} strokeWidth={2} />
+                    </TouchableOpacity>
+                  </View>
                   <TextInput
-                    style={styles.input}
+                    style={styles.editInput}
                     value={editedName}
                     onChangeText={setEditedName}
                     placeholder="Enter your name"
@@ -499,56 +587,36 @@ export default function SettingsScreen() {
                     autoFocus
                     editable={!isLoading}
                   />
-                ) : (
-                  <Text style={styles.cardValue}>{user.name || 'Not set'}</Text>
-                )}
-              </View>
-              <View style={styles.actionButtons}>
-                {isEditingName ? (
-                  <>
-                    <TouchableOpacity
-                      style={styles.iconButton}
-                      onPress={handleSaveName}
-                      activeOpacity={0.7}
-                      disabled={isLoading}
-                    >
-                      {isLoading ? (
-                        <ActivityIndicator size="small" color={Colors.orange} />
-                      ) : (
-                        <Check size={20} color={Colors.orange} strokeWidth={2} />
-                      )}
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.iconButton}
-                      onPress={handleCancelName}
-                      activeOpacity={0.7}
-                      disabled={isLoading}
-                    >
-                      <X size={20} color={Colors.grayLight} strokeWidth={2} />
-                    </TouchableOpacity>
-                  </>
-                ) : (
                   <TouchableOpacity
-                    style={styles.iconButton}
-                    onPress={() => setIsEditingName(true)}
+                    style={styles.saveButton}
+                    onPress={handleSaveName}
                     activeOpacity={0.7}
+                    disabled={isLoading}
                   >
-                    <Edit2 size={18} color={Colors.orange} strokeWidth={2} />
+                    {isLoading ? (
+                      <ActivityIndicator size="small" color={Colors.white} />
+                    ) : (
+                      <Text style={styles.saveButtonText}>Save</Text>
+                    )}
                   </TouchableOpacity>
-                )}
+                </View>
               </View>
-            </View>
-          </View>
+            )}
 
-          {/* Style Card */}
-          <View style={styles.card}>
-            <View style={styles.cardRow}>
-              <View style={styles.iconContainer}>
-                <Palette size={20} color={Colors.orange} strokeWidth={2} />
-              </View>
-              <View style={styles.cardContent}>
-                <Text style={styles.cardLabel}>Style Preference</Text>
-                {isEditingStyle ? (
+            {/* Edit Style Modal */}
+            {isEditingStyle && (
+              <View style={styles.editModalOverlay}>
+                <View style={styles.editModalContent}>
+                  <View style={styles.editModalHeader}>
+                    <Text style={styles.editModalTitle}>Content Preferences</Text>
+                    <TouchableOpacity
+                      onPress={handleCancelStyle}
+                      activeOpacity={0.7}
+                      disabled={isLoading}
+                    >
+                      <X size={24} color={Colors.white} strokeWidth={2} />
+                    </TouchableOpacity>
+                  </View>
                   <View style={styles.styleOptions}>
                     {STYLE_OPTIONS.map((style) => (
                       <TouchableOpacity
@@ -571,237 +639,134 @@ export default function SettingsScreen() {
                       </TouchableOpacity>
                     ))}
                   </View>
-                ) : (
-                  <Text style={styles.cardValue}>
-                    {user.preferredStyle ? mapStyleToApp(user.preferredStyle) : 'Not set'}
-                  </Text>
-                )}
-              </View>
-              <View style={styles.actionButtons}>
-                {isEditingStyle ? (
-                  <>
-                    <TouchableOpacity
-                      style={styles.iconButton}
-                      onPress={handleSaveStyle}
-                      activeOpacity={0.7}
-                      disabled={isLoading}
-                    >
-                      {isLoading ? (
-                        <ActivityIndicator size="small" color={Colors.orange} />
-                      ) : (
-                        <Check size={20} color={Colors.orange} strokeWidth={2} />
-                      )}
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.iconButton}
-                      onPress={handleCancelStyle}
-                      activeOpacity={0.7}
-                      disabled={isLoading}
-                    >
-                      <X size={20} color={Colors.grayLight} strokeWidth={2} />
-                    </TouchableOpacity>
-                  </>
-                ) : (
                   <TouchableOpacity
-                    style={styles.iconButton}
-                    onPress={() => setIsEditingStyle(true)}
+                    style={styles.saveButton}
+                    onPress={handleSaveStyle}
                     activeOpacity={0.7}
+                    disabled={isLoading}
                   >
-                    <Edit2 size={18} color={Colors.orange} strokeWidth={2} />
-                  </TouchableOpacity>
-                )}
-              </View>
-            </View>
-          </View>
-
-          {/* Voice Selection Card */}
-          <View style={styles.card}>
-            <View style={styles.cardRow}>
-              <View style={styles.iconContainer}>
-                <Headphones size={20} color={Colors.orange} strokeWidth={2} />
-              </View>
-              <View style={styles.cardContent}>
-                <Text style={styles.cardLabel}>Voice</Text>
-                <Text style={styles.cardValue}>{getCurrentVoiceName()}</Text>
-                {user.elevenlabsVoiceId && (
-                  <Text style={styles.cardSubtext}>Custom voice available</Text>
-                )}
-              </View>
-              <View style={styles.actionButtons}>
-                <TouchableOpacity
-                  style={styles.iconButton}
-                  onPress={() => setIsSelectingVoice(true)}
-                  activeOpacity={0.7}
-                >
-                  <Edit2 size={18} color={Colors.orange} strokeWidth={2} />
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-
-          {/* Voice Recording Card (Create Clone) */}
-          <View style={styles.card}>
-            {isEditingVoice ? (
-              <View style={styles.voiceRecorderContainer}>
-                <View style={styles.cardHeader}>
-                  <View style={styles.iconContainer}>
-                    <Mic size={20} color={Colors.orange} strokeWidth={2} />
-                  </View>
-                  <View style={styles.headerContent}>
-                    <Text style={styles.cardLabel}>Record Voice Clone</Text>
-                    <Text style={styles.cardSubtext}>
-                      Record a sample to create your AI voice clone
-                    </Text>
-                  </View>
-                  <View style={styles.actionButtons}>
-                    <TouchableOpacity
-                      style={styles.iconButton}
-                      onPress={() => setIsEditingVoice(false)}
-                      activeOpacity={0.7}
-                      disabled={isLoading}
-                    >
-                      <X size={20} color={Colors.grayLight} strokeWidth={2} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-                <VoiceRecorder
-                  onRecordingComplete={handleVoiceRecordingComplete}
-                  initialRecordingUri={user.voiceRecordingUrl}
-                  showScript={true}
-                />
-              </View>
-            ) : (
-              <View style={styles.cardRow}>
-                <View style={styles.iconContainer}>
-                  <Mic size={20} color={Colors.orange} strokeWidth={2} />
-                </View>
-                <View style={styles.cardContent}>
-                  <Text style={styles.cardLabel}>Voice Clone</Text>
-                  <Text style={styles.cardValue}>
-                    {user.elevenlabsVoiceId ? 'Created' : 'Not created'}
-                  </Text>
-                  <Text style={styles.cardSubtext}>
-                    Record your voice to create an AI clone
-                  </Text>
-                </View>
-                <View style={styles.actionButtons}>
-                  <TouchableOpacity
-                    style={styles.iconButton}
-                    onPress={() => setIsEditingVoice(true)}
-                    activeOpacity={0.7}
-                  >
-                    <Edit2 size={18} color={Colors.orange} strokeWidth={2} />
+                    {isLoading ? (
+                      <ActivityIndicator size="small" color={Colors.white} />
+                    ) : (
+                      <Text style={styles.saveButtonText}>Save</Text>
+                    )}
                   </TouchableOpacity>
                 </View>
               </View>
             )}
-          </View>
-        </View>
 
-        {/* Account Actions Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account Actions</Text>
-          
-          <TouchableOpacity
-            style={styles.logoutButton}
-            onPress={handleLogout}
-            activeOpacity={0.7}
-          >
-            <View style={styles.logoutContent}>
-              <View style={styles.logoutIconContainer}>
-                <LogOut size={20} color={Colors.white} strokeWidth={2} />
+            {/* Voice Recording Modal */}
+            {isEditingVoice && (
+              <View style={styles.editModalOverlay}>
+                <View style={styles.voiceModalContent}>
+                  <View style={styles.editModalHeader}>
+                    <Text style={styles.editModalTitle}>Voice Clone</Text>
+                    <TouchableOpacity
+                      onPress={() => setIsEditingVoice(false)}
+                      activeOpacity={0.7}
+                      disabled={isLoading}
+                    >
+                      <X size={24} color={Colors.white} strokeWidth={2} />
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={styles.modalDescription}>
+                    Record a sample to create your AI voice clone
+                  </Text>
+                  <VoiceRecorder
+                    onRecordingComplete={handleVoiceRecordingComplete}
+                    initialRecordingUri={user.voiceRecordingUrl}
+                    showScript={true}
+                  />
+                </View>
               </View>
-              <Text style={styles.logoutText}>Logout</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
+            )}
 
-        {/* Voice Selection Modal */}
-        {isSelectingVoice && (
-          <View style={styles.voiceModalOverlay}>
-            <View style={styles.voiceModalContent}>
-              <View style={styles.voiceModalHeader}>
-                <Text style={styles.voiceModalTitle}>Select Voice</Text>
-                <TouchableOpacity
-                  onPress={() => setIsSelectingVoice(false)}
-                  activeOpacity={0.7}
-                >
-                  <X size={24} color={Colors.white} strokeWidth={2} />
-                </TouchableOpacity>
-              </View>
+            {/* Voice Selection Modal */}
+            {isSelectingVoice && (
+              <View style={styles.editModalOverlay}>
+                <View style={styles.voiceModalContent}>
+                  <View style={styles.editModalHeader}>
+                    <Text style={styles.editModalTitle}>Select Voice</Text>
+                    <TouchableOpacity
+                      onPress={() => setIsSelectingVoice(false)}
+                      activeOpacity={0.7}
+                    >
+                      <X size={24} color={Colors.white} strokeWidth={2} />
+                    </TouchableOpacity>
+                  </View>
 
-              <ScrollView style={styles.voicesList}>
-                {/* Custom Voice Option */}
-                {user.elevenlabsVoiceId && (
-                  <TouchableOpacity
-                    style={[
-                      styles.voiceOption,
-                      user.selectedVoiceId === user.elevenlabsVoiceId && styles.voiceOptionSelected,
-                    ]}
-                    onPress={() => handleSelectVoice(user.elevenlabsVoiceId)}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.voiceOptionContent}>
-                      <Headphones size={24} color={Colors.orange} strokeWidth={2} />
-                      <View style={styles.voiceOptionText}>
-                        <Text style={styles.voiceOptionName}>
-                          {user.name ? `${user.name}'s Voice` : 'Your Voice'}
-                        </Text>
-                        <Text style={styles.voiceOptionDesc}>Custom AI voice clone</Text>
-                      </View>
-                    </View>
-                    {user.selectedVoiceId === user.elevenlabsVoiceId && (
-                      <Check size={20} color={Colors.orange} strokeWidth={3} />
+                  <ScrollView style={styles.voicesList}>
+                    {/* Custom Voice Option */}
+                    {user.elevenlabsVoiceId && (
+                      <TouchableOpacity
+                        style={[
+                          styles.voiceOption,
+                          user.selectedVoiceId === user.elevenlabsVoiceId && styles.voiceOptionSelected,
+                        ]}
+                        onPress={() => handleSelectVoice(user.elevenlabsVoiceId)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={styles.voiceOptionContent}>
+                          <Headphones size={24} color={Colors.orange} strokeWidth={2} />
+                          <View style={styles.voiceOptionText}>
+                            <Text style={styles.voiceOptionName}>
+                              {user.name ? `${user.name}'s Voice` : 'Your Voice'}
+                            </Text>
+                            <Text style={styles.voiceOptionDesc}>Custom AI voice clone</Text>
+                          </View>
+                        </View>
+                        {user.selectedVoiceId === user.elevenlabsVoiceId && (
+                          <Check size={20} color={Colors.orange} strokeWidth={3} />
+                        )}
+                      </TouchableOpacity>
                     )}
-                  </TouchableOpacity>
-                )}
 
-                {/* Default Voices */}
-                {defaultVoices?.map((voice: any) => (
-                  <TouchableOpacity
-                    key={voice._id}
-                    style={[
-                      styles.voiceOption,
-                      user.selectedVoiceId === voice.voiceId && styles.voiceOptionSelected,
-                    ]}
-                    onPress={() => handleSelectVoice(voice.voiceId)}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.voiceOptionContent}>
-                      <Volume2 size={24} color={Colors.orange} strokeWidth={2} />
-                      <View style={styles.voiceOptionText}>
-                        <Text style={styles.voiceOptionName}>{voice.name}</Text>
-                        <Text style={styles.voiceOptionDesc}>
-                          {voice.description || 'Default voice'}
-                        </Text>
-                      </View>
-                    </View>
-                    <View style={styles.voiceOptionActions}>
-                      {voice.previewStorageId && (
-                        <TouchableOpacity
-                          style={styles.previewButton}
-                          onPress={() => playVoicePreview(voice.previewStorageId!, voice.voiceId)}
-                          activeOpacity={0.7}
-                          disabled={playingPreviewId === voice.voiceId && !previewUrl}
-                        >
-                          {playingPreviewId === voice.voiceId && !previewUrl ? (
-                            <ActivityIndicator size="small" color={Colors.orange} />
-                          ) : (
-                            <Volume2 size={18} color={Colors.orange} strokeWidth={2} />
+                    {/* Default Voices */}
+                    {defaultVoices?.map((voice: any) => (
+                      <TouchableOpacity
+                        key={voice._id}
+                        style={[
+                          styles.voiceOption,
+                          user.selectedVoiceId === voice.voiceId && styles.voiceOptionSelected,
+                        ]}
+                        onPress={() => handleSelectVoice(voice.voiceId)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={styles.voiceOptionContent}>
+                          <Volume2 size={24} color={Colors.orange} strokeWidth={2} />
+                          <View style={styles.voiceOptionTextContainer}>
+                            <Text style={styles.voiceOptionName}>{voice.name}</Text>
+                            <Text style={styles.voiceOptionDesc}>
+                              {voice.description || 'Default voice'}
+                            </Text>
+                          </View>
+                        </View>
+                        <View style={styles.voiceOptionActions}>
+                          {voice.previewStorageId && (
+                            <TouchableOpacity
+                              style={styles.previewButton}
+                              onPress={() => playVoicePreview(voice.previewStorageId!, voice.voiceId)}
+                              activeOpacity={0.7}
+                              disabled={playingPreviewId === voice.voiceId && !previewUrl}
+                            >
+                              {playingPreviewId === voice.voiceId && !previewUrl ? (
+                                <ActivityIndicator size="small" color={Colors.orange} />
+                              ) : (
+                                <Volume2 size={18} color={Colors.orange} strokeWidth={2} />
+                              )}
+                            </TouchableOpacity>
                           )}
-                        </TouchableOpacity>
-                      )}
-                      {user.selectedVoiceId === voice.voiceId && (
-                        <Check size={20} color={Colors.orange} strokeWidth={3} />
-                      )}
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          </View>
-        )}
-      </ScrollView>
+                          {user.selectedVoiceId === voice.voiceId && (
+                            <Check size={20} color={Colors.orange} strokeWidth={3} />
+                          )}
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              </View>
+            )}
+          </ScrollView>
         </Animated.View>
       </GestureDetector>
     </Animated.View>
@@ -822,7 +787,7 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   modalContainer: {
-    backgroundColor: Colors.black,
+    backgroundColor: '#000000',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     height: '94%',
@@ -835,35 +800,25 @@ const styles = StyleSheet.create({
   dragHandle: {
     width: 40,
     height: 5,
-    backgroundColor: Colors.gray,
+    backgroundColor: '#333333',
     borderRadius: 3,
     alignSelf: 'center',
     marginTop: 12,
     marginBottom: 8,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  closeButtonContainer: {
     paddingHorizontal: 24,
+    paddingTop: 8,
     paddingBottom: 16,
   },
-  backButton: {
-    width: 40,
-    height: 40,
+  closeButton: {
+    width: 32,
+    height: 32,
     justifyContent: 'center',
-    alignItems: 'flex-start',
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontFamily: Fonts.title,
-    color: Colors.white,
-  },
-  placeholder: {
-    width: 40,
+    alignItems: 'center',
   },
   content: {
-    padding: 24,
+    paddingTop: 0,
     paddingBottom: 40,
   },
   loadingContainer: {
@@ -875,86 +830,129 @@ const styles = StyleSheet.create({
     color: Colors.grayLight,
     fontSize: 16,
   },
-  section: {
+  // Profile Section
+  profileSection: {
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 24,
+  },
+  profileName: {
+    fontSize: 28,
+    fontFamily: Fonts.title,
+    color: Colors.white,
+    fontWeight: '600',
+  },
+  // Divider
+  divider: {
+    height: 1,
+    backgroundColor: '#1a1a1a',
+    marginBottom: 8,
+  },
+  // Menu Section
+  menuSection: {
+    paddingHorizontal: 24,
     marginBottom: 32,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontFamily: Fonts.regular,
-    color: Colors.grayLight,
-    marginBottom: 16,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1a1a1a',
   },
-  card: {
-    backgroundColor: Colors.grayDark,
+  menuItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  menuIconContainer: {
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  menuItemText: {
+    fontSize: 16,
+    color: Colors.white,
+    fontFamily: Fonts.regular,
+  },
+  // Logout
+  logoutButton: {
+    marginHorizontal: 24,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  logoutText: {
+    fontSize: 16,
+    color: '#ff3b30',
+    fontFamily: Fonts.regular,
+  },
+  // Edit Modals
+  editModalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  editModalContent: {
+    backgroundColor: '#1c1c1e',
+    borderRadius: 16,
+    padding: 24,
+    width: '85%',
+    maxWidth: 400,
+  },
+  editModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  editModalTitle: {
+    fontSize: 20,
+    fontFamily: Fonts.title,
+    color: Colors.white,
+    fontWeight: '600',
+  },
+  editInput: {
+    backgroundColor: '#2c2c2e',
     borderRadius: 12,
     padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: Colors.gray,
-  },
-  cardRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 107, 53, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  cardContent: {
-    flex: 1,
-  },
-  cardLabel: {
-    fontSize: 14,
-    color: Colors.grayLight,
-    marginBottom: 4,
-  },
-  cardValue: {
-    fontSize: 18,
-    fontFamily: Fonts.regular,
-    color: Colors.white,
-  },
-  cardSubtext: {
-    fontSize: 12,
-    color: Colors.grayLight,
-    marginTop: 2,
-  },
-  input: {
-    backgroundColor: Colors.gray,
-    borderRadius: 8,
-    padding: 12,
     fontSize: 16,
     color: Colors.white,
-    borderWidth: 2,
-    borderColor: Colors.orange,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#3a3a3c',
   },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: 8,
-    marginLeft: 8,
-  },
-  iconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.gray,
-    justifyContent: 'center',
+  saveButton: {
+    backgroundColor: Colors.orange,
+    borderRadius: 12,
+    padding: 16,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 54,
   },
+  saveButtonText: {
+    fontSize: 16,
+    fontFamily: Fonts.regular,
+    color: Colors.white,
+    fontWeight: '600',
+  },
+  // Style Options
   styleOptions: {
-    gap: 8,
-    marginTop: 8,
+    gap: 12,
+    marginBottom: 24,
   },
   styleOption: {
-    backgroundColor: Colors.gray,
-    borderRadius: 8,
-    padding: 12,
+    backgroundColor: '#2c2c2e',
+    borderRadius: 12,
+    padding: 16,
     borderWidth: 2,
     borderColor: 'transparent',
   },
@@ -963,56 +961,28 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 107, 53, 0.1)',
   },
   styleOptionText: {
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: Fonts.regular,
     color: Colors.white,
     textAlign: 'center',
   },
   styleOptionTextSelected: {
     color: Colors.orange,
+    fontWeight: '600',
   },
-  voiceRecorderContainer: {
-    width: '100%',
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  headerContent: {
-    flex: 1,
-    marginLeft: 16,
-  },
-  voiceModalOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-  },
+  // Voice Modal
   voiceModalContent: {
-    backgroundColor: Colors.grayDark,
+    backgroundColor: '#1c1c1e',
     borderRadius: 16,
     padding: 24,
     width: '90%',
     maxHeight: '80%',
-    borderWidth: 1,
-    borderColor: Colors.gray,
   },
-  voiceModalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  modalDescription: {
+    fontSize: 14,
+    color: '#8e8e93',
     marginBottom: 20,
-  },
-  voiceModalTitle: {
-    fontSize: 24,
-    fontFamily: Fonts.title,
-    color: Colors.white,
+    textAlign: 'center',
   },
   voicesList: {
     maxHeight: 400,
@@ -1021,7 +991,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: Colors.gray,
+    backgroundColor: '#2c2c2e',
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -1041,6 +1011,9 @@ const styles = StyleSheet.create({
   voiceOptionText: {
     flex: 1,
   },
+  voiceOptionTextContainer: {
+    flex: 1,
+  },
   voiceOptionName: {
     fontSize: 16,
     fontFamily: Fonts.regular,
@@ -1048,8 +1021,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   voiceOptionDesc: {
-    fontSize: 12,
-    color: Colors.grayLight,
+    fontSize: 13,
+    color: '#8e8e93',
   },
   voiceOptionActions: {
     flexDirection: 'row',
@@ -1060,34 +1033,8 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: Colors.grayDark,
+    backgroundColor: '#3a3a3c',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  logoutButton: {
-    backgroundColor: 'rgba(255, 59, 48, 0.1)',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 59, 48, 0.3)',
-  },
-  logoutContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  logoutIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 59, 48, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  logoutText: {
-    fontSize: 16,
-    fontFamily: Fonts.regular,
-    color: Colors.white,
   },
 });
