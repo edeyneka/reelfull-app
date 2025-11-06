@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Plus, Trash2, Download, Settings, Loader2, AlertCircle } from 'lucide-react-native';
+import { Plus, Trash2, Download, Settings, Loader2 } from 'lucide-react-native';
 import { useState, useRef, useEffect } from 'react';
 import {
   Dimensions,
@@ -11,89 +11,53 @@ import {
   View,
   Alert,
   Animated,
-  ActivityIndicator,
-  Platform,
+  Image,
 } from 'react-native';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import * as MediaLibrary from 'expo-media-library';
-import * as FileSystem from 'expo-file-system/legacy';
+import * as FileSystem from 'expo-file-system';
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
-import { Video as VideoType } from '@/types';
-import { useVideoPolling, registerForPushNotificationsAsync } from '@/lib/videoPollingService';
+import { Video as VideoType, Project } from '@/types';
+import { useQuery } from 'convex/react';
+import { api } from '@/backend-api';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const ITEM_SPACING = 8;
 const ITEM_WIDTH = (SCREEN_WIDTH - ITEM_SPACING * 3) / 2;
 
-function VideoThumbnail({ item, onPress }: { item: VideoType; onPress: () => void }) {
-  const spinAnim = useRef(new Animated.Value(0)).current;
-
-  // Always call hooks in the same order - create player even if not used
-  const hasValidUri = item.uri && item.uri.length > 0 && item.status === 'ready';
-  const thumbnailPlayer = useVideoPlayer(
-    hasValidUri ? item.uri : null,
-    (player) => {
-      if (player && hasValidUri) {
-        player.muted = true;
-        // Don't autoplay thumbnails
-      }
-    }
-  );
-
-  useEffect(() => {
-    if (item.status === 'pending' || item.status === 'processing') {
-      Animated.loop(
-        Animated.timing(spinAnim, {
-          toValue: 1,
-          duration: 2000,
-          useNativeDriver: true,
-        })
-      ).start();
-    }
-  }, [item.status, spinAnim]);
-
-  const spin = spinAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
-
-  // Show placeholder for pending/processing videos
-  if (item.status === 'pending' || item.status === 'processing') {
-    return (
-      <View style={styles.thumbnailContainer}>
-        <View style={styles.processingThumbnail}>
-          <Animated.View style={{ transform: [{ rotate: spin }] }}>
-            <Loader2 size={40} color={Colors.orange} strokeWidth={2} />
-          </Animated.View>
-          <Text style={styles.processingText}>
-            {item.status === 'pending' ? 'Queued...' : 'Generating...'}
-          </Text>
-        </View>
-        <View style={styles.thumbnailOverlay}>
-          <Text style={styles.thumbnailPrompt} numberOfLines={2}>
-            {item.prompt}
-          </Text>
-        </View>
-      </View>
-    );
-  }
-
-  // Show error state for failed videos
-  if (item.status === 'failed') {
+function VideoThumbnail({ item, onPress }: { item: any; onPress: () => void }) {
+  if (item.status && item.status !== 'completed') {
+    console.log('Rendering processing item:', {
+      id: item.id,
+      status: item.status,
+      previewImage: item.previewImage,
+    });
     return (
       <TouchableOpacity
         style={styles.thumbnailContainer}
-        onPress={() => Alert.alert('Generation Failed', item.error || 'Video generation failed. Please try again.')}
+        onPress={onPress}
         activeOpacity={0.9}
       >
-        <View style={styles.errorThumbnail}>
-          <AlertCircle size={32} color={Colors.white} strokeWidth={2} />
-          <Text style={styles.errorText}>Failed</Text>
+        {item.previewImage ? (
+          <Image 
+            source={{ uri: item.previewImage }} 
+            style={styles.thumbnail}
+            onError={(e) => console.log('Image load error:', e.nativeEvent.error)}
+            onLoad={() => console.log('Image loaded:', item.previewImage)}
+          />
+        ) : (
+          <View style={styles.thumbnail} />
+        )}
+        <View style={styles.processingOverlay}>
+          <Loader2 size={32} color={Colors.orange} />
         </View>
         <View style={styles.thumbnailOverlay}>
+          <Text style={styles.thumbnailStatus}>
+            {item.status === 'pending' ? 'queued' : 'processing'}
+          </Text>
           <Text style={styles.thumbnailPrompt} numberOfLines={2}>
             {item.prompt}
           </Text>
@@ -104,13 +68,30 @@ function VideoThumbnail({ item, onPress }: { item: VideoType; onPress: () => voi
 
   if (!item.uri || item.uri.length === 0) {
     return (
-      <View style={styles.thumbnailContainer}>
-        <View style={styles.errorThumbnail}>
-          <Text style={styles.errorText}>Unavailable</Text>
+      <TouchableOpacity
+        style={styles.thumbnailContainer}
+        onPress={onPress}
+        activeOpacity={0.9}
+      >
+        {item.previewImage ? (
+          <Image source={{ uri: item.previewImage }} style={styles.thumbnail} />
+        ) : (
+          <View style={styles.errorThumbnail}>
+            <Text style={styles.errorText}>Unavailable</Text>
+          </View>
+        )}
+        <View style={styles.thumbnailOverlay}>
+          <Text style={styles.thumbnailPrompt} numberOfLines={2}>
+            {item.prompt}
+          </Text>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   }
+
+  const thumbnailPlayer = useVideoPlayer(item.uri, (player) => {
+    player.muted = true;
+  });
 
   return (
     <TouchableOpacity
@@ -136,23 +117,53 @@ function VideoThumbnail({ item, onPress }: { item: VideoType; onPress: () => voi
 export default function FeedScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { videos, deleteVideo } = useApp();
+  const { videos: localVideos, deleteVideo } = useApp();
   const [selectedVideo, setSelectedVideo] = useState<VideoType | null>(null);
   const [isPromptExpanded, setIsPromptExpanded] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   
-  // Enable video polling for pending videos
-  useVideoPolling();
-
-  // Request notification permissions on mount
+  const projects = useQuery(api.tasks.getProjects) as Project[] | undefined;
+  
   useEffect(() => {
-    registerForPushNotificationsAsync();
-  }, []);
+    if (projects) {
+      console.log('Projects:', JSON.stringify(projects, null, 2));
+      projects.forEach(p => {
+        console.log(`Project ${p._id}:`, {
+          status: p.status,
+          thumbnail: p.thumbnail,
+          thumbnailUrl: p.thumbnailUrl,
+          files: p.files,
+          videoUrl: p.videoUrl
+        });
+      });
+    }
+  }, [projects]);
+  
+  const allItems = [
+    ...localVideos,
+    ...(projects?.map((p: Project) => {
+      const item = {
+        id: p._id,
+        uri: p.status === 'completed' ? p.videoUrl : undefined,
+        prompt: p.prompt,
+        createdAt: p._creationTime,
+        status: p.status,
+        previewImage: p.thumbnailUrl || p.fileUrls?.[0],
+      };
+      console.log('Mapped item:', item);
+      return item;
+    }) || [])
+  ];
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    setTimeout(() => setRefreshing(false), 1000);
+  };
   
   const modalPlayer = useVideoPlayer(
-    selectedVideo?.uri && selectedVideo?.status === 'ready' ? selectedVideo.uri : null,
+    selectedVideo?.uri ?? null,
     (player) => {
-      if (player && selectedVideo && selectedVideo.uri) {
+      if (player && selectedVideo?.uri) {
         player.loop = true;
         player.muted = false;
         player.play();
@@ -160,7 +171,6 @@ export default function FeedScreen() {
     }
   );
 
-  // Animated values for slide gesture
   const translateY = useRef(new Animated.Value(0)).current;
   const opacity = useRef(new Animated.Value(1)).current;
 
@@ -170,20 +180,15 @@ export default function FeedScreen() {
     opacity.setValue(1);
   };
 
-  // Slide down gesture to close modal
   const panGesture = Gesture.Pan()
     .onUpdate((event) => {
-      // Only allow downward drag
       if (event.translationY > 0) {
         translateY.setValue(event.translationY);
-        // Gradually fade out as user drags down
         opacity.setValue(Math.max(0.5, 1 - event.translationY / 400));
       }
     })
     .onEnd((event) => {
-      // If swiped down far enough or with velocity, close modal
       if (event.translationY > 150 || event.velocityY > 500) {
-        // Fast animate out before closing
         Animated.parallel([
           Animated.timing(translateY, {
             toValue: 800,
@@ -199,7 +204,6 @@ export default function FeedScreen() {
           closeModal();
         });
       } else {
-        // Quickly spring back to original position
         Animated.parallel([
           Animated.spring(translateY, {
             toValue: 0,
@@ -218,19 +222,7 @@ export default function FeedScreen() {
     });
 
   const renderVideoThumbnail = ({ item }: { item: VideoType }) => (
-    <VideoThumbnail 
-      item={item} 
-      onPress={() => {
-        // Only allow opening ready videos with valid URIs
-        if (item.status === 'ready' && item.uri && item.uri.length > 0) {
-          setSelectedVideo(item);
-        } else if (item.status === 'ready' && (!item.uri || item.uri.length === 0)) {
-          Alert.alert('Error', 'Video is not available. Please try again or contact support.');
-        } else if (item.status === 'pending' || item.status === 'processing') {
-          Alert.alert('Video Processing', 'Your video is still being generated. You\'ll receive a notification when it\'s ready!');
-        }
-      }} 
-    />
+    <VideoThumbnail item={item} onPress={() => setSelectedVideo(item)} />
   );
 
   const renderEmpty = () => (
@@ -250,23 +242,9 @@ export default function FeedScreen() {
   };
 
   const handleDownload = async () => {
-    if (!selectedVideo || isDownloading) return;
-
-    // Validate video URI
-    if (!selectedVideo.uri || selectedVideo.uri.length === 0) {
-      Alert.alert('Error', 'Video is not available for download.');
-      return;
-    }
-
-    if (selectedVideo.status !== 'ready') {
-      Alert.alert('Error', 'Please wait until the video is ready before downloading.');
-      return;
-    }
+    if (!selectedVideo?.uri) return;
 
     try {
-      setIsDownloading(true);
-
-      // Request permissions
       const { status } = await MediaLibrary.requestPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert(
@@ -276,37 +254,13 @@ export default function FeedScreen() {
         return;
       }
 
-      if (Platform.OS === 'web') {
-        // Web: trigger browser download
-        const link = document.createElement('a');
-        link.href = selectedVideo.uri;
-        link.download = `reelfull_${Date.now()}.mp4`;
-        link.click();
-        Alert.alert('Success', 'Video download started!');
-      } else {
-        // Mobile: download to local file first, then save to media library
-        const fileUri = `${FileSystem.documentDirectory}reelfull_${Date.now()}.mp4`;
-        
-        console.log('[Download] Downloading video from:', selectedVideo.uri);
-        console.log('[Download] To local path:', fileUri);
-        
-        // Download from remote URL to local file
-        const downloadResult = await FileSystem.downloadAsync(selectedVideo.uri, fileUri);
-        
-        if (downloadResult.status === 200) {
-          console.log('[Download] Download complete, saving to media library...');
-          const asset = await MediaLibrary.createAssetAsync(downloadResult.uri);
-          await MediaLibrary.createAlbumAsync('Reelful', asset, false);
-          Alert.alert('Success', 'Video saved to your gallery!');
-        } else {
-          throw new Error(`Download failed with status: ${downloadResult.status}`);
-        }
-      }
+      const asset = await MediaLibrary.createAssetAsync(selectedVideo.uri);
+      await MediaLibrary.createAlbumAsync('Reelful', asset, false);
+      
+      Alert.alert('Success', 'Video saved to your gallery!');
     } catch (error) {
       console.error('Error downloading video:', error);
-      Alert.alert('Error', 'Failed to download video. Please try again.');
-    } finally {
-      setIsDownloading(false);
+      Alert.alert('Error', 'Failed to save video. Please try again.');
     }
   };
 
@@ -329,7 +283,7 @@ export default function FeedScreen() {
       </View>
 
       <FlatList
-        data={videos}
+        data={allItems}
         renderItem={renderVideoThumbnail}
         keyExtractor={(item) => item.id}
         numColumns={2}
@@ -337,6 +291,8 @@ export default function FeedScreen() {
         contentContainerStyle={styles.grid}
         columnWrapperStyle={styles.row}
         ListEmptyComponent={renderEmpty}
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
       />
 
       <TouchableOpacity
@@ -374,13 +330,8 @@ export default function FeedScreen() {
                   style={styles.downloadButton}
                   onPress={handleDownload}
                   activeOpacity={0.8}
-                  disabled={isDownloading}
                 >
-                  {isDownloading ? (
-                    <ActivityIndicator size="small" color={Colors.white} />
-                  ) : (
-                    <Download size={24} color={Colors.white} strokeWidth={2} />
-                  )}
+                  <Download size={24} color={Colors.white} strokeWidth={2} />
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.deleteButton}
@@ -484,20 +435,6 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 12,
     color: Colors.grayLight,
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  processingThumbnail: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: Colors.grayDark,
-    gap: 12,
-  },
-  processingText: {
-    fontSize: 13,
-    color: Colors.orange,
-    fontWeight: '600' as const,
   },
   emptyContainer: {
     justifyContent: 'center',
@@ -580,5 +517,62 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontWeight: '500' as const,
     lineHeight: 20,
+  },
+  processingSection: {
+    paddingHorizontal: 24,
+    paddingBottom: 16,
+    backgroundColor: Colors.black,
+  },
+  processingSectionTitle: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: Colors.grayLight,
+    marginBottom: 12,
+  },
+  processingList: {
+    gap: 8,
+  },
+  processingContainer: {
+    backgroundColor: 'rgba(255, 138, 0, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 138, 0, 0.3)',
+  },
+  processingContent: {
+    flexDirection: 'row' as const,
+    alignItems: 'center',
+    gap: 12,
+  },
+  processingText: {
+    flex: 1,
+  },
+  processingStatus: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    color: Colors.orange,
+    marginBottom: 4,
+  },
+  processingPrompt: {
+    fontSize: 14,
+    color: Colors.white,
+    fontWeight: '500' as const,
+  },
+  processingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  thumbnailStatus: {
+    fontSize: 10,
+    fontWeight: '700' as const,
+    color: Colors.orange,
+    marginBottom: 4,
+    textTransform: 'uppercase' as const,
   },
 });

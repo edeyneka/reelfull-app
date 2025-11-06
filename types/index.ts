@@ -1,8 +1,5 @@
 export type StylePreference = 'Playful' | 'Professional' | 'Dreamy';
 
-// Backend style mapping
-export type BackendStyle = 'playful' | 'professional' | 'travel';
-
 export interface UserProfile {
   name: string;
   style: StylePreference;
@@ -11,13 +8,22 @@ export interface UserProfile {
 
 export interface Video {
   id: string;
-  uri: string;
+  uri?: string;
   prompt: string;
   createdAt: number;
-  status: 'pending' | 'processing' | 'ready' | 'failed';
-  projectId?: string;
-  error?: string;
+  status?: 'pending' | 'processing' | 'completed' | 'failed';
+  previewImage?: string;
 }
 
-// Convex types placeholder - will be replaced with generated types
-export type ConvexId<T extends string> = string & { __tableName: T };
+export interface Project {
+  _id: string;
+  _creationTime: number;
+  prompt: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  videoUrl?: string;
+  error?: string;
+  files?: Array<string>;
+  thumbnail?: string;
+  thumbnailUrl?: string;
+  fileUrls?: Array<string>;
+}

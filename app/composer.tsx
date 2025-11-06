@@ -13,22 +13,26 @@ import {
   TouchableOpacity,
   View,
   PanResponder,
-  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { VideoView, useVideoPlayer } from 'expo-video';
-import { useMutation, useAction } from "convex/react";
-import { api } from "@/convex/_generated/api";
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
-import { uploadMediaFiles } from '@/lib/api-helpers';
+import { useMutation } from 'convex/react';
+import { api } from '@/backend-api';
+
+const PROMPT_PRESETS = [
+  "had great weather yesterday!",
+  "just finished an amazing workout session",
+  "caught up with old friends today"
+];
 
 function VideoThumbnail({ uri, style }: { uri: string; style: any }) {
   const player = useVideoPlayer(uri, (player) => {
     player.muted = true;
-    // Don't autoplay thumbnails
   });
   
   return (
@@ -44,15 +48,13 @@ function VideoThumbnail({ uri, style }: { uri: string; style: any }) {
 export default function ComposerScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { user, userId } = useApp();
+  const { user } = useApp();
   const [prompt, setPrompt] = useState('');
   const [mediaUris, setMediaUris] = useState<{ uri: string; type: 'video' | 'image' }[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   
-  // Convex hooks
   const generateUploadUrl = useMutation(api.tasks.generateUploadUrl);
   const createProject = useMutation(api.tasks.createProject);
-  const generateScriptOnly = useAction(api.tasks.generateScriptOnly);
   
   const pan = useRef(new Animated.Value(0)).current;
   
@@ -106,51 +108,51 @@ export default function ComposerScreen() {
     setMediaUris(prev => prev.filter((_, i) => i !== index));
   };
 
+  const uploadFile = async (uri: string): Promise<string> => {
+    const uploadUrl = await generateUploadUrl();
+    
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    
+    const result = await fetch(uploadUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': blob.type },
+      body: blob,
+    });
+
+    const { storageId } = await result.json();
+    return storageId;
+  };
+
   const handleSubmit = async () => {
-    if (!prompt.trim() || mediaUris.length === 0 || !userId) {
-      return;
-    }
-
-    setIsUploading(true);
-
-    try {
-      console.log('=== COMPOSER: Starting upload ===');
-      console.log('Prompt:', prompt.trim());
-      console.log('Media count:', mediaUris.length);
-
-      // Upload all media files to Convex
-      const uploads = await uploadMediaFiles(
-        generateUploadUrl,
-        mediaUris.map(m => ({ uri: m.uri, type: m.type }))
-      );
-
-      console.log('Uploads complete:', uploads.length);
-
-      // Create project
-      const projectId = await createProject({
-        userId,
-        prompt: prompt.trim(),
-        files: uploads.map(u => u.storageId),
-        fileMetadata: uploads,
-        thumbnail: uploads[0].storageId,
-      });
-
-      console.log('Project created:', projectId);
-
-      // Start script generation
-      console.log('Starting script generation...');
-      await generateScriptOnly({ projectId });
-
-      // Navigate to script review
-      router.replace({
-        pathname: '/script-review',
-        params: { projectId: projectId.toString() },
-      });
-    } catch (error) {
-      console.error('Error in composer:', error);
-      alert(`Failed to create project: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setIsUploading(false);
+    if (prompt.trim() && mediaUris.length > 0) {
+      try {
+        setIsUploading(true);
+        console.log('uploading files to convex...');
+        
+        const storageIds = await Promise.all(
+          mediaUris.map(media => uploadFile(media.uri))
+        );
+        
+        console.log('creating project with files:', storageIds);
+        const projectId = await createProject({
+          files: storageIds,
+          prompt: prompt.trim(),
+        });
+        
+        console.log('project created:', projectId);
+        router.replace({
+          pathname: '/loader',
+          params: { 
+            projectId,
+          },
+        });
+      } catch (error) {
+        console.error('upload failed:', error);
+        Alert.alert('Upload Failed', 'Could not upload files. Please try again.');
+      } finally {
+        setIsUploading(false);
+      }
     }
   };
 
@@ -197,6 +199,25 @@ export default function ComposerScreen() {
             <View style={styles.form}>
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Tell your story</Text>
+                
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.presetContainer}
+                  contentContainerStyle={{ gap: 8 }}
+                >
+                  {PROMPT_PRESETS.map((preset, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={styles.presetChip}
+                      onPress={() => setPrompt(preset)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.presetText}>{preset}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+
                 <TextInput
                   style={styles.input}
                   placeholder="Describe your day..."
@@ -280,14 +301,9 @@ export default function ComposerScreen() {
                   end={{ x: 1, y: 0 }}
                   style={styles.buttonGradient}
                 >
-                  {isUploading ? (
-                    <>
-                      <ActivityIndicator size="small" color={Colors.white} />
-                      <Text style={styles.buttonText}>Uploading...</Text>
-                    </>
-                  ) : (
-                    <Text style={styles.buttonText}>Generate Reel</Text>
-                  )}
+                  <Text style={styles.buttonText}>
+                    {isUploading ? 'Uploading...' : 'Generate Reel'}
+                  </Text>
                 </LinearGradient>
               </TouchableOpacity>
             </View>
@@ -345,6 +361,23 @@ const styles = StyleSheet.create({
     fontWeight: '600' as const,
     color: Colors.white,
     marginBottom: 10,
+  },
+  presetContainer: {
+    marginBottom: 10,
+    maxHeight: 32,
+  },
+  presetChip: {
+    backgroundColor: 'rgba(255, 107, 53, 0.15)',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 107, 53, 0.3)',
+  },
+  presetText: {
+    fontSize: 12,
+    color: Colors.orange,
+    fontWeight: '500' as const,
   },
   input: {
     backgroundColor: Colors.gray,
