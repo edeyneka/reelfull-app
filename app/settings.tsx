@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   Animated,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useQuery, useMutation, useAction } from "convex/react";
@@ -45,6 +46,7 @@ export default function SettingsScreen() {
   const [isEditingStyle, setIsEditingStyle] = useState(false);
   const [isEditingVoice, setIsEditingVoice] = useState(false);
   const [isSelectingVoice, setIsSelectingVoice] = useState(false);
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [editedName, setEditedName] = useState('');
   const [editedStyle, setEditedStyle] = useState<StylePreference | null>(null);
   const [playingPreviewId, setPlayingPreviewId] = useState<string | null>(null);
@@ -542,6 +544,7 @@ export default function SettingsScreen() {
 
               <TouchableOpacity
                 style={styles.menuItem}
+                onPress={() => setIsAboutOpen(true)}
                 activeOpacity={0.7}
               >
                 <View style={styles.menuItemLeft}>
@@ -588,16 +591,26 @@ export default function SettingsScreen() {
                     editable={!isLoading}
                   />
                   <TouchableOpacity
-                    style={styles.saveButton}
                     onPress={handleSaveName}
                     activeOpacity={0.7}
                     disabled={isLoading}
                   >
-                    {isLoading ? (
-                      <ActivityIndicator size="small" color={Colors.white} />
-                    ) : (
-                      <Text style={styles.saveButtonText}>Save</Text>
-                    )}
+                    <LinearGradient
+                      colors={
+                        !isLoading
+                          ? [Colors.orange, Colors.orangeLight]
+                          : [Colors.gray, Colors.grayLight]
+                      }
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.saveButton}
+                    >
+                      {isLoading ? (
+                        <ActivityIndicator size="small" color={Colors.white} />
+                      ) : (
+                        <Text style={styles.saveButtonText}>Save</Text>
+                      )}
+                    </LinearGradient>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -640,16 +653,26 @@ export default function SettingsScreen() {
                     ))}
                   </View>
                   <TouchableOpacity
-                    style={styles.saveButton}
                     onPress={handleSaveStyle}
                     activeOpacity={0.7}
                     disabled={isLoading}
                   >
-                    {isLoading ? (
-                      <ActivityIndicator size="small" color={Colors.white} />
-                    ) : (
-                      <Text style={styles.saveButtonText}>Save</Text>
-                    )}
+                    <LinearGradient
+                      colors={
+                        !isLoading
+                          ? [Colors.orange, Colors.orangeLight]
+                          : [Colors.gray, Colors.grayLight]
+                      }
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.saveButton}
+                    >
+                      {isLoading ? (
+                        <ActivityIndicator size="small" color={Colors.white} />
+                      ) : (
+                        <Text style={styles.saveButtonText}>Save</Text>
+                      )}
+                    </LinearGradient>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -771,6 +794,35 @@ export default function SettingsScreen() {
                 </View>
               </View>
             )}
+
+            {/* About Modal */}
+            {isAboutOpen && (
+              <View style={styles.editModalOverlay}>
+                <View style={styles.editModalContent}>
+                  <View style={styles.editModalHeader}>
+                    <Text style={styles.editModalTitle}>About Reelful</Text>
+                    <TouchableOpacity
+                      onPress={() => setIsAboutOpen(false)}
+                      activeOpacity={0.7}
+                    >
+                      <X size={24} color={Colors.white} strokeWidth={2} />
+                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.aboutContent}>
+                    <Text style={styles.aboutDescription}>
+                      Upload your photos and videos with a short description and get a ready-to-share clip in minutes.
+                    </Text>
+                    <Text style={styles.aboutDescription}>
+                      Transform your memories into engaging content effortlessly.
+                    </Text>
+                    <View style={styles.madeWithLove}>
+                      <Text style={styles.madeWithLoveText}>Made with love </Text>
+                      <Text style={styles.orangeHeart}>🧡</Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            )}
           </ScrollView>
         </Animated.View>
       </GestureDetector>
@@ -832,8 +884,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    color: Colors.grayLight,
     fontSize: 16,
+    fontFamily: Fonts.regular,
+    color: Colors.grayLight,
   },
   // Profile Section
   profileSection: {
@@ -936,7 +989,6 @@ const styles = StyleSheet.create({
     borderColor: '#3a3a3c',
   },
   saveButton: {
-    backgroundColor: Colors.orange,
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
@@ -996,6 +1048,7 @@ const styles = StyleSheet.create({
   },
   modalDescription: {
     fontSize: 14,
+    fontFamily: Fonts.regular,
     color: '#8e8e93',
     marginBottom: 12,
     textAlign: 'center',
@@ -1038,6 +1091,7 @@ const styles = StyleSheet.create({
   },
   voiceOptionDesc: {
     fontSize: 13,
+    fontFamily: Fonts.regular,
     color: '#8e8e93',
   },
   voiceOptionActions: {
@@ -1052,5 +1106,33 @@ const styles = StyleSheet.create({
     backgroundColor: '#3a3a3c',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  // About Modal
+  aboutContent: {
+    paddingVertical: 8,
+  },
+  aboutDescription: {
+    fontSize: 16,
+    fontFamily: Fonts.regular,
+    color: Colors.white,
+    lineHeight: 24,
+    marginBottom: 16,
+  },
+  madeWithLove: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#3a3a3c',
+  },
+  madeWithLoveText: {
+    fontSize: 16,
+    fontFamily: Fonts.regular,
+    color: Colors.grayLight,
+  },
+  orangeHeart: {
+    fontSize: 18,
   },
 });
