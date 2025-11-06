@@ -220,13 +220,51 @@ export default function FeedScreen() {
 
   // Animated values for slide gesture
   const translateY = useRef(new Animated.Value(0)).current;
-  const opacity = useRef(new Animated.Value(1)).current;
+  const backdropOpacity = useRef(new Animated.Value(0)).current;
+
+  // Animate modal in when video is selected
+  useEffect(() => {
+    if (selectedVideo) {
+      // Start from below screen
+      translateY.setValue(600);
+      backdropOpacity.setValue(0);
+      
+      // Animate in
+      Animated.parallel([
+        Animated.spring(translateY, {
+          toValue: 0,
+          useNativeDriver: true,
+          tension: 65,
+          friction: 11,
+        }),
+        Animated.timing(backdropOpacity, {
+          toValue: 1,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [selectedVideo, translateY, backdropOpacity]);
 
   const closeModal = () => {
-    setSelectedVideo(null);
-    translateY.setValue(0);
-    opacity.setValue(1);
-    setDownloadSuccess(false);
+    // Animate out before closing
+    Animated.parallel([
+      Animated.timing(translateY, {
+        toValue: 600,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+      Animated.timing(backdropOpacity, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setSelectedVideo(null);
+      translateY.setValue(0);
+      backdropOpacity.setValue(0);
+      setDownloadSuccess(false);
+    });
   };
 
   // Slide down gesture to close modal
@@ -235,8 +273,8 @@ export default function FeedScreen() {
       // Only allow downward drag
       if (event.translationY > 0) {
         translateY.setValue(event.translationY);
-        // Gradually fade out as user drags down
-        opacity.setValue(Math.max(0.5, 1 - event.translationY / 400));
+        // Gradually fade out backdrop as user drags down
+        backdropOpacity.setValue(Math.max(0.3, 1 - event.translationY / 600));
       }
     })
     .onEnd((event) => {
@@ -245,17 +283,20 @@ export default function FeedScreen() {
         // Fast animate out before closing
         Animated.parallel([
           Animated.timing(translateY, {
-            toValue: 800,
+            toValue: 600,
             duration: 200,
             useNativeDriver: true,
           }),
-          Animated.timing(opacity, {
+          Animated.timing(backdropOpacity, {
             toValue: 0,
             duration: 200,
             useNativeDriver: true,
           }),
         ]).start(() => {
-          closeModal();
+          setSelectedVideo(null);
+          translateY.setValue(0);
+          backdropOpacity.setValue(0);
+          setDownloadSuccess(false);
         });
       } else {
         // Quickly spring back to original position
@@ -266,7 +307,7 @@ export default function FeedScreen() {
             tension: 100,
             friction: 8,
           }),
-          Animated.spring(opacity, {
+          Animated.spring(backdropOpacity, {
             toValue: 1,
             useNativeDriver: true,
             tension: 100,
@@ -456,76 +497,91 @@ export default function FeedScreen() {
       <Modal
         visible={selectedVideo !== null}
         animationType="none"
+        transparent={true}
         onRequestClose={closeModal}
       >
         {selectedVideo && (
-          <GestureDetector gesture={panGesture}>
-            <Animated.View
-              style={[
-                styles.modalContainer,
-                {
-                  transform: [{ translateY }],
-                  opacity,
-                },
-              ]}
-            >
-              <View style={[styles.modalHeader, { paddingTop: insets.top + 16 }]}>
-                <TouchableOpacity
-                  style={styles.closeButton}
-                  onPress={closeModal}
-                  activeOpacity={0.7}
-                >
-                  <X size={24} color={Colors.white} strokeWidth={2.5} />
-                </TouchableOpacity>
-              </View>
+          <Animated.View 
+            style={[
+              styles.modalBackdrop,
+              { opacity: backdropOpacity }
+            ]}
+          >
+            <TouchableOpacity 
+              style={styles.backdropTouchable} 
+              activeOpacity={1}
+              onPress={closeModal}
+            />
+            <GestureDetector gesture={panGesture}>
+              <Animated.View
+                style={[
+                  styles.modalContainer,
+                  {
+                    transform: [{ translateY }],
+                  },
+                ]}
+              >
+                {/* Drag Handle */}
+                <View style={styles.dragHandle} />
 
-              <View style={styles.modalContent}>
-                <View style={styles.modalTitleSection}>
-                  <Text style={styles.modalTitle}>Ready to share!</Text>
-                </View>
-
-                <View style={styles.videoPreviewContainer}>
-                  <VideoView
-                    player={modalPlayer}
-                    style={styles.videoPreview}
-                    contentFit="cover"
-                    nativeControls={false}
-                  />
-                </View>
-
-                <View style={styles.modalActions}>
+                <View style={[styles.modalHeader, { paddingTop: 12 }]}>
                   <TouchableOpacity
-                    style={styles.downloadGradientButton}
-                    onPress={handleDownload}
-                    activeOpacity={0.8}
-                    disabled={isDownloading}
+                    style={styles.closeButton}
+                    onPress={closeModal}
+                    activeOpacity={0.7}
                   >
-                    <LinearGradient
-                      colors={[Colors.orangeLight, Colors.orange]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={styles.downloadGradient}
-                    >
-                      {isDownloading ? (
-                        <ActivityIndicator size="small" color={Colors.white} />
-                      ) : (
-                        <>
-                          <Download size={20} color={Colors.white} strokeWidth={2.5} />
-                          <Text style={styles.downloadButtonText}>Download</Text>
-                        </>
-                      )}
-                    </LinearGradient>
+                    <X size={24} color={Colors.white} strokeWidth={2.5} />
                   </TouchableOpacity>
-
-                  {downloadSuccess && (
-                    <Text style={styles.downloadSuccessText}>
-                      This video was saved to your camera roll.
-                    </Text>
-                  )}
                 </View>
-              </View>
-            </Animated.View>
-          </GestureDetector>
+
+                <View style={styles.modalContent}>
+                  <View style={styles.modalTitleSection}>
+                    <Text style={styles.modalTitle}>Ready to share!</Text>
+                  </View>
+
+                  <View style={styles.videoPreviewContainer}>
+                    <VideoView
+                      player={modalPlayer}
+                      style={styles.videoPreview}
+                      contentFit="cover"
+                      nativeControls={false}
+                    />
+                  </View>
+
+                  <View style={styles.modalActions}>
+                    <TouchableOpacity
+                      style={styles.downloadGradientButton}
+                      onPress={handleDownload}
+                      activeOpacity={0.8}
+                      disabled={isDownloading}
+                    >
+                      <LinearGradient
+                        colors={[Colors.orangeLight, Colors.orange]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={styles.downloadGradient}
+                      >
+                        {isDownloading ? (
+                          <ActivityIndicator size="small" color={Colors.white} />
+                        ) : (
+                          <>
+                            <Download size={20} color={Colors.white} strokeWidth={2.5} />
+                            <Text style={styles.downloadButtonText}>Download</Text>
+                          </>
+                        )}
+                      </LinearGradient>
+                    </TouchableOpacity>
+
+                    {downloadSuccess && (
+                      <Text style={styles.downloadSuccessText}>
+                        This video was saved to your camera roll.
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              </Animated.View>
+            </GestureDetector>
+          </Animated.View>
         )}
       </Modal>
     </View>
@@ -671,13 +727,41 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
-  modalContainer: {
+  modalBackdrop: {
     flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'flex-end',
+  },
+  backdropTouchable: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  modalContainer: {
     backgroundColor: Colors.black,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    height: '94%',
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  dragHandle: {
+    width: 40,
+    height: 5,
+    backgroundColor: Colors.gray,
+    borderRadius: 3,
+    alignSelf: 'center',
+    marginTop: 12,
+    marginBottom: 8,
   },
   modalHeader: {
     paddingHorizontal: 24,
-    paddingBottom: 16,
+    paddingBottom: 8,
     alignItems: 'flex-start',
   },
   closeButton: {
@@ -691,11 +775,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     justifyContent: 'flex-start',
     paddingBottom: 40,
-    paddingTop: 20,
+    paddingTop: 12,
   },
   modalTitleSection: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 24,
+    marginTop: 8,
   },
   modalTitle: {
     fontSize: 28,
@@ -706,12 +791,12 @@ const styles = StyleSheet.create({
   videoPreviewContainer: {
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 32,
   },
   videoPreview: {
-    width: '70%',
+    width: '65%',
     aspectRatio: 9 / 16,
-    maxHeight: 400,
+    maxHeight: 380,
     borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: Colors.grayDark,
