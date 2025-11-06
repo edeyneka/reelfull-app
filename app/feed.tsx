@@ -544,7 +544,7 @@ export default function FeedScreen() {
                       player={modalPlayer}
                       style={styles.videoPreview}
                       contentFit="cover"
-                      nativeControls={false}
+                      nativeControls={true}
                     />
                   </View>
 
