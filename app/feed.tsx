@@ -30,7 +30,7 @@ import { Fonts } from '@/constants/typography';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const ITEM_SPACING = 8;
-const ITEM_WIDTH = (SCREEN_WIDTH - ITEM_SPACING * 3) / 2;
+const ITEM_WIDTH = (SCREEN_WIDTH - ITEM_SPACING * 4) / 3;
 
 function VideoThumbnail({ 
   item, 
@@ -435,7 +435,7 @@ export default function FeedScreen() {
         data={videos}
         renderItem={renderVideoThumbnail}
         keyExtractor={(item) => item.id}
-        numColumns={2}
+        numColumns={3}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.grid}
         columnWrapperStyle={styles.row}
