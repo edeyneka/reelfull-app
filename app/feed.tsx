@@ -13,6 +13,7 @@ import {
   Animated,
   ActivityIndicator,
   Platform,
+  Image,
 } from 'react-native';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -413,9 +414,12 @@ export default function FeedScreen() {
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <View style={styles.headerContent}>
-          <View>
+          <View style={styles.titleContainer}>
             <Text style={styles.headerTitle}>Reelful</Text>
-            <Text style={styles.headerSubtitle}>Your Video Gallery</Text>
+            <Image 
+              source={require('../assets/images/icon-no-bg.png')}
+              style={styles.headerIcon}
+            />
           </View>
           <TouchableOpacity
             style={styles.settingsButton}
@@ -524,16 +528,20 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerIcon: {
+    width: 32,
+    height: 32,
+    resizeMode: 'contain',
+    marginLeft: 6,
+  },
   headerTitle: {
     fontSize: 32,
     fontFamily: Fonts.regular,
     color: Colors.white,
-    marginBottom: 4,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    fontFamily: Fonts.regular,
-    color: Colors.orange,
   },
   settingsButton: {
     width: 44,
