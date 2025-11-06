@@ -45,7 +45,14 @@ export default function RootLayout() {
                       <Stack.Screen name="script-review" options={{ gestureEnabled: false }} />
                       <Stack.Screen name="loader" options={{ gestureEnabled: false }} />
                       <Stack.Screen name="result" options={{ gestureEnabled: false, animation: 'none' }} />
-                      <Stack.Screen name="settings" />
+                      <Stack.Screen 
+                        name="settings" 
+                        options={{ 
+                          presentation: "transparentModal",
+                          animation: 'none',
+                          contentStyle: { backgroundColor: 'transparent' }
+                        }} 
+                      />
             </Stack>
           </AppProvider>
         </GestureHandlerRootView>

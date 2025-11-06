@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { ArrowLeft, User, Palette, Edit2, Check, X, Mic, Volume2, Headphones, LogOut } from 'lucide-react-native';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -10,8 +10,10 @@ import {
   View,
   Alert,
   ActivityIndicator,
+  Animated,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Audio } from 'expo-av';
@@ -49,12 +51,34 @@ export default function SettingsScreen() {
   const [previewStorageId, setPreviewStorageId] = useState<string | null>(null);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Animated values for slide gesture
+  const translateY = useRef(new Animated.Value(600)).current;
+  const backdropOpacity = useRef(new Animated.Value(0)).current;
   
   // Get preview URL for the voice being previewed
   const previewUrl = useQuery(
     api.users.getVoicePreviewUrl,
     previewStorageId ? { storageId: previewStorageId as any } : "skip"
   );
+
+  // Animate modal in when mounted
+  useEffect(() => {
+    // Animate in
+    Animated.parallel([
+      Animated.spring(translateY, {
+        toValue: 0,
+        useNativeDriver: true,
+        tension: 65,
+        friction: 11,
+      }),
+      Animated.timing(backdropOpacity, {
+        toValue: 1,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [translateY, backdropOpacity]);
 
   // Initialize edited values from user data
   useEffect(() => {
@@ -72,6 +96,57 @@ export default function SettingsScreen() {
       }
     };
   }, [sound]);
+
+  const closeModal = () => {
+    // Animate out before closing
+    Animated.parallel([
+      Animated.timing(translateY, {
+        toValue: 600,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+      Animated.timing(backdropOpacity, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      router.back();
+    });
+  };
+
+  // Slide down gesture to close modal
+  const panGesture = Gesture.Pan()
+    .onUpdate((event) => {
+      // Only allow downward drag
+      if (event.translationY > 0) {
+        translateY.setValue(event.translationY);
+        // Gradually fade out backdrop as user drags down
+        backdropOpacity.setValue(Math.max(0.3, 1 - event.translationY / 600));
+      }
+    })
+    .onEnd((event) => {
+      // If swiped down far enough or with velocity, close modal
+      if (event.translationY > 150 || event.velocityY > 500) {
+        closeModal();
+      } else {
+        // Quickly spring back to original position
+        Animated.parallel([
+          Animated.spring(translateY, {
+            toValue: 0,
+            useNativeDriver: true,
+            tension: 100,
+            friction: 8,
+          }),
+          Animated.spring(backdropOpacity, {
+            toValue: 1,
+            useNativeDriver: true,
+            tension: 100,
+            friction: 8,
+          }),
+        ]).start();
+      }
+    });
 
   const playPreviewAudio = useCallback(async (url: string) => {
     try {
@@ -259,7 +334,7 @@ export default function SettingsScreen() {
     if (!user?.selectedVoiceId) return 'Not selected';
     
     // Check if it's a default voice
-    const defaultVoice = defaultVoices?.find(v => v.voiceId === user.selectedVoiceId);
+    const defaultVoice = defaultVoices?.find((v: any) => v.voiceId === user.selectedVoiceId);
     if (defaultVoice) return defaultVoice.name;
     
     // Check if it's custom voice
@@ -298,64 +373,110 @@ export default function SettingsScreen() {
 
   if (!userId) {
     return (
-      <View style={styles.container}>
-        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-            activeOpacity={0.7}
-          >
-            <ArrowLeft size={24} color={Colors.white} strokeWidth={2} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Settings</Text>
-          <View style={styles.placeholder} />
+      <Animated.View 
+        style={[
+          styles.modalBackdrop,
+          { opacity: backdropOpacity }
+        ]}
+      >
+        <TouchableOpacity 
+          style={styles.backdropTouchable} 
+          activeOpacity={1}
+          onPress={closeModal}
+        />
+        <View style={styles.modalContainer}>
+          <View style={[styles.header, { paddingTop: 12 }]}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={closeModal}
+              activeOpacity={0.7}
+            >
+              <X size={24} color={Colors.white} strokeWidth={2} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Settings</Text>
+            <View style={styles.placeholder} />
+          </View>
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>Please log in to access settings</Text>
+          </View>
         </View>
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Please log in to access settings</Text>
-        </View>
-      </View>
+      </Animated.View>
     );
   }
 
   if (!user) {
     return (
-      <View style={styles.container}>
-        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-            activeOpacity={0.7}
-          >
-            <ArrowLeft size={24} color={Colors.white} strokeWidth={2} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Settings</Text>
-          <View style={styles.placeholder} />
+      <Animated.View 
+        style={[
+          styles.modalBackdrop,
+          { opacity: backdropOpacity }
+        ]}
+      >
+        <TouchableOpacity 
+          style={styles.backdropTouchable} 
+          activeOpacity={1}
+          onPress={closeModal}
+        />
+        <View style={styles.modalContainer}>
+          <View style={[styles.header, { paddingTop: 12 }]}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={closeModal}
+              activeOpacity={0.7}
+            >
+              <X size={24} color={Colors.white} strokeWidth={2} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Settings</Text>
+            <View style={styles.placeholder} />
+          </View>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={Colors.orange} />
+          </View>
         </View>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.orange} />
-        </View>
-      </View>
+      </Animated.View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-          activeOpacity={0.7}
+    <Animated.View 
+      style={[
+        styles.modalBackdrop,
+        { opacity: backdropOpacity }
+      ]}
+    >
+      <TouchableOpacity 
+        style={styles.backdropTouchable} 
+        activeOpacity={1}
+        onPress={closeModal}
+      />
+      <GestureDetector gesture={panGesture}>
+        <Animated.View
+          style={[
+            styles.modalContainer,
+            {
+              transform: [{ translateY }],
+            },
+          ]}
         >
-          <ArrowLeft size={24} color={Colors.white} strokeWidth={2} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Settings</Text>
-        <View style={styles.placeholder} />
-      </View>
+          {/* Drag Handle */}
+          <View style={styles.dragHandle} />
 
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
+          <View style={[styles.header, { paddingTop: 12 }]}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={closeModal}
+              activeOpacity={0.7}
+            >
+              <X size={24} color={Colors.white} strokeWidth={2.5} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Settings</Text>
+            <View style={styles.placeholder} />
+          </View>
+
+          <ScrollView
+            contentContainerStyle={styles.content}
+            showsVerticalScrollIndicator={false}
+          >
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Profile Information</Text>
           
@@ -597,10 +718,10 @@ export default function SettingsScreen() {
 
         {/* Voice Selection Modal */}
         {isSelectingVoice && (
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Select Voice</Text>
+          <View style={styles.voiceModalOverlay}>
+            <View style={styles.voiceModalContent}>
+              <View style={styles.voiceModalHeader}>
+                <Text style={styles.voiceModalTitle}>Select Voice</Text>
                 <TouchableOpacity
                   onPress={() => setIsSelectingVoice(false)}
                   activeOpacity={0.7}
@@ -636,7 +757,7 @@ export default function SettingsScreen() {
                 )}
 
                 {/* Default Voices */}
-                {defaultVoices?.map((voice) => (
+                {defaultVoices?.map((voice: any) => (
                   <TouchableOpacity
                     key={voice._id}
                     style={[
@@ -681,14 +802,44 @@ export default function SettingsScreen() {
           </View>
         )}
       </ScrollView>
-    </View>
+        </Animated.View>
+      </GestureDetector>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  modalBackdrop: {
     flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'flex-end',
+  },
+  backdropTouchable: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  modalContainer: {
     backgroundColor: Colors.black,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    height: '94%',
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  dragHandle: {
+    width: 40,
+    height: 5,
+    backgroundColor: Colors.gray,
+    borderRadius: 3,
+    alignSelf: 'center',
+    marginTop: 12,
+    marginBottom: 8,
   },
   header: {
     flexDirection: 'row',
@@ -696,18 +847,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 24,
     paddingBottom: 16,
-    backgroundColor: Colors.black,
   },
   backButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.gray,
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 24,
     fontFamily: Fonts.title,
     color: Colors.white,
   },
@@ -716,6 +864,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 24,
+    paddingBottom: 40,
   },
   loadingContainer: {
     flex: 1,
@@ -834,7 +983,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 16,
   },
-  modalOverlay: {
+  voiceModalOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
@@ -845,7 +994,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 1000,
   },
-  modalContent: {
+  voiceModalContent: {
     backgroundColor: Colors.grayDark,
     borderRadius: 16,
     padding: 24,
@@ -854,13 +1003,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.gray,
   },
-  modalHeader: {
+  voiceModalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
   },
-  modalTitle: {
+  voiceModalTitle: {
     fontSize: 24,
     fontFamily: Fonts.title,
     color: Colors.white,
