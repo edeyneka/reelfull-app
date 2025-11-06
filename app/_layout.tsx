@@ -5,6 +5,7 @@ import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ConvexProvider, ConvexReactClient } from "convex/react";
 import { AppProvider } from "@/contexts/AppContext";
+import { useFonts, Inter_400Regular, Inter_700Bold } from '@expo-google-fonts/inter';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -15,9 +16,20 @@ const convexUrl = process.env.EXPO_PUBLIC_CONVEX_URL;
 const convex = new ConvexReactClient(convexUrl || "");
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    Inter_400Regular,
+    Inter_700Bold,
+  });
+
   useEffect(() => {
-    SplashScreen.hideAsync();
-  }, []);
+    if (fontsLoaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) {
+    return null;
+  }
 
   return (
     <ConvexProvider client={convex}>

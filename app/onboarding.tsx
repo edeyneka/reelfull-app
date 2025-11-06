@@ -17,6 +17,7 @@ import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
 import { StylePreference } from '@/types';
 import VoiceRecorder from '@/components/VoiceRecorder';
+import { Fonts } from '@/constants/typography';
 
 const STYLE_OPTIONS: StylePreference[] = ['Playful', 'Professional', 'Dreamy'];
 
@@ -220,7 +221,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 32,
-    fontWeight: '800' as const,
+    fontFamily: Fonts.title,
     color: Colors.white,
     marginBottom: 8,
     textAlign: 'center',
@@ -238,7 +239,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 18,
-    fontWeight: '600' as const,
+    fontFamily: Fonts.regular,
     color: Colors.white,
     marginBottom: 12,
   },
@@ -267,7 +268,7 @@ const styles = StyleSheet.create({
   },
   optionText: {
     fontSize: 16,
-    fontWeight: '600' as const,
+    fontFamily: Fonts.regular,
     color: Colors.white,
     textAlign: 'center',
   },
@@ -291,7 +292,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontSize: 18,
-    fontWeight: '700' as const,
+    fontFamily: Fonts.title,
     color: Colors.white,
   },
   skipButton: {
@@ -301,7 +302,7 @@ const styles = StyleSheet.create({
   },
   skipButtonText: {
     fontSize: 16,
-    fontWeight: '600' as const,
+    fontFamily: Fonts.regular,
     color: Colors.grayLight,
     textDecorationLine: 'underline',
   },

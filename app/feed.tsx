@@ -25,6 +25,7 @@ import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
 import { Video as VideoType } from '@/types';
 import { useVideoPolling, registerForPushNotificationsAsync } from '@/lib/videoPollingService';
+import { Fonts } from '@/constants/typography';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const ITEM_SPACING = 8;
@@ -525,14 +526,14 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 32,
-    fontWeight: '700' as const,
+    fontFamily: Fonts.title,
     color: Colors.white,
     marginBottom: 4,
   },
   headerSubtitle: {
     fontSize: 16,
+    fontFamily: Fonts.regular,
     color: Colors.orange,
-    fontWeight: '600' as const,
   },
   settingsButton: {
     width: 44,
@@ -570,8 +571,8 @@ const styles = StyleSheet.create({
   },
   thumbnailPrompt: {
     fontSize: 12,
+    fontFamily: Fonts.regular,
     color: Colors.white,
-    fontWeight: '600' as const,
   },
   thumbnailDeleteButton: {
     position: 'absolute',
@@ -594,6 +595,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 12,
+    fontFamily: Fonts.regular,
     color: Colors.grayLight,
     marginTop: 8,
     textAlign: 'center',
@@ -607,8 +609,8 @@ const styles = StyleSheet.create({
   },
   processingText: {
     fontSize: 13,
+    fontFamily: Fonts.regular,
     color: Colors.orange,
-    fontWeight: '600' as const,
   },
   emptyContainer: {
     justifyContent: 'center',
@@ -618,12 +620,13 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 28,
-    fontWeight: '700' as const,
+    fontFamily: Fonts.title,
     color: Colors.white,
     marginBottom: 12,
   },
   emptySubtitle: {
     fontSize: 16,
+    fontFamily: Fonts.regular,
     color: Colors.grayLight,
     textAlign: 'center',
   },
@@ -688,8 +691,8 @@ const styles = StyleSheet.create({
   },
   modalPrompt: {
     fontSize: 14,
+    fontFamily: Fonts.regular,
     color: Colors.white,
-    fontWeight: '500' as const,
     lineHeight: 20,
   },
 });

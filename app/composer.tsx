@@ -26,6 +26,7 @@ import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
 import { uploadMediaFiles } from '@/lib/api-helpers';
 import { Asset } from 'expo-asset';
+import { Fonts } from '@/constants/typography';
 
 function VideoThumbnail({ uri, style }: { uri: string; style: any }) {
   const player = useVideoPlayer(uri, (player) => {
@@ -413,7 +414,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: '700' as const,
+    fontFamily: Fonts.title,
     color: Colors.white,
     lineHeight: 28,
   },
@@ -425,7 +426,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 15,
-    fontWeight: '600' as const,
+    fontFamily: Fonts.regular,
     color: Colors.white,
     marginBottom: 10,
   },
@@ -452,7 +453,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 14,
     color: Colors.orange,
-    fontWeight: '600' as const,
+    fontFamily: Fonts.regular,
   },
   mediaScroll: {
     marginBottom: 10,
@@ -495,7 +496,7 @@ const styles = StyleSheet.create({
   },
   exampleTitle: {
     fontSize: 11,
-    fontWeight: '600' as const,
+    fontFamily: Fonts.regular,
     color: Colors.orange,
   },
   exampleText: {
@@ -522,7 +523,7 @@ const styles = StyleSheet.create({
   },
   testRunLabel: {
     fontSize: 15,
-    fontWeight: '600' as const,
+    fontFamily: Fonts.regular,
     color: Colors.white,
   },
   testRunInfo: {
@@ -552,7 +553,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontSize: 17,
-    fontWeight: '700' as const,
+    fontFamily: Fonts.title,
     color: Colors.white,
   },
 });

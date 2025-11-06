@@ -19,6 +19,7 @@ import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
 import { Asset } from 'expo-asset';
 import { uploadFileToConvex } from '@/lib/api-helpers';
+import { Fonts } from '@/constants/typography';
 
 export default function ScriptReviewScreen() {
   const router = useRouter();
@@ -404,7 +405,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: '700' as const,
+    fontFamily: Fonts.title,
     color: Colors.white,
   },
   placeholder: {
@@ -434,7 +435,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '700' as const,
+    fontFamily: Fonts.title,
     color: Colors.white,
   },
   actions: {
@@ -491,7 +492,7 @@ const styles = StyleSheet.create({
   },
   editButtonText: {
     fontSize: 16,
-    fontWeight: '700' as const,
+    fontFamily: Fonts.title,
     color: Colors.white,
   },
   cancelButton: {
@@ -506,7 +507,7 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     fontSize: 16,
-    fontWeight: '700' as const,
+    fontFamily: Fonts.title,
     color: Colors.grayLight,
   },
   approveButton: {
@@ -526,7 +527,7 @@ const styles = StyleSheet.create({
   },
   approveButtonText: {
     fontSize: 18,
-    fontWeight: '700' as const,
+    fontFamily: Fonts.title,
     color: Colors.white,
   },
   errorContainer: {
@@ -546,7 +547,7 @@ const styles = StyleSheet.create({
   },
   retryButtonText: {
     fontSize: 16,
-    fontWeight: '700' as const,
+    fontFamily: Fonts.title,
     color: Colors.white,
   },
   testModeBadge: {
@@ -565,7 +566,7 @@ const styles = StyleSheet.create({
   },
   testModeText: {
     fontSize: 13,
-    fontWeight: '600' as const,
+    fontFamily: Fonts.regular,
     color: Colors.orange,
   },
 });

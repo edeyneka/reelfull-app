@@ -20,6 +20,7 @@ import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
 import CountrySelector from '@/components/CountrySelector';
 import { Country, DEFAULT_COUNTRY } from '@/constants/countries';
+import { Fonts } from '@/constants/typography';
 
 export default function AuthScreen() {
   const router = useRouter();
@@ -359,13 +360,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: '800' as const,
+    fontFamily: Fonts.title,
     color: Colors.white,
     marginBottom: 8,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
+    fontFamily: Fonts.regular,
     color: Colors.grayLight,
     textAlign: 'center',
   },
@@ -377,7 +379,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 18,
-    fontWeight: '600' as const,
+    fontFamily: Fonts.regular,
     color: Colors.white,
     marginBottom: 12,
   },
@@ -406,7 +408,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     fontSize: 32,
-    fontWeight: '700' as const,
+    fontFamily: Fonts.title,
     color: Colors.white,
     textAlign: 'center',
     letterSpacing: 8,
@@ -430,7 +432,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontSize: 18,
-    fontWeight: '700' as const,
+    fontFamily: Fonts.title,
     color: Colors.white,
   },
   changePhoneButton: {
@@ -440,7 +442,7 @@ const styles = StyleSheet.create({
   },
   changePhoneText: {
     fontSize: 16,
-    fontWeight: '600' as const,
+    fontFamily: Fonts.regular,
     color: Colors.orange,
   },
   resendButton: {
@@ -450,7 +452,7 @@ const styles = StyleSheet.create({
   },
   resendText: {
     fontSize: 16,
-    fontWeight: '600' as const,
+    fontFamily: Fonts.regular,
     color: Colors.grayLight,
     textDecorationLine: 'underline',
   },

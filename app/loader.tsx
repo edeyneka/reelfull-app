@@ -6,6 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Colors from '@/constants/colors';
+import { Fonts } from '@/constants/typography';
 
 export default function LoaderScreen() {
   const router = useRouter();
@@ -247,7 +248,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: '700' as const,
+    fontFamily: Fonts.title,
     color: Colors.white,
     marginBottom: 8,
     textAlign: 'center',
@@ -270,7 +271,7 @@ const styles = StyleSheet.create({
   },
   timerText: {
     fontSize: 48,
-    fontWeight: '700' as const,
+    fontFamily: Fonts.title,
     color: Colors.orange,
     fontVariant: ['tabular-nums'],
   },
@@ -296,7 +297,7 @@ const styles = StyleSheet.create({
   },
   errorTitle: {
     fontSize: 18,
-    fontWeight: '700' as const,
+    fontFamily: Fonts.title,
     color: '#EF4444',
     marginBottom: 8,
   },
@@ -314,7 +315,7 @@ const styles = StyleSheet.create({
   },
   retryButtonText: {
     fontSize: 16,
-    fontWeight: '700' as const,
+    fontFamily: Fonts.title,
     color: Colors.white,
   },
 });

@@ -20,6 +20,7 @@ import { useApp } from '@/contexts/AppContext';
 import { StylePreference, BackendStyle } from '@/types';
 import VoiceRecorder from '@/components/VoiceRecorder';
 import { uploadFileToConvex, mapStyleToBackend, mapStyleToApp } from '@/lib/api-helpers';
+import { Fonts } from '@/constants/typography';
 
 const STYLE_OPTIONS: StylePreference[] = ['Playful', 'Professional', 'Dreamy'];
 
@@ -707,7 +708,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: '700' as const,
+    fontFamily: Fonts.title,
     color: Colors.white,
   },
   placeholder: {
@@ -730,7 +731,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '600' as const,
+    fontFamily: Fonts.regular,
     color: Colors.grayLight,
     marginBottom: 16,
     textTransform: 'uppercase',
@@ -767,7 +768,7 @@ const styles = StyleSheet.create({
   },
   cardValue: {
     fontSize: 18,
-    fontWeight: '600' as const,
+    fontFamily: Fonts.regular,
     color: Colors.white,
   },
   cardSubtext: {
@@ -814,7 +815,7 @@ const styles = StyleSheet.create({
   },
   styleOptionText: {
     fontSize: 14,
-    fontWeight: '600' as const,
+    fontFamily: Fonts.regular,
     color: Colors.white,
     textAlign: 'center',
   },
@@ -861,7 +862,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 24,
-    fontWeight: '700' as const,
+    fontFamily: Fonts.title,
     color: Colors.white,
   },
   voicesList: {
@@ -893,7 +894,7 @@ const styles = StyleSheet.create({
   },
   voiceOptionName: {
     fontSize: 16,
-    fontWeight: '600' as const,
+    fontFamily: Fonts.regular,
     color: Colors.white,
     marginBottom: 4,
   },
@@ -937,7 +938,7 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     fontSize: 16,
-    fontWeight: '600' as const,
+    fontFamily: Fonts.regular,
     color: Colors.white,
   },
 });

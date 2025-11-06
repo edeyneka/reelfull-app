@@ -20,6 +20,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
+import { Fonts } from '@/constants/typography';
 
 export default function ResultScreen() {
   const router = useRouter();
@@ -131,7 +132,7 @@ export default function ResultScreen() {
           style={{ marginTop: 20, padding: 16, backgroundColor: Colors.orange, borderRadius: 12 }}
           onPress={() => router.replace('/feed')}
         >
-          <Text style={{ color: Colors.white, fontWeight: '700' as const }}>Go to Feed</Text>
+          <Text style={{ color: Colors.white, fontFamily: Fonts.title }}>Go to Feed</Text>
         </TouchableOpacity>
       </View>
     );
@@ -154,7 +155,7 @@ export default function ResultScreen() {
           style={{ marginTop: 20, padding: 16, backgroundColor: Colors.orange, borderRadius: 12 }}
           onPress={() => router.replace('/feed')}
         >
-          <Text style={{ color: Colors.white, fontWeight: '700' as const }}>Go to Feed</Text>
+          <Text style={{ color: Colors.white, fontFamily: Fonts.title }}>Go to Feed</Text>
         </TouchableOpacity>
       </View>
     );
@@ -232,7 +233,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: '700' as const,
+    fontFamily: Fonts.title,
     color: Colors.white,
     marginTop: 16,
     marginBottom: 4,
@@ -254,7 +255,7 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     fontSize: 18,
-    fontWeight: '600' as const,
+    fontFamily: Fonts.regular,
     color: Colors.white,
   },
   savedBadge: {
@@ -271,7 +272,7 @@ const styles = StyleSheet.create({
   },
   savedText: {
     fontSize: 14,
-    fontWeight: '600' as const,
+    fontFamily: Fonts.regular,
     color: Colors.orange,
   },
 });

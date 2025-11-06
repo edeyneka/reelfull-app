@@ -6,6 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
+import { Fonts } from '@/constants/typography';
 
 export default function IntroScreen() {
   const router = useRouter();
@@ -114,15 +115,15 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 56,
-    fontWeight: '800' as const,
+    fontFamily: Fonts.title,
     color: Colors.white,
     marginBottom: 8,
     letterSpacing: -1,
   },
   subtitle: {
     fontSize: 18,
+    fontFamily: Fonts.regular,
     color: Colors.orange,
-    fontWeight: '500' as const,
     letterSpacing: 1,
   },
 });
