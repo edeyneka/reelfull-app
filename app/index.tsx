@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
-import { Film } from 'lucide-react-native';
-import { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import { Film, ArrowRight } from 'lucide-react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import Colors from '@/constants/colors';
@@ -13,13 +13,28 @@ export default function IntroScreen() {
   const { userId, isLoading } = useApp();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const [hasNavigated, setHasNavigated] = useState(false);
   
   const videoSource = require('../assets/intro-video.mov');
   const player = useVideoPlayer(videoSource, (player) => {
-    player.loop = true;
+    player.loop = false; // Play video only once
     player.muted = true;
     player.play();
   });
+
+  // Navigate to the appropriate screen
+  const navigateToNextScreen = () => {
+    if (hasNavigated) return;
+    setHasNavigated(true);
+    
+    if (userId) {
+      // User is authenticated, go to feed
+      router.replace('/feed');
+    } else {
+      // No user, go to auth
+      router.replace('/auth');
+    }
+  };
 
   useEffect(() => {
     Animated.parallel([
@@ -37,21 +52,25 @@ export default function IntroScreen() {
     ]).start();
   }, [fadeAnim, scaleAnim]);
 
+  // Listen for video ending and automatically navigate when it's done
   useEffect(() => {
-    if (!isLoading) {
-      const timer = setTimeout(() => {
-        if (userId) {
-          // User is authenticated, go to feed
-          router.replace('/feed');
-        } else {
-          // No user, go to auth
-          router.replace('/auth');
+    if (!isLoading && player) {
+      const checkStatus = setInterval(() => {
+        // Check if video has finished: status is 'idle' and we've played through the video
+        const duration = player.duration || 0;
+        const currentTime = player.currentTime || 0;
+        
+        // Video is considered finished when we're at or very near the end
+        if (duration > 0 && currentTime > 0 && (currentTime >= duration - 0.1 || player.status === 'idle')) {
+          console.log('Video finished, auto-navigating...', { duration, currentTime, status: player.status });
+          navigateToNextScreen();
+          clearInterval(checkStatus);
         }
-      }, 2000);
+      }, 100);
 
-      return () => clearTimeout(timer);
+      return () => clearInterval(checkStatus);
     }
-  }, [isLoading, userId, router]);
+  }, [isLoading, userId, player, navigateToNextScreen]);
 
   return (
     <View style={styles.container}>
@@ -78,8 +97,20 @@ export default function IntroScreen() {
             <Film size={80} color={Colors.orange} strokeWidth={2} />
           </View>
           <Text style={styles.title}>Reelful</Text>
-          <Text style={styles.subtitle}>Your stories, reimagined</Text>
+          <Text style={styles.subtitle}>Live life to the fullest</Text>
         </Animated.View>
+
+        {/* Skip Intro Button at the bottom */}
+        {!isLoading && (
+          <TouchableOpacity
+            style={styles.skipButton}
+            onPress={navigateToNextScreen}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.skipText}>Skip intro</Text>
+            <ArrowRight size={20} color={Colors.white} strokeWidth={2} />
+          </TouchableOpacity>
+        )}
       </LinearGradient>
     </View>
   );
@@ -125,5 +156,20 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.regular,
     color: Colors.orange,
     letterSpacing: 1,
+  },
+  skipButton: {
+    position: 'absolute',
+    bottom: 220,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    gap: 8,
+  },
+  skipText: {
+    fontSize: 16,
+    fontFamily: Fonts.title,
+    color: Colors.white,
+    letterSpacing: 0.5,
   },
 });
