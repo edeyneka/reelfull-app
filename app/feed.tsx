@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Plus, Trash2, Download, Settings, Loader2, AlertCircle, X } from 'lucide-react-native';
+import { Plus, Download, Settings, Loader2, AlertCircle, X, Trash2 } from 'lucide-react-native';
 import { useState, useRef, useEffect } from 'react';
 import {
   Dimensions,
@@ -36,13 +36,17 @@ const ITEM_WIDTH = (SCREEN_WIDTH - ITEM_SPACING * 4) / 3;
 function VideoThumbnail({ 
   item, 
   onPress, 
-  onDelete 
+  onLongPress,
+  isSelected
 }: { 
   item: VideoType; 
   onPress: () => void;
-  onDelete: () => void;
+  onLongPress: (event: any) => void;
+  isSelected: boolean;
 }) {
   const spinAnim = useRef(new Animated.Value(0)).current;
+  const thumbnailRef = useRef<View>(null);
+  const scaleAnim = useRef(new Animated.Value(1)).current;
 
   // Always call hooks in the same order - create player even if not used
   const hasValidUri = item.uri && item.uri.length > 0 && item.status === 'ready';
@@ -55,6 +59,24 @@ function VideoThumbnail({
       }
     }
   );
+
+  const handleLongPress = (event: any) => {
+    if (thumbnailRef.current) {
+      thumbnailRef.current.measure((x, y, width, height, pageX, pageY) => {
+        onLongPress({ pageX, pageY, width, height });
+      });
+    }
+  };
+
+  // Scale up when selected
+  useEffect(() => {
+    Animated.spring(scaleAnim, {
+      toValue: isSelected ? 1.05 : 1,
+      useNativeDriver: true,
+      tension: 100,
+      friction: 8,
+    }).start();
+  }, [isSelected, scaleAnim]);
 
   useEffect(() => {
     if (item.status === 'pending' || item.status === 'processing') {
@@ -76,59 +98,75 @@ function VideoThumbnail({
   // Show placeholder for pending/processing videos
   if (item.status === 'pending' || item.status === 'processing') {
     return (
-      <View style={styles.thumbnailContainer}>
-        <View style={styles.processingThumbnail}>
-          <Animated.View style={{ transform: [{ rotate: spin }] }}>
-            <Loader2 size={40} color={Colors.orange} strokeWidth={2} />
-          </Animated.View>
-          <Text style={styles.processingText}>
-            {item.status === 'pending' ? 'Queued...' : 'Generating...'}
-          </Text>
-        </View>
-        <View style={styles.thumbnailOverlay}>
-          <Text style={styles.thumbnailPrompt} numberOfLines={2}>
-            {item.prompt}
-          </Text>
-        </View>
-        <TouchableOpacity
-          style={styles.thumbnailDeleteButton}
-          onPress={onDelete}
-          activeOpacity={0.7}
+      <Animated.View 
+        ref={thumbnailRef} 
+        style={[
+          styles.thumbnailContainer,
+          { 
+            transform: [{ scale: scaleAnim }],
+            zIndex: isSelected ? 1000 : 1,
+          }
+        ]} 
+        collapsable={false}
+      >
+        <TouchableOpacity 
+          style={styles.thumbnailTouchable}
+          onLongPress={handleLongPress}
+          activeOpacity={0.9}
+          delayLongPress={500}
         >
-          <Trash2 size={18} color={Colors.white} strokeWidth={2} />
+          <View style={styles.processingThumbnail}>
+            <Animated.View style={{ transform: [{ rotate: spin }] }}>
+              <Loader2 size={40} color={Colors.orange} strokeWidth={2} />
+            </Animated.View>
+            <Text style={styles.processingText}>
+              {item.status === 'pending' ? 'Queued...' : 'Generating...'}
+            </Text>
+          </View>
+          <View style={styles.thumbnailOverlay}>
+            <Text style={styles.thumbnailPrompt} numberOfLines={2}>
+              {item.prompt}
+            </Text>
+          </View>
         </TouchableOpacity>
-      </View>
+        {isSelected && <View style={styles.selectedBorder} />}
+      </Animated.View>
     );
   }
 
   // Show error state for failed videos
   if (item.status === 'failed') {
     return (
-      <TouchableOpacity
-        style={styles.thumbnailContainer}
-        onPress={() => Alert.alert('Generation Failed', item.error || 'Video generation failed. Please try again.')}
-        activeOpacity={0.9}
+      <Animated.View 
+        ref={thumbnailRef} 
+        style={[
+          styles.thumbnailContainer,
+          { 
+            transform: [{ scale: scaleAnim }],
+            zIndex: isSelected ? 1000 : 1,
+          }
+        ]} 
+        collapsable={false}
       >
-        <View style={styles.errorThumbnail}>
-          <AlertCircle size={32} color={Colors.white} strokeWidth={2} />
-          <Text style={styles.errorText}>Failed</Text>
-        </View>
-        <View style={styles.thumbnailOverlay}>
-          <Text style={styles.thumbnailPrompt} numberOfLines={2}>
-            {item.prompt}
-          </Text>
-        </View>
         <TouchableOpacity
-          style={styles.thumbnailDeleteButton}
-          onPress={(e) => {
-            e.stopPropagation();
-            onDelete();
-          }}
-          activeOpacity={0.7}
+          style={styles.thumbnailTouchable}
+          onPress={() => Alert.alert('Generation Failed', item.error || 'Video generation failed. Please try again.')}
+          onLongPress={handleLongPress}
+          activeOpacity={0.9}
+          delayLongPress={500}
         >
-          <Trash2 size={18} color={Colors.white} strokeWidth={2} />
+          <View style={styles.errorThumbnail}>
+            <AlertCircle size={32} color={Colors.white} strokeWidth={2} />
+            <Text style={styles.errorText}>Failed</Text>
+          </View>
+          <View style={styles.thumbnailOverlay}>
+            <Text style={styles.thumbnailPrompt} numberOfLines={2}>
+              {item.prompt}
+            </Text>
+          </View>
         </TouchableOpacity>
-      </TouchableOpacity>
+        {isSelected && <View style={styles.selectedBorder} />}
+      </Animated.View>
     );
   }
 
@@ -143,33 +181,38 @@ function VideoThumbnail({
   }
 
   return (
-    <TouchableOpacity
-      style={styles.thumbnailContainer}
-      onPress={onPress}
-      activeOpacity={0.9}
+    <Animated.View 
+      ref={thumbnailRef} 
+      style={[
+        styles.thumbnailContainer,
+        { 
+          transform: [{ scale: scaleAnim }],
+          zIndex: isSelected ? 1000 : 1,
+        }
+      ]} 
+      collapsable={false}
     >
-      <VideoView
-        player={thumbnailPlayer}
-        style={styles.thumbnail}
-        contentFit="cover"
-        nativeControls={false}
-      />
-      <View style={styles.thumbnailOverlay}>
-        <Text style={styles.thumbnailPrompt} numberOfLines={2}>
-          {item.prompt}
-        </Text>
-      </View>
       <TouchableOpacity
-        style={styles.thumbnailDeleteButton}
-        onPress={(e) => {
-          e.stopPropagation();
-          onDelete();
-        }}
-        activeOpacity={0.7}
+        style={styles.thumbnailTouchable}
+        onPress={onPress}
+        onLongPress={handleLongPress}
+        activeOpacity={0.9}
+        delayLongPress={500}
       >
-        <Trash2 size={18} color={Colors.white} strokeWidth={2} />
+        <VideoView
+          player={thumbnailPlayer}
+          style={styles.thumbnail}
+          contentFit="cover"
+          nativeControls={false}
+        />
+        <View style={styles.thumbnailOverlay}>
+          <Text style={styles.thumbnailPrompt} numberOfLines={2}>
+            {item.prompt}
+          </Text>
+        </View>
       </TouchableOpacity>
-    </TouchableOpacity>
+      {isSelected && <View style={styles.selectedBorder} />}
+    </Animated.View>
   );
 }
 
@@ -181,6 +224,9 @@ export default function FeedScreen() {
   const [isPromptExpanded, setIsPromptExpanded] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
+  const [actionSheetVideo, setActionSheetVideo] = useState<VideoType | null>(null);
+  const [showActionSheet, setShowActionSheet] = useState(false);
+  const [actionSheetPosition, setActionSheetPosition] = useState({ pageX: 0, pageY: 0, width: 0, height: 0, columnIndex: 0 });
   
   // Fetch user's projects from backend
   const backendProjects = useQuery(
@@ -221,6 +267,9 @@ export default function FeedScreen() {
   // Animated values for slide gesture
   const translateY = useRef(new Animated.Value(0)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
+  
+  // Animated values for action sheet
+  const actionSheetBackdropOpacity = useRef(new Animated.Value(0)).current;
 
   // Animate modal in when video is selected
   useEffect(() => {
@@ -246,6 +295,20 @@ export default function FeedScreen() {
     }
   }, [selectedVideo, translateY, backdropOpacity]);
 
+  // Animate action sheet in when shown
+  useEffect(() => {
+    if (showActionSheet) {
+      actionSheetBackdropOpacity.setValue(0);
+      
+      // Animate in
+      Animated.timing(actionSheetBackdropOpacity, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [showActionSheet, actionSheetBackdropOpacity]);
+
   const closeModal = () => {
     // Animate out before closing
     Animated.parallel([
@@ -264,6 +327,19 @@ export default function FeedScreen() {
       translateY.setValue(0);
       backdropOpacity.setValue(0);
       setDownloadSuccess(false);
+    });
+  };
+
+  const closeActionSheet = () => {
+    // Animate out before closing
+    Animated.timing(actionSheetBackdropOpacity, {
+      toValue: 0,
+      duration: 150,
+      useNativeDriver: true,
+    }).start(() => {
+      setShowActionSheet(false);
+      setActionSheetVideo(null);
+      actionSheetBackdropOpacity.setValue(0);
     });
   };
 
@@ -349,22 +425,31 @@ export default function FeedScreen() {
     );
   };
 
-  const renderVideoThumbnail = ({ item }: { item: VideoType }) => (
-    <VideoThumbnail 
-      item={item} 
-      onPress={() => {
-        // Only allow opening ready videos with valid URIs
-        if (item.status === 'ready' && item.uri && item.uri.length > 0) {
-          setSelectedVideo(item);
-        } else if (item.status === 'ready' && (!item.uri || item.uri.length === 0)) {
-          Alert.alert('Error', 'Video is not available. Please try again or contact support.');
-        } else if (item.status === 'pending' || item.status === 'processing') {
-          Alert.alert('Video Processing', 'Your video is still being generated. You\'ll receive a notification when it\'s ready!');
-        }
-      }}
-      onDelete={() => handleDeleteFromGallery(item)}
-    />
-  );
+  const renderVideoThumbnail = ({ item, index }: { item: VideoType; index: number }) => {
+    const columnIndex = index % 3; // 0 = left, 1 = middle, 2 = right
+    
+    return (
+      <VideoThumbnail 
+        item={item} 
+        isSelected={actionSheetVideo?.id === item.id}
+        onPress={() => {
+          // Only allow opening ready videos with valid URIs
+          if (item.status === 'ready' && item.uri && item.uri.length > 0) {
+            setSelectedVideo(item);
+          } else if (item.status === 'ready' && (!item.uri || item.uri.length === 0)) {
+            Alert.alert('Error', 'Video is not available. Please try again or contact support.');
+          } else if (item.status === 'pending' || item.status === 'processing') {
+            Alert.alert('Video Processing', 'Your video is still being generated. You\'ll receive a notification when it\'s ready!');
+          }
+        }}
+        onLongPress={(position) => {
+          setActionSheetVideo(item);
+          setActionSheetPosition({ ...position, columnIndex });
+          setShowActionSheet(true);
+        }}
+      />
+    );
+  };
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
@@ -584,6 +669,68 @@ export default function FeedScreen() {
           </Animated.View>
         )}
       </Modal>
+
+      {/* Action Sheet Modal */}
+      {showActionSheet && (
+        <View style={styles.actionSheetWrapper} pointerEvents="box-none">
+          <Animated.View 
+            style={[
+              styles.actionSheetBackdrop,
+              { opacity: actionSheetBackdropOpacity }
+            ]}
+            pointerEvents="box-none"
+          >
+            <TouchableOpacity 
+              style={styles.backdropTouchable} 
+              activeOpacity={1}
+              onPress={closeActionSheet}
+            />
+          </Animated.View>
+          <View
+            style={[
+              styles.actionSheetContainer,
+              {
+                position: 'absolute',
+                // For right column (2), position on left side; for left/middle (0,1), position on right side
+                left: actionSheetPosition.columnIndex === 2
+                  ? actionSheetPosition.pageX - 108 // Left side for right column
+                  : actionSheetPosition.pageX + actionSheetPosition.width + 8, // Right side for left/middle columns
+                top: actionSheetPosition.pageY + actionSheetPosition.height - 38,
+              },
+            ]}
+          >
+            <TouchableOpacity
+              style={styles.actionSheetOption}
+              onPress={async () => {
+                if (!actionSheetVideo) return;
+                closeActionSheet();
+                
+                // Small delay to let action sheet close first
+                setTimeout(async () => {
+                  try {
+                    // Delete from backend database first (if it has a projectId)
+                    if (actionSheetVideo.projectId) {
+                      await deleteProjectMutation({ id: actionSheetVideo.projectId as any });
+                    }
+                    
+                    // Then delete from local state
+                    deleteVideo(actionSheetVideo.id);
+                  } catch (error) {
+                    console.error('Error deleting video:', error);
+                    Alert.alert('Error', 'Failed to delete video. Please try again.');
+                  }
+                }, 200);
+              }}
+              activeOpacity={0.7}
+            >
+              <View style={styles.actionSheetOptionContent}>
+                <Trash2 size={18} color="#ff3b30" strokeWidth={2} />
+                <Text style={styles.actionSheetOptionTextDelete}>Delete</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -655,19 +802,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: Fonts.regular,
     color: Colors.white,
-  },
-  thumbnailDeleteButton: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: Colors.white,
   },
   errorThumbnail: {
     flex: 1,
@@ -828,5 +962,55 @@ const styles = StyleSheet.create({
     color: Colors.white,
     textAlign: 'center',
     opacity: 0.8,
+  },
+  // Action Sheet
+  actionSheetWrapper: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 999,
+  },
+  actionSheetBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+  },
+  actionSheetContainer: {
+    width: 100,
+    backgroundColor: 'rgba(255, 255, 255, 0.98)',
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  actionSheetOption: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  actionSheetOptionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  actionSheetOptionTextDelete: {
+    fontSize: 14,
+    fontFamily: Fonts.regular,
+    color: '#ff3b30',
+    fontWeight: '600',
+  },
+  thumbnailTouchable: {
+    width: '100%',
+    height: '100%',
+  },
+  selectedBorder: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderWidth: 3,
+    borderColor: Colors.orange,
+    borderRadius: 12,
+    pointerEvents: 'none',
   },
 });
