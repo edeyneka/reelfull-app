@@ -526,7 +526,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 32,
-    fontFamily: Fonts.title,
+    fontFamily: Fonts.regular,
     color: Colors.white,
     marginBottom: 4,
   },
