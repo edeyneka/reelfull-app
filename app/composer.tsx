@@ -1,21 +1,22 @@
 import { useRouter } from 'expo-router';
 import { Image as LucideImage, Upload, X, TestTube } from 'lucide-react-native';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Animated,
   Image,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  PanResponder,
   ActivityIndicator,
   Switch,
 } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -59,30 +60,78 @@ export default function ComposerScreen() {
   const generateScriptOnly = useAction(api.tasks.generateScriptOnly);
   const updateProjectScript = useMutation(api.tasks.updateProjectScript);
   
-  const pan = useRef(new Animated.Value(0)).current;
-  
-  const panResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gestureState) => {
-        return gestureState.dy > 5;
-      },
-      onPanResponderMove: (_, gestureState) => {
-        if (gestureState.dy > 0) {
-          pan.setValue(gestureState.dy);
-        }
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        if (gestureState.dy > 100) {
-          router.back();
-        } else {
-          Animated.spring(pan, {
+  // Animated values for slide gesture
+  const translateY = useRef(new Animated.Value(600)).current;
+  const backdropOpacity = useRef(new Animated.Value(0)).current;
+
+  // Animate modal in when mounted
+  useEffect(() => {
+    // Animate in
+    Animated.parallel([
+      Animated.spring(translateY, {
+        toValue: 0,
+        useNativeDriver: true,
+        tension: 65,
+        friction: 11,
+      }),
+      Animated.timing(backdropOpacity, {
+        toValue: 1,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [translateY, backdropOpacity]);
+
+  const closeModal = () => {
+    // Animate out before closing
+    Animated.parallel([
+      Animated.timing(translateY, {
+        toValue: 600,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+      Animated.timing(backdropOpacity, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      router.back();
+    });
+  };
+
+  // Slide down gesture to close modal
+  const panGesture = Gesture.Pan()
+    .onUpdate((event) => {
+      // Only allow downward drag
+      if (event.translationY > 0) {
+        translateY.setValue(event.translationY);
+        // Gradually fade out backdrop as user drags down
+        backdropOpacity.setValue(Math.max(0.3, 1 - event.translationY / 600));
+      }
+    })
+    .onEnd((event) => {
+      // If swiped down far enough or with velocity, close modal
+      if (event.translationY > 150 || event.velocityY > 500) {
+        closeModal();
+      } else {
+        // Quickly spring back to original position
+        Animated.parallel([
+          Animated.spring(translateY, {
             toValue: 0,
             useNativeDriver: true,
-          }).start();
-        }
-      },
-    })
-  ).current;
+            tension: 100,
+            friction: 8,
+          }),
+          Animated.spring(backdropOpacity, {
+            toValue: 1,
+            useNativeDriver: true,
+            tension: 100,
+            friction: 8,
+          }),
+        ]).start();
+      }
+    });
 
   const pickMedia = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -211,42 +260,52 @@ export default function ComposerScreen() {
   const isValid = prompt.trim().length > 0 && mediaUris.length > 0;
 
   return (
-    <View style={styles.backgroundContainer}>
-      <Animated.View 
-        style={[
-          styles.container, 
-          { transform: [{ translateY: pan }] }
-        ]}
-        {...panResponder.panHandlers}
-      >
-        <LinearGradient
-          colors={[Colors.black, Colors.grayDark]}
-          style={styles.gradient}
+    <Animated.View 
+      style={[
+        styles.modalBackdrop,
+        { opacity: backdropOpacity }
+      ]}
+    >
+      <TouchableOpacity 
+        style={styles.backdropTouchable} 
+        activeOpacity={1}
+        onPress={closeModal}
+      />
+      <GestureDetector gesture={panGesture}>
+        <Animated.View
+          style={[
+            styles.modalContainer,
+            {
+              transform: [{ translateY }],
+            },
+          ]}
         >
-        <TouchableOpacity
-          style={[styles.closeButton, { top: insets.top + 20 }]}
-          onPress={() => router.back()}
-          activeOpacity={0.7}
-        >
-          <X size={28} color={Colors.white} strokeWidth={2} />
-        </TouchableOpacity>
-        
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.keyboardView}
-        >
-          <ScrollView
-            contentContainerStyle={[
-              styles.scrollContent,
-              { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20 },
-            ]}
-            showsVerticalScrollIndicator={false}
+          {/* Drag Handle */}
+          <View style={styles.dragHandle} />
+
+          <View style={[styles.modalHeader, { paddingTop: 12 }]}>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={closeModal}
+              activeOpacity={0.7}
+            >
+              <X size={24} color={Colors.white} strokeWidth={2} />
+            </TouchableOpacity>
+          </View>
+
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.keyboardView}
           >
-            <View style={styles.header}>
-              <Text style={styles.title}>
-                Hey, {user?.name || 'there'}, what&apos;s your day been like?
-              </Text>
-            </View>
+            <ScrollView
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.header}>
+                <Text style={styles.title}>
+                  Hey, {user?.name || 'there'}, what&apos;s your day been like?
+                </Text>
+              </View>
 
             <View style={styles.form}>
               <View style={styles.inputGroup}>
@@ -377,23 +436,55 @@ export default function ComposerScreen() {
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
-      </LinearGradient>
-      </Animated.View>
-    </View>
+        </Animated.View>
+      </GestureDetector>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  backgroundContainer: {
+  modalBackdrop: {
     flex: 1,
-    backgroundColor: Colors.black,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'flex-end',
   },
-  container: {
-    flex: 1,
-    backgroundColor: Colors.black,
+  backdropTouchable: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
-  gradient: {
-    flex: 1,
+  modalContainer: {
+    backgroundColor: '#000000',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    height: '94%',
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  dragHandle: {
+    width: 40,
+    height: 5,
+    backgroundColor: '#333333',
+    borderRadius: 3,
+    alignSelf: 'center',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  modalHeader: {
+    paddingHorizontal: 24,
+    paddingBottom: 8,
+    alignItems: 'flex-start',
+  },
+  closeButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
   },
   keyboardView: {
     flex: 1,
@@ -401,16 +492,12 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
+    paddingTop: 0,
+    paddingBottom: 40,
   },
   header: {
     marginBottom: 20,
-    paddingTop: 40,
-  },
-  closeButton: {
-    position: 'absolute',
-    right: 24,
-    zIndex: 10,
-    padding: 8,
+    paddingTop: 8,
   },
   title: {
     fontSize: 20,

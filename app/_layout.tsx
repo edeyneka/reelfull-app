@@ -41,7 +41,14 @@ export default function RootLayout() {
                       <Stack.Screen name="auth" />
                       <Stack.Screen name="onboarding" />
                       <Stack.Screen name="feed" options={{ animation: 'fade' }} />
-                      <Stack.Screen name="composer" options={{ presentation: "fullScreenModal" }} />
+                      <Stack.Screen 
+                        name="composer" 
+                        options={{ 
+                          presentation: "transparentModal",
+                          animation: 'none',
+                          contentStyle: { backgroundColor: 'transparent' }
+                        }} 
+                      />
                       <Stack.Screen name="script-review" options={{ gestureEnabled: false }} />
                       <Stack.Screen name="loader" options={{ gestureEnabled: false }} />
                       <Stack.Screen name="result" options={{ gestureEnabled: false, animation: 'none' }} />
