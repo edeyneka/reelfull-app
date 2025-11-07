@@ -497,12 +497,14 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: 20,
     paddingTop: 8,
+    alignItems: 'center',
   },
   title: {
     fontSize: 20,
     fontFamily: Fonts.title,
     color: Colors.white,
     lineHeight: 28,
+    textAlign: 'center',
   },
   form: {
     flex: 1,
