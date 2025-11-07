@@ -884,8 +884,8 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   profileName: {
-    fontSize: 28,
-    fontFamily: Fonts.title,
+    fontSize: 24,
+    fontFamily: Fonts.regular,
     color: Colors.white,
     fontWeight: '600',
   },

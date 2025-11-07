@@ -232,8 +232,8 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   title: {
-    fontSize: 28,
-    fontFamily: Fonts.title,
+    fontSize: 24,
+    fontFamily: Fonts.regular,
     color: Colors.white,
     marginTop: 16,
     marginBottom: 4,

@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
   Platform,
   Image,
+  RefreshControl,
 } from 'react-native';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -227,11 +228,13 @@ export default function FeedScreen() {
   const [actionSheetVideo, setActionSheetVideo] = useState<VideoType | null>(null);
   const [showActionSheet, setShowActionSheet] = useState(false);
   const [actionSheetPosition, setActionSheetPosition] = useState({ pageX: 0, pageY: 0, width: 0, height: 0, columnIndex: 0 });
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [shouldRefetch, setShouldRefetch] = useState(false);
   
-  // Fetch user's projects from backend
+  // Only fetch from backend if we haven't synced yet OR user pulls to refresh (cache-first strategy)
   const backendProjects = useQuery(
     api.tasks.getProjects,
-    userId ? { userId } : "skip"
+    ((!syncedFromBackend || shouldRefetch) && userId) ? { userId } : "skip"
   );
   
   // Convex mutation for deleting projects
@@ -239,11 +242,25 @@ export default function FeedScreen() {
 
   // Sync videos from backend when projects are loaded
   useEffect(() => {
-    if (backendProjects && !syncedFromBackend && userId) {
-      console.log('[feed] Backend projects loaded, syncing...');
-      syncVideosFromBackend(backendProjects);
+    if (backendProjects && userId) {
+      if (!syncedFromBackend) {
+        console.log('[feed] Initial sync: Backend projects loaded, syncing...');
+        syncVideosFromBackend(backendProjects);
+      } else if (shouldRefetch) {
+        console.log('[feed] Refresh: Backend projects loaded, syncing...');
+        syncVideosFromBackend(backendProjects);
+        setShouldRefetch(false);
+        setIsRefreshing(false);
+      }
     }
-  }, [backendProjects, syncedFromBackend, userId, syncVideosFromBackend]);
+  }, [backendProjects, syncedFromBackend, userId, syncVideosFromBackend, shouldRefetch]);
+
+  // Handle pull-to-refresh
+  const handleRefresh = () => {
+    console.log('[feed] User initiated refresh');
+    setIsRefreshing(true);
+    setShouldRefetch(true);
+  };
   
   // Enable video polling for pending videos
   useVideoPolling();
@@ -455,7 +472,7 @@ export default function FeedScreen() {
     <View style={styles.emptyContainer}>
       <Text style={styles.emptyTitle}>No reels yet</Text>
       <Text style={styles.emptySubtitle}>
-        Tap the + button to create your first story
+        Tap the + button to create your first video
       </Text>
     </View>
   );
@@ -564,11 +581,20 @@ export default function FeedScreen() {
         data={videos}
         renderItem={renderVideoThumbnail}
         keyExtractor={(item) => item.id}
+        extraData={videos.length}
         numColumns={3}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.grid}
         columnWrapperStyle={styles.row}
         ListEmptyComponent={renderEmpty}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor={Colors.orange}
+            colors={[Colors.orange]}
+          />
+        }
       />
 
       <TouchableOpacity
@@ -835,8 +861,8 @@ const styles = StyleSheet.create({
     marginTop: 100,
   },
   emptyTitle: {
-    fontSize: 28,
-    fontFamily: Fonts.title,
+    fontSize: 24,
+    fontFamily: Fonts.regular,
     color: Colors.white,
     marginBottom: 12,
   },
@@ -917,8 +943,8 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   modalTitle: {
-    fontSize: 28,
-    fontFamily: Fonts.title,
+    fontSize: 24,
+    fontFamily: Fonts.regular,
     color: Colors.white,
     textAlign: 'center',
   },

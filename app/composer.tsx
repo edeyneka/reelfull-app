@@ -50,7 +50,7 @@ export default function ComposerScreen() {
   const insets = useSafeAreaInsets();
   const { user, userId } = useApp();
   const [prompt, setPrompt] = useState('');
-  const [mediaUris, setMediaUris] = useState<{ uri: string; type: 'video' | 'image' }[]>([]);
+  const [mediaUris, setMediaUris] = useState<{ uri: string; type: 'video' | 'image'; id: string }[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isTestRun, setIsTestRun] = useState(false);
   
@@ -150,6 +150,7 @@ export default function ComposerScreen() {
       const newMedia = result.assets.map(asset => ({
         uri: asset.uri,
         type: (asset.type === 'video' ? 'video' : 'image') as 'video' | 'image',
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       }));
       console.log('Selected media:', newMedia);
       setMediaUris(prev => [...prev, ...newMedia]);
@@ -170,9 +171,10 @@ export default function ComposerScreen() {
       ];
 
       const assets = await Asset.loadAsync(sampleAssets);
-      const sampleMedia = assets.map(asset => ({
+      const sampleMedia = assets.map((asset, idx) => ({
         uri: asset.localUri || asset.uri,
         type: 'video' as const,
+        id: `sample-${idx}-${Date.now()}`,
       }));
 
       setMediaUris(sampleMedia);
@@ -369,7 +371,7 @@ export default function ComposerScreen() {
                     contentContainerStyle={styles.mediaScrollContent}
                   >
                     {mediaUris.map((media, index) => (
-                      <View key={index} style={styles.mediaPreview}>
+                      <View key={media.id} style={styles.mediaPreview}>
                         {media.type === 'video' ? (
                           <VideoThumbnail
                             uri={media.uri}
@@ -500,10 +502,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    fontSize: 20,
-    fontFamily: Fonts.title,
+    fontSize: 24,
+    fontFamily: Fonts.regular,
     color: Colors.white,
-    lineHeight: 28,
+    lineHeight: 32,
     textAlign: 'center',
   },
   form: {

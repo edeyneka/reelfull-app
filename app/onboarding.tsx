@@ -220,8 +220,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 107, 53, 0.1)',
   },
   title: {
-    fontSize: 32,
-    fontFamily: Fonts.title,
+    fontSize: 24,
+    fontFamily: Fonts.regular,
     color: Colors.white,
     marginBottom: 8,
     textAlign: 'center',
