@@ -303,16 +303,15 @@ export default function ComposerScreen() {
             >
               <View style={styles.header}>
                 <Text style={styles.title}>
-                  Hey, {user?.name || 'there'}, what&apos;s your day been like?
+                  Hey, {user?.name || 'there'}, share your story!
                 </Text>
               </View>
 
             <View style={styles.form}>
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Tell your story</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="Describe your day..."
+                  placeholder="Describe your day, event, or experience..."
                   placeholderTextColor={Colors.grayLight}
                   value={prompt}
                   onChangeText={setPrompt}
