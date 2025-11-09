@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Image as LucideImage, Upload, X, TestTube } from 'lucide-react-native';
+import { Image as LucideImage, Camera, X, TestTube } from 'lucide-react-native';
 import { useState, useRef, useEffect } from 'react';
 import {
   Animated,
@@ -310,29 +310,6 @@ export default function ComposerScreen() {
               </View>
 
             <View style={styles.form}>
-              <View style={styles.inputGroup}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Describe your day, event, or experience..."
-                  placeholderTextColor={Colors.grayLight}
-                  value={prompt}
-                  onChangeText={setPrompt}
-                  multiline
-                  numberOfLines={4}
-                  textAlignVertical="top"
-                />
-              </View>
-
-              <View style={styles.exampleContainer}>
-                <View style={styles.exampleHeader}>
-                  <LucideImage size={14} color={Colors.orange} />
-                  <Text style={styles.exampleTitle}>Example Story</Text>
-                </View>
-                <Text style={styles.exampleText}>
-                  &quot;I went to the a16z Tech Week in SF - met inspiring founders and caught up with old friends. The focus was on pre-seed fundraising. My three main takeaways: storytelling wins, community opens doors, and clarity beats buzzwords.&quot;
-                </Text>
-              </View>
-
               <View style={styles.testRunContainer}>
                 <View style={styles.testRunHeader}>
                   <TestTube size={16} color={Colors.orange} />
@@ -362,7 +339,7 @@ export default function ComposerScreen() {
               )}
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Upload Media</Text>
+                <Text style={styles.label}>Upload Media <Text style={styles.labelHint}>(optimal: 5-6 files)</Text></Text>
                 {mediaUris.length > 0 && (
                   <ScrollView 
                     horizontal 
@@ -396,16 +373,39 @@ export default function ComposerScreen() {
                 )}
                 {!isTestRun && (
                   <TouchableOpacity
-                    style={styles.uploadButton}
+                    style={styles.pickerButton}
                     onPress={pickMedia}
                     activeOpacity={0.7}
                   >
-                    <Upload size={28} color={Colors.orange} strokeWidth={2} />
-                    <Text style={styles.uploadText}>
-                      {mediaUris.length > 0 ? 'Add more' : 'Tap to upload photos/videos'}
+                    <Camera size={20} color={Colors.white} strokeWidth={2} />
+                    <Text style={styles.pickerButtonText}>
+                      {mediaUris.length > 0 ? 'Add More Media' : 'Select Photos/Videos'}
                     </Text>
                   </TouchableOpacity>
                 )}
+              </View>
+
+              <View style={styles.inputGroup}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Describe your day, event, or experience..."
+                  placeholderTextColor={Colors.grayLight}
+                  value={prompt}
+                  onChangeText={setPrompt}
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                />
+              </View>
+
+              <View style={styles.exampleContainer}>
+                <View style={styles.exampleHeader}>
+                  <LucideImage size={14} color={Colors.orange} />
+                  <Text style={styles.exampleTitle}>Example Story</Text>
+                </View>
+                <Text style={styles.exampleText}>
+                  &quot;I went to the a16z Tech Week in SF - met inspiring founders and caught up with old friends. The focus was on pre-seed fundraising. My three main takeaways: storytelling wins, community opens doors, and clarity beats buzzwords.&quot;
+                </Text>
               </View>
 
               <TouchableOpacity
@@ -520,6 +520,11 @@ const styles = StyleSheet.create({
     color: Colors.white,
     marginBottom: 10,
   },
+  labelHint: {
+    fontSize: 13,
+    fontFamily: Fonts.regular,
+    color: Colors.grayLight,
+  },
   input: {
     backgroundColor: Colors.gray,
     borderRadius: 12,
@@ -530,19 +535,19 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
     minHeight: 90,
   },
-  uploadButton: {
-    backgroundColor: Colors.gray,
+  pickerButton: {
+    backgroundColor: Colors.orange,
     borderRadius: 12,
-    padding: 28,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: Colors.orange,
-    borderStyle: 'dashed',
+    justifyContent: 'center',
+    gap: 8,
   },
-  uploadText: {
-    marginTop: 8,
-    fontSize: 14,
-    color: Colors.orange,
+  pickerButtonText: {
+    fontSize: 16,
+    color: Colors.white,
     fontFamily: Fonts.regular,
   },
   mediaScroll: {
