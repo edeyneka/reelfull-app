@@ -61,6 +61,12 @@ function VideoThumbnail({
       return false;
     }
     
+    // Convex storage URLs don't have extensions, but they're used for thumbnails
+    // Pattern: https://*.convex.cloud/api/storage/*
+    if (lowerUrl.includes('convex.cloud/api/storage/')) {
+      return true;
+    }
+    
     // Check if it has an image extension
     return imageExtensions.some(ext => lowerUrl.includes(ext));
   };
