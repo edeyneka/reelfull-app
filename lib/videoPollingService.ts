@@ -149,7 +149,7 @@ export function useVideoPolling() {
 }
 
 /**
- * Request notification permissions on app start
+ * Request notification permissions and get push token
  */
 export async function registerForPushNotificationsAsync() {
   let token;
@@ -172,12 +172,21 @@ export async function registerForPushNotificationsAsync() {
   }
   
   if (finalStatus !== 'granted') {
-    console.log('Failed to get push token for push notification!');
-    return;
+    console.log('[Notifications] Failed to get push notification permissions');
+    return null;
   }
 
-  console.log('Notification permissions granted');
-  return finalStatus;
+  try {
+    // Get the Expo push token
+    // The projectId is automatically read from app.json's extra.eas.projectId
+    const tokenData = await Notifications.getExpoPushTokenAsync();
+    token = tokenData.data;
+    console.log('[Notifications] Push token obtained:', token);
+    return token;
+  } catch (error) {
+    console.error('[Notifications] Error getting push token:', error);
+    return null;
+  }
 }
 
 /**
