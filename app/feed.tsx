@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { Plus, Download, Settings, Loader2, AlertCircle, X, Trash2 } from 'lucide-react-native';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Dimensions,
   FlatList,
@@ -255,6 +255,15 @@ export default function FeedScreen() {
     }
   }, [backendProjects, syncedFromBackend, userId, syncVideosFromBackend, shouldRefetch]);
 
+  // Organize videos into rows of 3 for proper snake fill
+  const videoRows = useMemo(() => {
+    const rows: VideoType[][] = [];
+    for (let i = 0; i < videos.length; i += 3) {
+      rows.push(videos.slice(i, i + 3));
+    }
+    return rows;
+  }, [videos]);
+
   // Handle pull-to-refresh
   const handleRefresh = () => {
     console.log('[feed] User initiated refresh');
@@ -442,11 +451,10 @@ export default function FeedScreen() {
     );
   };
 
-  const renderVideoThumbnail = ({ item, index }: { item: VideoType; index: number }) => {
-    const columnIndex = index % 3; // 0 = left, 1 = middle, 2 = right
-    
+  const renderVideoThumbnail = (item: VideoType, globalIndex: number, columnIndex: number) => {
     return (
       <VideoThumbnail 
+        key={item.id}
         item={item} 
         isSelected={actionSheetVideo?.id === item.id}
         onPress={() => {
@@ -468,6 +476,18 @@ export default function FeedScreen() {
     );
   };
 
+  const renderRow = ({ item: row, index: rowIndex }: { item: VideoType[]; index: number }) => {
+    return (
+      <View style={styles.row}>
+        {row.map((video, colIndex) => renderVideoThumbnail(video, rowIndex * 3 + colIndex, colIndex))}
+        {/* Add empty spacers for incomplete rows to maintain layout */}
+        {row.length < 3 && Array.from({ length: 3 - row.length }).map((_, i) => (
+          <View key={`spacer-${rowIndex}-${i}`} style={{ width: ITEM_WIDTH }} />
+        ))}
+      </View>
+    );
+  };
+
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
       <Text style={styles.emptyTitle}>No reels yet</Text>
@@ -486,8 +506,9 @@ export default function FeedScreen() {
         await deleteProjectMutation({ id: selectedVideo.projectId as any });
       }
       
-      // Then delete from local state
+      // Then delete from local state (will trigger grid remount via useEffect)
       deleteVideo(selectedVideo.id);
+      
       closeModal();
     } catch (error) {
       console.error('Error deleting video:', error);
@@ -578,14 +599,11 @@ export default function FeedScreen() {
       </View>
 
       <FlatList
-        data={videos}
-        renderItem={renderVideoThumbnail}
-        keyExtractor={(item) => item.id}
-        extraData={videos.length}
-        numColumns={3}
+        data={videoRows}
+        renderItem={renderRow}
+        keyExtractor={(item, index) => `row-${index}-${item.map(v => v.id).join('-')}`}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.grid}
-        columnWrapperStyle={styles.row}
         ListEmptyComponent={renderEmpty}
         refreshControl={
           <RefreshControl
@@ -739,7 +757,7 @@ export default function FeedScreen() {
                       await deleteProjectMutation({ id: actionSheetVideo.projectId as any });
                     }
                     
-                    // Then delete from local state
+                    // Then delete from local state (will trigger grid remount via useEffect)
                     deleteVideo(actionSheetVideo.id);
                   } catch (error) {
                     console.error('Error deleting video:', error);
@@ -802,6 +820,7 @@ const styles = StyleSheet.create({
     padding: ITEM_SPACING,
   },
   row: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: ITEM_SPACING,
   },
