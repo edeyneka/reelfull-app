@@ -196,7 +196,7 @@ async function sendVideoReadyNotification(videoPrompt: string) {
   try {
     await Notifications.scheduleNotificationAsync({
       content: {
-        title: '✨ Your reel is ready!',
+        title: '✨ Your video is ready!',
         body: `"${videoPrompt.substring(0, 50)}${videoPrompt.length > 50 ? '...' : ''}" has been generated`,
         data: { type: 'video_ready' },
         sound: true,
