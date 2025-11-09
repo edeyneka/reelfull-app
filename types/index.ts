@@ -17,6 +17,7 @@ export interface Video {
   status: 'pending' | 'processing' | 'ready' | 'failed';
   projectId?: string;
   error?: string;
+  thumbnailUrl?: string; // Thumbnail image URL for grid display
 }
 
 // Convex types placeholder - will be replaced with generated types

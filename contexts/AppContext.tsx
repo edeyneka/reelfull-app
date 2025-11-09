@@ -75,6 +75,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
           createdAt: project.createdAt,
           status: 'ready' as const,
           projectId: project._id,
+          thumbnailUrl: project.thumbnailUrl, // Include thumbnail URL for grid display
         }));
 
       // Add pending/processing videos
@@ -90,6 +91,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
           createdAt: project.createdAt,
           status: project.status === 'rendering' ? 'processing' as const : 'pending' as const,
           projectId: project._id,
+          thumbnailUrl: project.thumbnailUrl, // Include thumbnail URL even for processing videos
         }));
 
       // Add failed videos
@@ -103,6 +105,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
           status: 'failed' as const,
           projectId: project._id,
           error: project.error || project.renderError || 'Generation failed',
+          thumbnailUrl: project.thumbnailUrl, // Include thumbnail URL even for failed videos
         }));
 
       const backendVideoList = [...backendVideos, ...processingVideos, ...failedVideos];

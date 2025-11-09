@@ -49,17 +49,44 @@ function VideoThumbnail({
   const thumbnailRef = useRef<View>(null);
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
-  // Always call hooks in the same order - create player even if not used
-  const hasValidUri = item.uri && item.uri.length > 0 && item.status === 'ready';
+  // Check if thumbnailUrl is actually an image (not a video)
+  const isImageUrl = (url?: string) => {
+    if (!url) return false;
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
+    const videoExtensions = ['.mp4', '.mov', '.avi', '.webm', '.mkv'];
+    const lowerUrl = url.toLowerCase();
+    
+    // If it has a video extension, it's not a valid thumbnail
+    if (videoExtensions.some(ext => lowerUrl.includes(ext))) {
+      return false;
+    }
+    
+    // Check if it has an image extension
+    return imageExtensions.some(ext => lowerUrl.includes(ext));
+  };
+
+  // Use image thumbnail if available, otherwise fall back to video
+  const effectiveThumbnailUrl = isImageUrl(item.thumbnailUrl) ? item.thumbnailUrl : undefined;
+  const shouldUseVideoPreview = !effectiveThumbnailUrl && item.uri && item.status === 'ready';
+
+  // Create video player for fallback (only if needed)
   const thumbnailPlayer = useVideoPlayer(
-    hasValidUri ? item.uri : null,
+    shouldUseVideoPreview ? item.uri : null,
     (player) => {
-      if (player && hasValidUri) {
+      if (player && shouldUseVideoPreview) {
         player.muted = true;
         // Don't autoplay thumbnails
       }
     }
   );
+
+  // Debug: Log thumbnail URL
+  useEffect(() => {
+    const urlType = item.thumbnailUrl 
+      ? (isImageUrl(item.thumbnailUrl) ? 'image' : 'video/other') 
+      : 'missing';
+    console.log(`[Thumbnail] ${item.prompt}: status=${item.status}, thumbnailUrl=${urlType}, using=${effectiveThumbnailUrl ? 'image' : (shouldUseVideoPreview ? 'video' : 'placeholder')}`);
+  }, [item.thumbnailUrl, item.status, item.prompt, effectiveThumbnailUrl, shouldUseVideoPreview]);
 
   const handleLongPress = (event: any) => {
     if (thumbnailRef.current) {
@@ -116,14 +143,33 @@ function VideoThumbnail({
           activeOpacity={0.9}
           delayLongPress={500}
         >
-          <View style={styles.processingThumbnail}>
-            <Animated.View style={{ transform: [{ rotate: spin }] }}>
-              <Loader2 size={40} color={Colors.orange} strokeWidth={2} />
-            </Animated.View>
-            <Text style={styles.processingText}>
-              {item.status === 'pending' ? 'Queued...' : 'Generating...'}
-            </Text>
-          </View>
+          {/* Show thumbnail in background if available */}
+          {effectiveThumbnailUrl ? (
+            <>
+              <Image
+                source={{ uri: effectiveThumbnailUrl }}
+                style={styles.thumbnail}
+                resizeMode="cover"
+              />
+              <View style={styles.processingOverlay}>
+                <Animated.View style={{ transform: [{ rotate: spin }] }}>
+                  <Loader2 size={40} color={Colors.orange} strokeWidth={2} />
+                </Animated.View>
+                <Text style={styles.processingText}>
+                  {item.status === 'pending' ? 'Queued...' : 'Generating...'}
+                </Text>
+              </View>
+            </>
+          ) : (
+            <View style={styles.processingThumbnail}>
+              <Animated.View style={{ transform: [{ rotate: spin }] }}>
+                <Loader2 size={40} color={Colors.orange} strokeWidth={2} />
+              </Animated.View>
+              <Text style={styles.processingText}>
+                {item.status === 'pending' ? 'Queued...' : 'Generating...'}
+              </Text>
+            </View>
+          )}
           <View style={styles.thumbnailOverlay}>
             <Text style={styles.thumbnailPrompt} numberOfLines={2}>
               {item.prompt}
@@ -156,10 +202,25 @@ function VideoThumbnail({
           activeOpacity={0.9}
           delayLongPress={500}
         >
-          <View style={styles.errorThumbnail}>
-            <AlertCircle size={32} color={Colors.white} strokeWidth={2} />
-            <Text style={styles.errorText}>Failed</Text>
-          </View>
+          {/* Show thumbnail in background if available */}
+          {effectiveThumbnailUrl ? (
+            <>
+              <Image
+                source={{ uri: effectiveThumbnailUrl }}
+                style={styles.thumbnail}
+                resizeMode="cover"
+              />
+              <View style={styles.errorOverlay}>
+                <AlertCircle size={32} color={Colors.white} strokeWidth={2} />
+                <Text style={styles.errorText}>Failed</Text>
+              </View>
+            </>
+          ) : (
+            <View style={styles.errorThumbnail}>
+              <AlertCircle size={32} color={Colors.white} strokeWidth={2} />
+              <Text style={styles.errorText}>Failed</Text>
+            </View>
+          )}
           <View style={styles.thumbnailOverlay}>
             <Text style={styles.thumbnailPrompt} numberOfLines={2}>
               {item.prompt}
@@ -171,16 +232,7 @@ function VideoThumbnail({
     );
   }
 
-  if (!item.uri || item.uri.length === 0) {
-    return (
-      <View style={styles.thumbnailContainer}>
-        <View style={styles.errorThumbnail}>
-          <Text style={styles.errorText}>Unavailable</Text>
-        </View>
-      </View>
-    );
-  }
-
+  // Show thumbnail image for ready videos (or placeholder if no thumbnail)
   return (
     <Animated.View 
       ref={thumbnailRef} 
@@ -200,12 +252,24 @@ function VideoThumbnail({
         activeOpacity={0.9}
         delayLongPress={500}
       >
-        <VideoView
-          player={thumbnailPlayer}
-          style={styles.thumbnail}
-          contentFit="cover"
-          nativeControls={false}
-        />
+        {effectiveThumbnailUrl ? (
+          <Image
+            source={{ uri: effectiveThumbnailUrl }}
+            style={styles.thumbnail}
+            resizeMode="cover"
+          />
+        ) : shouldUseVideoPreview ? (
+          <VideoView
+            player={thumbnailPlayer}
+            style={styles.thumbnail}
+            contentFit="cover"
+            nativeControls={false}
+          />
+        ) : (
+          <View style={styles.noThumbnailContainer}>
+            <Text style={styles.noThumbnailText}>No Thumbnail</Text>
+          </View>
+        )}
         <View style={styles.thumbnailOverlay}>
           <Text style={styles.thumbnailPrompt} numberOfLines={2}>
             {item.prompt}
@@ -868,10 +932,43 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.grayDark,
     gap: 12,
   },
+  processingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+  },
   processingText: {
     fontSize: 13,
     fontFamily: Fonts.regular,
     color: Colors.orange,
+  },
+  errorOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+  },
+  noThumbnailContainer: {
+    flex: 1,
+    backgroundColor: Colors.grayDark,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  noThumbnailText: {
+    color: Colors.grayLight,
+    fontFamily: Fonts.regular,
+    fontSize: 12,
   },
   emptyContainer: {
     justifyContent: 'center',
