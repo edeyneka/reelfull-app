@@ -178,17 +178,32 @@ export const [AppProvider, useApp] = createContextHook(() => {
     }
   }, []);
 
-  const updateVideoStatus = useCallback(async (videoId: string, status: Video['status'], uri?: string, error?: string) => {
+  const updateVideoStatus = useCallback(async (videoId: string, status: Video['status'], uri?: string, error?: string, thumbnailUrl?: string) => {
     try {
       setVideos((prevVideos) => {
         const updatedVideos = prevVideos.map(video => {
           if (video.id === videoId) {
-            return {
+            const updated = {
               ...video,
               status,
-              ...(uri && { uri }),
-              ...(error && { error }),
             };
+            
+            // Only update uri if provided
+            if (uri !== undefined) {
+              updated.uri = uri;
+            }
+            
+            // Only update error if provided
+            if (error !== undefined) {
+              updated.error = error;
+            }
+            
+            // Only update thumbnailUrl if provided (preserve existing if not)
+            if (thumbnailUrl !== undefined) {
+              updated.thumbnailUrl = thumbnailUrl;
+            }
+            
+            return updated;
           }
           return video;
         });

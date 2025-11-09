@@ -301,10 +301,19 @@ export default function FeedScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [shouldRefetch, setShouldRefetch] = useState(false);
   
-  // Only fetch from backend if we haven't synced yet OR user pulls to refresh (cache-first strategy)
+  // Check if there are any pending/processing videos that need fresh data
+  const hasPendingVideos = useMemo(() => 
+    videos.some(v => v.status === 'pending' || v.status === 'processing'),
+    [videos]
+  );
+  
+  // Fetch from backend if: 
+  // 1. Haven't synced yet (initial load)
+  // 2. User pulls to refresh
+  // 3. There are pending/processing videos (to get latest thumbnails and status)
   const backendProjects = useQuery(
     api.tasks.getProjects,
-    ((!syncedFromBackend || shouldRefetch) && userId) ? { userId } : "skip"
+    ((!syncedFromBackend || shouldRefetch || hasPendingVideos) && userId) ? { userId } : "skip"
   );
   
   // Convex mutation for deleting projects
@@ -321,9 +330,12 @@ export default function FeedScreen() {
         syncVideosFromBackend(backendProjects);
         setShouldRefetch(false);
         setIsRefreshing(false);
+      } else if (hasPendingVideos) {
+        console.log('[feed] Pending videos detected, syncing for fresh data including thumbnails...');
+        syncVideosFromBackend(backendProjects);
       }
     }
-  }, [backendProjects, syncedFromBackend, userId, syncVideosFromBackend, shouldRefetch]);
+  }, [backendProjects, syncedFromBackend, userId, syncVideosFromBackend, shouldRefetch, hasPendingVideos]);
 
   // Organize videos into rows of 3 for proper snake fill
   const videoRows = useMemo(() => {

@@ -62,7 +62,7 @@ export function useVideoPolling() {
           if (project.status === 'failed') {
             if (video.status !== 'failed') {
               console.log('[VideoPolling] ❌ Backend marked as FAILED:', video.id, 'Error:', project.error);
-              updateVideoStatus(video.id, 'failed', undefined, project.error);
+              updateVideoStatus(video.id, 'failed', undefined, project.error, project.thumbnailUrl);
               
               // Send failure notification
               sendVideoFailedNotification(project.prompt || 'Your video');
@@ -76,7 +76,8 @@ export function useVideoPolling() {
               if (project.renderedVideoUrl && project.renderedVideoUrl.trim().length > 0) {
                 console.log('[VideoPolling] ✅ Video READY:', video.id);
                 console.log('[VideoPolling] Video URL:', project.renderedVideoUrl);
-                updateVideoStatus(video.id, 'ready', project.renderedVideoUrl);
+                console.log('[VideoPolling] Thumbnail URL:', project.thumbnailUrl);
+                updateVideoStatus(video.id, 'ready', project.renderedVideoUrl, undefined, project.thumbnailUrl);
                 
                 // Send notification
                 sendVideoReadyNotification(project.prompt || 'Your video');
@@ -101,7 +102,7 @@ export function useVideoPolling() {
             
             // Keep as processing - don't mark as failed even if action throws
             if (video.status === 'pending') {
-              updateVideoStatus(video.id, 'processing');
+              updateVideoStatus(video.id, 'processing', undefined, undefined, project.thumbnailUrl);
             }
             
             // Trigger render - any errors are non-critical since rendering continues via scheduled steps
@@ -121,7 +122,7 @@ export function useVideoPolling() {
             // This also recovers videos from 'failed' status if backend is actually still working
             if (video.status === 'pending' || video.status === 'failed') {
               console.log('[VideoPolling] ⏳ Video generating (recovering from incorrect failed status):', video.id, 'Backend status:', project.status);
-              updateVideoStatus(video.id, 'processing');
+              updateVideoStatus(video.id, 'processing', undefined, undefined, project.thumbnailUrl);
             }
           }
         } catch (error) {
