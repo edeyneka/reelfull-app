@@ -1,15 +1,17 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { StyleSheet, TouchableOpacity } from 'react-native';
+import { StyleSheet, TouchableOpacity, View, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Video, ResizeMode } from 'expo-av';
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
+import { Fonts } from '@/constants/typography';
 
 export default function IntroScreen() {
   const router = useRouter();
   const { userId, isLoading } = useApp();
   const [hasNavigated, setHasNavigated] = useState(false);
+  const [showButtons, setShowButtons] = useState(false);
   
   const videoSource = require('../assets/third_intro.mp4');
 
@@ -27,6 +29,15 @@ export default function IntroScreen() {
     }
   };
 
+  // Show buttons after 2 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowButtons(true);
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   // Auto-navigate after a few seconds
   useEffect(() => {
     if (!isLoading) {
@@ -39,11 +50,7 @@ export default function IntroScreen() {
   }, [isLoading, userId, navigateToNextScreen]);
 
   return (
-    <TouchableOpacity 
-      style={styles.container} 
-      activeOpacity={1}
-      onPress={navigateToNextScreen}
-    >
+    <View style={styles.container}>
       <Video
         source={videoSource}
         style={styles.gif}
@@ -56,7 +63,34 @@ export default function IntroScreen() {
         colors={['rgba(0,0,0,0.6)', 'transparent', 'rgba(0,0,0,0.8)']}
         style={styles.gradient}
       />
-    </TouchableOpacity>
+      {showButtons && (
+        <View style={styles.overlayContainer}>
+          <LinearGradient
+            colors={['transparent', 'rgba(0, 0, 0, 0.5)', 'rgba(0, 0, 0, 0.9)']}
+            style={styles.overlay}
+          >
+            <TouchableOpacity 
+              style={styles.button}
+              onPress={() => {
+                setHasNavigated(true);
+                router.replace('/auth');
+              }}
+            >
+              <Text style={styles.buttonText}>Get started</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.button, styles.secondaryButton]}
+              onPress={() => {
+                setHasNavigated(true);
+                router.replace('/auth');
+              }}
+            >
+              <Text style={[styles.buttonText, styles.secondaryButtonText]}>Log In</Text>
+            </TouchableOpacity>
+          </LinearGradient>
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -78,5 +112,40 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  overlayContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  overlay: {
+    paddingHorizontal: 30,
+    paddingTop: 80,
+    paddingBottom: 50,
+    alignItems: 'center',
+  },
+  button: {
+    backgroundColor: Colors.white,
+    paddingVertical: 16,
+    paddingHorizontal: 60,
+    borderRadius: 30,
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  secondaryButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: Colors.white,
+  },
+  buttonText: {
+    color: Colors.black,
+    fontSize: 18,
+    fontFamily: Fonts.regular,
+    fontWeight: '600',
+  },
+  secondaryButtonText: {
+    color: Colors.white,
   },
 });
