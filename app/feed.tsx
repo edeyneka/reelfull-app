@@ -176,69 +176,19 @@ function VideoThumbnail({
               </Text>
             </View>
           )}
-          <View style={styles.thumbnailOverlay}>
-            <Text style={styles.thumbnailPrompt} numberOfLines={2}>
-              {item.prompt}
-            </Text>
-          </View>
-        </TouchableOpacity>
-        {isSelected && <View style={styles.selectedBorder} />}
-      </Animated.View>
-    );
-  }
+        <View style={styles.thumbnailOverlay}>
+          <Text style={styles.thumbnailPrompt} numberOfLines={1} ellipsizeMode="tail">
+            {item.prompt}
+          </Text>
+        </View>
+      </TouchableOpacity>
+      {isSelected && <View style={styles.selectedBorder} />}
+    </Animated.View>
+  );
+}
 
-  // Show error state for failed videos
-  if (item.status === 'failed') {
-    return (
-      <Animated.View 
-        ref={thumbnailRef} 
-        style={[
-          styles.thumbnailContainer,
-          { 
-            transform: [{ scale: scaleAnim }],
-            zIndex: isSelected ? 1000 : 1,
-          }
-        ]} 
-        collapsable={false}
-      >
-        <TouchableOpacity
-          style={styles.thumbnailTouchable}
-          onPress={() => Alert.alert('Generation Failed', item.error || 'Video generation failed. Please try again.')}
-          onLongPress={handleLongPress}
-          activeOpacity={0.9}
-          delayLongPress={500}
-        >
-          {/* Show thumbnail in background if available */}
-          {effectiveThumbnailUrl ? (
-            <>
-              <Image
-                source={{ uri: effectiveThumbnailUrl }}
-                style={styles.thumbnail}
-                resizeMode="cover"
-              />
-              <View style={styles.errorOverlay}>
-                <AlertCircle size={32} color={Colors.white} strokeWidth={2} />
-                <Text style={styles.errorText}>Failed</Text>
-              </View>
-            </>
-          ) : (
-            <View style={styles.errorThumbnail}>
-              <AlertCircle size={32} color={Colors.white} strokeWidth={2} />
-              <Text style={styles.errorText}>Failed</Text>
-            </View>
-          )}
-          <View style={styles.thumbnailOverlay}>
-            <Text style={styles.thumbnailPrompt} numberOfLines={2}>
-              {item.prompt}
-            </Text>
-          </View>
-        </TouchableOpacity>
-        {isSelected && <View style={styles.selectedBorder} />}
-      </Animated.View>
-    );
-  }
-
-  // Show thumbnail image for ready videos (or placeholder if no thumbnail)
+// Show error state for failed videos
+if (item.status === 'failed') {
   return (
     <Animated.View 
       ref={thumbnailRef} 
@@ -253,34 +203,84 @@ function VideoThumbnail({
     >
       <TouchableOpacity
         style={styles.thumbnailTouchable}
-        onPress={onPress}
+        onPress={() => Alert.alert('Generation Failed', item.error || 'Video generation failed. Please try again.')}
         onLongPress={handleLongPress}
         activeOpacity={0.9}
         delayLongPress={500}
       >
+        {/* Show thumbnail in background if available */}
         {effectiveThumbnailUrl ? (
-          <Image
-            source={{ uri: effectiveThumbnailUrl }}
-            style={styles.thumbnail}
-            resizeMode="cover"
-          />
-        ) : shouldUseVideoPreview ? (
-          <VideoView
-            player={thumbnailPlayer}
-            style={styles.thumbnail}
-            contentFit="cover"
-            nativeControls={false}
-          />
+          <>
+            <Image
+              source={{ uri: effectiveThumbnailUrl }}
+              style={styles.thumbnail}
+              resizeMode="cover"
+            />
+            <View style={styles.errorOverlay}>
+              <AlertCircle size={32} color={Colors.white} strokeWidth={2} />
+              <Text style={styles.errorText}>Failed</Text>
+            </View>
+          </>
         ) : (
-          <View style={styles.noThumbnailContainer}>
-            <Text style={styles.noThumbnailText}>No Thumbnail</Text>
+          <View style={styles.errorThumbnail}>
+            <AlertCircle size={32} color={Colors.white} strokeWidth={2} />
+            <Text style={styles.errorText}>Failed</Text>
           </View>
         )}
         <View style={styles.thumbnailOverlay}>
-          <Text style={styles.thumbnailPrompt} numberOfLines={2}>
+          <Text style={styles.thumbnailPrompt} numberOfLines={1} ellipsizeMode="tail">
             {item.prompt}
           </Text>
         </View>
+      </TouchableOpacity>
+      {isSelected && <View style={styles.selectedBorder} />}
+    </Animated.View>
+  );
+}
+
+// Show thumbnail image for ready videos (or placeholder if no thumbnail)
+return (
+  <Animated.View 
+    ref={thumbnailRef} 
+    style={[
+      styles.thumbnailContainer,
+      { 
+        transform: [{ scale: scaleAnim }],
+        zIndex: isSelected ? 1000 : 1,
+      }
+    ]} 
+    collapsable={false}
+  >
+    <TouchableOpacity
+      style={styles.thumbnailTouchable}
+      onPress={onPress}
+      onLongPress={handleLongPress}
+      activeOpacity={0.9}
+      delayLongPress={500}
+    >
+      {effectiveThumbnailUrl ? (
+        <Image
+          source={{ uri: effectiveThumbnailUrl }}
+          style={styles.thumbnail}
+          resizeMode="cover"
+        />
+      ) : shouldUseVideoPreview ? (
+        <VideoView
+          player={thumbnailPlayer}
+          style={styles.thumbnail}
+          contentFit="cover"
+          nativeControls={false}
+        />
+      ) : (
+        <View style={styles.noThumbnailContainer}>
+          <Text style={styles.noThumbnailText}>No Thumbnail</Text>
+        </View>
+      )}
+      <View style={styles.thumbnailOverlay}>
+        <Text style={styles.thumbnailPrompt} numberOfLines={1} ellipsizeMode="tail">
+          {item.prompt}
+        </Text>
+      </View>
       </TouchableOpacity>
       {isSelected && <View style={styles.selectedBorder} />}
     </Animated.View>
@@ -761,6 +761,10 @@ export default function FeedScreen() {
                     />
                   </View>
 
+                  <View style={styles.promptSection}>
+                    <Text style={styles.promptText}>{selectedVideo.prompt}</Text>
+                  </View>
+
                   <View style={styles.modalActions}>
                     <TouchableOpacity
                       style={styles.downloadGradientButton}
@@ -921,14 +925,16 @@ const styles = StyleSheet.create({
   },
   thumbnailOverlay: {
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 12,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    bottom: 8,
+    left: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    borderRadius: 6,
+    maxWidth: ITEM_WIDTH - 16,
   },
   thumbnailPrompt: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: Fonts.regular,
     color: Colors.white,
   },
@@ -1087,7 +1093,7 @@ const styles = StyleSheet.create({
   videoPreviewContainer: {
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 24,
   },
   videoPreview: {
     width: '65%',
@@ -1096,6 +1102,18 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: Colors.grayDark,
+  },
+  promptSection: {
+    marginBottom: 24,
+    paddingHorizontal: 4,
+    alignItems: 'center',
+  },
+  promptText: {
+    fontSize: 15,
+    fontStyle: 'italic',
+    color: Colors.white,
+    lineHeight: 22,
+    textAlign: 'center',
   },
   modalActions: {
     alignItems: 'center',
