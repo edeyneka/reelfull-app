@@ -168,6 +168,7 @@ export default function ComposerScreen() {
         require('@/assets/media/sample_video_1.MOV'),
         require('@/assets/media/sample_video_2.MOV'),
         require('@/assets/media/sample_video_3.MOV'),
+        require('@/assets/media/sample_animated_image.mp4'),
       ];
 
       const assets = await Asset.loadAsync(sampleAssets);
