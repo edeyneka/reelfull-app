@@ -1,17 +1,17 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, Image, TouchableOpacity } from 'react-native';
+import { StyleSheet, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Video, ResizeMode } from 'expo-av';
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
-import { Fonts } from '@/constants/typography';
 
 export default function IntroScreen() {
   const router = useRouter();
   const { userId, isLoading } = useApp();
   const [hasNavigated, setHasNavigated] = useState(false);
   
-  const gifSource = require('../assets/intro-video.gif');
+  const videoSource = require('../assets/third_intro.mp4');
 
   // Navigate to the appropriate screen
   const navigateToNextScreen = () => {
@@ -27,12 +27,12 @@ export default function IntroScreen() {
     }
   };
 
-  // Auto-navigate after a few seconds (GIF loops indefinitely, so we use a timer)
+  // Auto-navigate after a few seconds
   useEffect(() => {
     if (!isLoading) {
       const timer = setTimeout(() => {
         navigateToNextScreen();
-      }, 3000); // Show intro for 3 seconds
+      }, 5000); // Show intro for 5 seconds
 
       return () => clearTimeout(timer);
     }
@@ -44,17 +44,18 @@ export default function IntroScreen() {
       activeOpacity={1}
       onPress={navigateToNextScreen}
     >
-      <Image
-        source={gifSource}
+      <Video
+        source={videoSource}
         style={styles.gif}
-        resizeMode="cover"
+        resizeMode={ResizeMode.COVER}
+        shouldPlay
+        isLooping
+        isMuted
       />
       <LinearGradient
         colors={['rgba(0,0,0,0.6)', 'transparent', 'rgba(0,0,0,0.8)']}
         style={styles.gradient}
-      >
-        <Text style={styles.title}>Reelful</Text>
-      </LinearGradient>
+      />
     </TouchableOpacity>
   );
 }
@@ -77,13 +78,5 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  title: {
-    position: 'absolute',
-    bottom: 120,
-    fontSize: 50,
-    fontFamily: Fonts.regular,
-    color: Colors.white,
-    letterSpacing: -1,
   },
 });
