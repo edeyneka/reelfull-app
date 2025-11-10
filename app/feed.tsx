@@ -338,10 +338,12 @@ export default function FeedScreen() {
   }, [backendProjects, syncedFromBackend, userId, syncVideosFromBackend, shouldRefetch, hasPendingVideos]);
 
   // Organize videos into rows of 3 for proper snake fill
+  // Sort videos by creation time (most recent first)
   const videoRows = useMemo(() => {
+    const sortedVideos = [...videos].sort((a, b) => b.createdAt - a.createdAt);
     const rows: VideoType[][] = [];
-    for (let i = 0; i < videos.length; i += 3) {
-      rows.push(videos.slice(i, i + 3));
+    for (let i = 0; i < sortedVideos.length; i += 3) {
+      rows.push(sortedVideos.slice(i, i + 3));
     }
     return rows;
   }, [videos]);
