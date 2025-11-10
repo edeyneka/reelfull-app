@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { StyleSheet, TouchableOpacity, View, Text } from 'react-native';
+import { useEffect, useState, useRef } from 'react';
+import { StyleSheet, TouchableOpacity, View, Text, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Video, ResizeMode } from 'expo-av';
 import Colors from '@/constants/colors';
@@ -12,6 +12,7 @@ export default function IntroScreen() {
   const { userId, isLoading } = useApp();
   const [hasNavigated, setHasNavigated] = useState(false);
   const [showButtons, setShowButtons] = useState(false);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
   
   const videoSource = require('../assets/third_intro.mp4');
 
@@ -29,25 +30,19 @@ export default function IntroScreen() {
     }
   };
 
-  // Show buttons after 2 seconds
+  // Show buttons after 3 seconds with fade-in animation
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowButtons(true);
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }).start();
     }, 3000);
 
     return () => clearTimeout(timer);
-  }, []);
-
-  // Auto-navigate after a few seconds
-  useEffect(() => {
-    if (!isLoading) {
-      const timer = setTimeout(() => {
-        navigateToNextScreen();
-      }, 5000); // Show intro for 5 seconds
-
-      return () => clearTimeout(timer);
-    }
-  }, [isLoading, userId, navigateToNextScreen]);
+  }, [fadeAnim]);
 
   return (
     <View style={styles.container}>
@@ -64,31 +59,41 @@ export default function IntroScreen() {
         style={styles.gradient}
       />
       {showButtons && (
-        <View style={styles.overlayContainer}>
+        <Animated.View style={[styles.overlayContainer, { opacity: fadeAnim }]}>
           <LinearGradient
             colors={['transparent', 'rgba(0, 0, 0, 0.5)', 'rgba(0, 0, 0, 0.9)']}
             style={styles.overlay}
           >
+            <Text style={styles.title}>Reelful</Text>
             <TouchableOpacity 
-              style={styles.button}
+              style={styles.buttonWrapper}
               onPress={() => {
                 setHasNavigated(true);
                 router.replace('/auth');
               }}
             >
-              <Text style={styles.buttonText}>Get started</Text>
+              <LinearGradient
+                colors={['#E85D2C', '#F57428', '#FF8C1F']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.button}
+              >
+                <Text style={[styles.buttonText, styles.primaryButtonText]}>Get Started</Text>
+              </LinearGradient>
             </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.button, styles.secondaryButton]}
-              onPress={() => {
-                setHasNavigated(true);
-                router.replace('/auth');
-              }}
-            >
-              <Text style={[styles.buttonText, styles.secondaryButtonText]}>Log In</Text>
-            </TouchableOpacity>
+            <View style={styles.buttonWrapper}>
+              <TouchableOpacity 
+                style={[styles.button, styles.secondaryButton]}
+                onPress={() => {
+                  setHasNavigated(true);
+                  router.replace('/auth');
+                }}
+              >
+                <Text style={[styles.buttonText, styles.secondaryButtonText]}>Log In</Text>
+              </TouchableOpacity>
+            </View>
           </LinearGradient>
-        </View>
+        </Animated.View>
       )}
     </View>
   );
@@ -125,14 +130,23 @@ const styles = StyleSheet.create({
     paddingBottom: 50,
     alignItems: 'center',
   },
+  title: {
+    fontSize: 42,
+    fontFamily: Fonts.regular,
+    color: Colors.white,
+    marginBottom: 30,
+    letterSpacing: -1,
+  },
+  buttonWrapper: {
+    width: '100%',
+    marginBottom: 16,
+  },
   button: {
-    backgroundColor: Colors.white,
-    paddingVertical: 16,
-    paddingHorizontal: 60,
-    borderRadius: 30,
+    paddingVertical: 14,
+    paddingHorizontal: 40,
+    borderRadius: 25,
     width: '100%',
     alignItems: 'center',
-    marginBottom: 16,
   },
   secondaryButton: {
     backgroundColor: 'transparent',
@@ -141,9 +155,13 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: Colors.black,
-    fontSize: 18,
-    fontFamily: Fonts.regular,
-    fontWeight: '600',
+    fontSize: 17,
+    fontFamily: 'Poppins-Medium',
+    fontWeight: '500',
+    letterSpacing: 0.3,
+  },
+  primaryButtonText: {
+    color: Colors.white,
   },
   secondaryButtonText: {
     color: Colors.white,
