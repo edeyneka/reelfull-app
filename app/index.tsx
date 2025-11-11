@@ -14,7 +14,7 @@ export default function IntroScreen() {
   const [showButtons, setShowButtons] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   
-  const videoSource = require('../assets/third_intro.mp4');
+  const videoSource = require('../assets/third_intro_ultra.mp4');
 
   // Navigate to the appropriate screen
   const navigateToNextScreen = () => {
