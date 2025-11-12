@@ -30,19 +30,29 @@ export default function IntroScreen() {
     }
   };
 
-  // Show buttons after 3 seconds with fade-in animation
+  // Handle navigation based on user state
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowButtons(true);
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }).start();
-    }, 3000);
+    if (isLoading) return;
 
-    return () => clearTimeout(timer);
-  }, [fadeAnim]);
+    if (userId) {
+      // User is already authenticated - show intro for 3 seconds then go to feed
+      const timer = setTimeout(() => {
+        navigateToNextScreen();
+      }, 3000);
+      return () => clearTimeout(timer);
+    } else {
+      // New user - show buttons after 3 seconds with fade-in animation
+      const timer = setTimeout(() => {
+        setShowButtons(true);
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }).start();
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [fadeAnim, userId, isLoading]);
 
   return (
     <View style={styles.container}>
