@@ -3,37 +3,15 @@ import { Sparkles } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Asset } from 'expo-asset';
 import Colors from '@/constants/colors';
-import { useMutation, useQuery } from 'convex/react';
+import { useMutation, useQuery, useAction } from 'convex/react';
 import { api } from '@/backend-api';
-
-const simulateVideoGeneration = async (
-  mediaUris: { uri: string; type: 'video' | 'image' }[],
-  onProgress: (progress: number) => void
-): Promise<string> => {
-  // Load the hardcoded intro video asset first
-  const [asset] = await Asset.loadAsync(require('@/assets/video.mp4'));
-  const hardcodedVideo = [{ uri: asset.localUri || asset.uri, type: 'video' as const }];
-
-  return new Promise((resolve) => {
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += Math.random() * 15;
-      if (progress >= 100) {
-        progress = 100;
-        clearInterval(interval);
-        setTimeout(() => resolve(JSON.stringify(mediaUris)), 300);
-      }
-      onProgress(Math.min(progress, 100));
-    }, 200);
-  });
-};
 
 export default function LoaderScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ projectId: string }>();
   const [progress, setProgress] = useState(0);
+  const [hasTriggeredAI, setHasTriggeredAI] = useState(false);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
 
@@ -41,6 +19,7 @@ export default function LoaderScreen() {
     params.projectId ? { id: params.projectId as any } : 'skip'
   );
 
+  const processProject = useAction(api.tasks.processProjectWithAI);
   const completeProject = useMutation(api.tasks.completeProject);
 
   console.log('loader: project data:', project);
@@ -71,6 +50,14 @@ export default function LoaderScreen() {
   }, [pulseAnim, rotateAnim]);
 
   useEffect(() => {
+    if (project && !hasTriggeredAI && project.status === 'pending') {
+      console.log('triggering ai processing for project:', project._id);
+      processProject({ projectId: project._id as any });
+      setHasTriggeredAI(true);
+    }
+  }, [project, hasTriggeredAI, processProject]);
+
+  useEffect(() => {
     if (project) {
       if (project.status === 'completed') {
         console.log('project completed, navigating to result/feed');
@@ -93,7 +80,7 @@ export default function LoaderScreen() {
         setProgress(simulatedProgress);
       }
     }
-  }, [project]);
+  }, [project, router]);
 
   const handleSimulate = async () => {
     if (params.projectId) {

@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
-import { Plus, Trash2, Download, Settings, Loader2 } from 'lucide-react-native';
-import { useState, useRef, useEffect } from 'react';
+import { Plus, Trash2, Download, Settings, Loader2, X } from 'lucide-react-native';
+import { useState, useEffect } from 'react';
 import {
   Dimensions,
   FlatList,
@@ -10,14 +10,11 @@ import {
   TouchableOpacity,
   View,
   Alert,
-  Animated,
   Image,
 } from 'react-native';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import * as MediaLibrary from 'expo-media-library';
-import * as FileSystem from 'expo-file-system';
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
 import { Video as VideoType, Project } from '@/types';
@@ -29,6 +26,17 @@ const ITEM_SPACING = 8;
 const ITEM_WIDTH = (SCREEN_WIDTH - ITEM_SPACING * 3) / 2;
 
 function VideoThumbnail({ item, onPress }: { item: any; onPress: () => void }) {
+  const hasValidVideo = item.uri && item.uri.length > 0 && item.status === 'completed';
+  
+  const thumbnailPlayer = useVideoPlayer(
+    hasValidVideo ? item.uri : null,
+    (player) => {
+      if (player) {
+        player.muted = true;
+      }
+    }
+  );
+
   if (item.status && item.status !== 'completed') {
     console.log('Rendering processing item:', {
       id: item.id,
@@ -66,7 +74,7 @@ function VideoThumbnail({ item, onPress }: { item: any; onPress: () => void }) {
     );
   }
 
-  if (!item.uri || item.uri.length === 0) {
+  if (!hasValidVideo) {
     return (
       <TouchableOpacity
         style={styles.thumbnailContainer}
@@ -88,10 +96,6 @@ function VideoThumbnail({ item, onPress }: { item: any; onPress: () => void }) {
       </TouchableOpacity>
     );
   }
-
-  const thumbnailPlayer = useVideoPlayer(item.uri, (player) => {
-    player.muted = true;
-  });
 
   return (
     <TouchableOpacity
@@ -144,7 +148,7 @@ export default function FeedScreen() {
     ...(projects?.map((p: Project) => {
       const item = {
         id: p._id,
-        uri: p.status === 'completed' ? p.videoUrl : undefined,
+        uri: p.renderedVideoUrl || p.videoUrl,
         prompt: p.prompt,
         createdAt: p._creationTime,
         status: p.status,
@@ -154,6 +158,8 @@ export default function FeedScreen() {
       return item;
     }) || [])
   ];
+
+  console.log('All items count:', allItems.length, 'local:', localVideos.length, 'projects:', projects?.length);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -171,58 +177,23 @@ export default function FeedScreen() {
     }
   );
 
-  const translateY = useRef(new Animated.Value(0)).current;
-  const opacity = useRef(new Animated.Value(1)).current;
-
   const closeModal = () => {
     setSelectedVideo(null);
-    translateY.setValue(0);
-    opacity.setValue(1);
   };
 
-  const panGesture = Gesture.Pan()
-    .onUpdate((event) => {
-      if (event.translationY > 0) {
-        translateY.setValue(event.translationY);
-        opacity.setValue(Math.max(0.5, 1 - event.translationY / 400));
-      }
-    })
-    .onEnd((event) => {
-      if (event.translationY > 150 || event.velocityY > 500) {
-        Animated.parallel([
-          Animated.timing(translateY, {
-            toValue: 800,
-            duration: 200,
-            useNativeDriver: true,
-          }),
-          Animated.timing(opacity, {
-            toValue: 0,
-            duration: 200,
-            useNativeDriver: true,
-          }),
-        ]).start(() => {
-          closeModal();
-        });
-      } else {
-        Animated.parallel([
-          Animated.spring(translateY, {
-            toValue: 0,
-            useNativeDriver: true,
-            tension: 100,
-            friction: 8,
-          }),
-          Animated.spring(opacity, {
-            toValue: 1,
-            useNativeDriver: true,
-            tension: 100,
-            friction: 8,
-          }),
-        ]).start();
-      }
-    });
-
   const renderVideoThumbnail = ({ item }: { item: VideoType }) => (
-    <VideoThumbnail item={item} onPress={() => setSelectedVideo(item)} />
+    <VideoThumbnail 
+      item={item} 
+      onPress={() => {
+        console.log('item tapped:', { uri: item.uri, status: item.status, id: item.id });
+        if (item.uri && (!item.status || item.status === 'completed')) {
+          console.log('opening modal for item:', item.id);
+          setSelectedVideo(item);
+        } else {
+          console.log('blocked opening modal - no uri or wrong status');
+        }
+      }} 
+    />
   );
 
   const renderEmpty = () => (
@@ -304,57 +275,54 @@ export default function FeedScreen() {
       </TouchableOpacity>
 
       <Modal
-        visible={selectedVideo !== null}
-        animationType="none"
+        visible={selectedVideo !== null && !!selectedVideo?.uri}
+        animationType="slide"
         onRequestClose={closeModal}
       >
-        {selectedVideo && (
-          <GestureDetector gesture={panGesture}>
-            <Animated.View
-              style={[
-                styles.modalContainer,
-                {
-                  transform: [{ translateY }],
-                  opacity,
-                },
-              ]}
-            >
-              <VideoView
-                player={modalPlayer}
-                style={styles.fullVideo}
-                contentFit="contain"
-                nativeControls={true}
-              />
-              <View style={[styles.modalButtons, { top: insets.top + 16 }]}>
-                <TouchableOpacity
-                  style={styles.downloadButton}
-                  onPress={handleDownload}
-                  activeOpacity={0.8}
-                >
-                  <Download size={24} color={Colors.white} strokeWidth={2} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.deleteButton}
-                  onPress={handleDelete}
-                  activeOpacity={0.8}
-                >
-                  <Trash2 size={24} color={Colors.white} strokeWidth={2} />
-                </TouchableOpacity>
-              </View>
+        {selectedVideo && selectedVideo.uri && (
+          <View style={styles.modalContainer}>
+            <VideoView
+              player={modalPlayer}
+              style={styles.fullVideo}
+              contentFit="contain"
+              nativeControls={true}
+            />
+            <View style={[styles.modalButtons, { top: insets.top + 16 }]}>
               <TouchableOpacity
-                style={styles.modalOverlay}
-                onPress={() => setIsPromptExpanded(!isPromptExpanded)}
-                activeOpacity={0.9}
+                style={styles.closeButton}
+                onPress={closeModal}
+                activeOpacity={0.8}
               >
-                <Text
-                  style={styles.modalPrompt}
-                  numberOfLines={isPromptExpanded ? undefined : 2}
-                >
-                  {selectedVideo.prompt}
-                </Text>
+                <X size={24} color={Colors.white} strokeWidth={2} />
               </TouchableOpacity>
-            </Animated.View>
-          </GestureDetector>
+              <TouchableOpacity
+                style={styles.downloadButton}
+                onPress={handleDownload}
+                activeOpacity={0.8}
+              >
+                <Download size={24} color={Colors.white} strokeWidth={2} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={handleDelete}
+                activeOpacity={0.8}
+              >
+                <Trash2 size={24} color={Colors.white} strokeWidth={2} />
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity
+              style={styles.modalOverlay}
+              onPress={() => setIsPromptExpanded(!isPromptExpanded)}
+              activeOpacity={0.9}
+            >
+              <Text
+                style={styles.modalPrompt}
+                numberOfLines={isPromptExpanded ? undefined : 2}
+              >
+                {selectedVideo.prompt}
+              </Text>
+            </TouchableOpacity>
+          </View>
         )}
       </Modal>
     </View>
@@ -481,6 +449,16 @@ const styles = StyleSheet.create({
     right: 24,
     flexDirection: 'row',
     gap: 12,
+  },
+  closeButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: Colors.white,
   },
   downloadButton: {
     width: 44,
