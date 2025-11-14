@@ -44,10 +44,11 @@ export async function uploadFileToConvex(
 }
 
 /**
- * Upload multiple media files to Convex storage
+ * Upload multiple media files to Convex storage (LEGACY - use uploadMediaFilesToR2 instead)
  * @param generateUploadUrl - Convex mutation function to get upload URL
  * @param mediaUris - Array of media items with URI and type
  * @returns Array of upload metadata
+ * @deprecated Use uploadMediaFilesToR2 for direct R2 uploads and bandwidth savings
  */
 export async function uploadMediaFiles(
   generateUploadUrl: () => Promise<string>,
@@ -102,6 +103,92 @@ export async function uploadMediaFiles(
     }
   }
 
+  return uploads;
+}
+
+/**
+ * Upload multiple media files directly to R2 (RECOMMENDED - bypasses Convex for maximum savings)
+ * @param generateR2UploadUrls - Convex mutation function to get R2 upload URLs
+ * @param mediaUris - Array of media items with URI and type
+ * @param projectId - Optional project ID for organized storage
+ * @returns Array of upload metadata with R2 keys and URLs
+ */
+export async function uploadMediaFilesToR2(
+  generateR2UploadUrls: (files: Array<{ filename: string; contentType: string }>, projectId?: string) => Promise<Array<{
+    filename: string;
+    uploadUrl: string;
+    key: string;
+    r2Url?: string;
+  }>>,
+  mediaUris: Array<{ uri: string; type: "image" | "video"; filename?: string }>,
+  projectId?: string
+): Promise<
+  Array<{
+    filename: string;
+    contentType: string;
+    size: number;
+    r2Key: string;
+    r2Url: string;
+  }>
+> {
+  console.log(`[R2] Uploading ${mediaUris.length} files directly to R2...`);
+  
+  // 1. Prepare file metadata
+  const fileMetadata = mediaUris.map((media, index) => {
+    const ext = media.type === "video" ? "mp4" : "jpg";
+    const filename = media.filename || `${media.type}_${Date.now()}_${index}.${ext}`;
+    const contentType = media.type === "video" ? "video/mp4" : "image/jpeg";
+    
+    return { filename, contentType };
+  });
+
+  // 2. Generate R2 upload URLs for all files
+  const uploadUrls = await generateR2UploadUrls(fileMetadata, projectId);
+  
+  const uploads = [];
+
+  // 3. Upload each file directly to R2
+  for (let i = 0; i < mediaUris.length; i++) {
+    const media = mediaUris[i];
+    const uploadInfo = uploadUrls[i];
+    
+    try {
+      console.log(`[R2] Uploading ${uploadInfo.filename}...`);
+      
+      // Fetch file
+      const response = await fetch(media.uri);
+      const blob = await response.blob();
+
+      // Upload directly to R2
+      const uploadResponse = await fetch(uploadInfo.uploadUrl, {
+        method: "PUT",
+        headers: {
+          "Content-Type": fileMetadata[i].contentType,
+        },
+        body: blob,
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error(`R2 upload failed: ${uploadResponse.statusText}`);
+      }
+
+      // Add metadata
+      uploads.push({
+        filename: uploadInfo.filename,
+        contentType: fileMetadata[i].contentType,
+        size: blob.size,
+        r2Key: uploadInfo.key,
+        r2Url: uploadInfo.r2Url || "",
+      });
+
+      console.log(`[R2] ✓ Uploaded ${uploadInfo.filename} to R2`);
+    } catch (error) {
+      console.error(`[R2] Failed to upload ${uploadInfo.filename}:`, error);
+      throw error;
+    }
+  }
+
+  console.log(`[R2] Successfully uploaded ${uploads.length} files to R2`);
   return uploads;
 }
 
