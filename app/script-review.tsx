@@ -37,19 +37,24 @@ export default function ScriptReviewScreen() {
   const generateMediaAssets = useAction(api.tasks.generateMediaAssets);
   const generateUploadUrl = useMutation(api.tasks.generateUploadUrl);
   const setupTestRunProject = useAction(api.tasks.setupTestRunProject);
+  const updateProjectRenderMode = useMutation(api.tasks.updateProjectRenderMode);
 
   // Local state
   const [isEditing, setIsEditing] = useState(false);
   const [editedScript, setEditedScript] = useState('');
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [renderMode, setRenderMode] = useState<'remotion' | 'ffmpeg'>('ffmpeg');
 
-  // Initialize script from project
+  // Initialize script and render mode from project
   useEffect(() => {
     if (project?.script && !editedScript) {
       setEditedScript(project.script);
     }
-  }, [project?.script]);
+    if (project?.renderMode) {
+      setRenderMode(project.renderMode);
+    }
+  }, [project?.script, project?.renderMode]);
 
   const handleSaveEdit = async () => {
     if (!projectId || !editedScript.trim()) {
@@ -110,6 +115,13 @@ export default function ScriptReviewScreen() {
           script: scriptToSave,
         });
       }
+
+      // Save render mode
+      console.log('[script-review] Saving render mode:', renderMode);
+      await updateProjectRenderMode({
+        id: projectId,
+        renderMode,
+      });
 
       // Mark as submitted (sets submittedAt timestamp)
       console.log('[script-review] Marking project as submitted...');
@@ -335,6 +347,45 @@ export default function ScriptReviewScreen() {
               )}
             </View>
 
+            {/* Render Mode Toggle */}
+            <View style={styles.renderModeContainer}>
+              <Text style={styles.renderModeLabel}>Rendering Engine:</Text>
+              <View style={styles.renderModeToggle}>
+                <TouchableOpacity
+                  style={[
+                    styles.renderModeOption,
+                    renderMode === 'remotion' && styles.renderModeOptionActive
+                  ]}
+                  onPress={() => setRenderMode('remotion')}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[
+                    styles.renderModeText,
+                    renderMode === 'remotion' && styles.renderModeTextActive
+                  ]}>
+                    Remotion
+                  </Text>
+                  <Text style={styles.renderModeDesc}>(Higher quality)</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.renderModeOption,
+                    renderMode === 'ffmpeg' && styles.renderModeOptionActive
+                  ]}
+                  onPress={() => setRenderMode('ffmpeg')}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[
+                    styles.renderModeText,
+                    renderMode === 'ffmpeg' && styles.renderModeTextActive
+                  ]}>
+                    FFmpeg
+                  </Text>
+                  <Text style={styles.renderModeDesc}>(Faster)</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
             <TouchableOpacity
               style={[styles.approveButton, isSubmitting && styles.approveButtonDisabled]}
               onPress={handleApprove}
@@ -508,6 +559,48 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     fontSize: 16,
     fontFamily: Fonts.title,
+    color: Colors.grayLight,
+  },
+  renderModeContainer: {
+    marginTop: 24,
+    gap: 12,
+  },
+  renderModeLabel: {
+    fontSize: 14,
+    fontFamily: Fonts.regular,
+    color: Colors.grayLight,
+    marginBottom: 4,
+  },
+  renderModeToggle: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  renderModeOption: {
+    flex: 1,
+    backgroundColor: Colors.grayDark,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    alignItems: 'center',
+  },
+  renderModeOptionActive: {
+    borderColor: Colors.orange,
+    backgroundColor: 'rgba(255, 107, 53, 0.1)',
+  },
+  renderModeText: {
+    fontSize: 16,
+    fontFamily: Fonts.regular,
+    color: Colors.white,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  renderModeTextActive: {
+    color: Colors.orange,
+  },
+  renderModeDesc: {
+    fontSize: 12,
+    fontFamily: Fonts.regular,
     color: Colors.grayLight,
   },
   approveButton: {
