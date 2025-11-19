@@ -34,7 +34,6 @@ export default function ScriptReviewScreen() {
   const updateProjectScript = useMutation(api.tasks.updateProjectScript);
   const regenerateScript = useAction(api.tasks.regenerateScript);
   const markProjectSubmitted = useMutation(api.tasks.markProjectSubmitted);
-  const generateMediaAssets = useAction(api.tasks.generateMediaAssets);
   const generateUploadUrl = useMutation(api.tasks.generateUploadUrl);
   const setupTestRunProject = useAction(api.tasks.setupTestRunProject);
   const updateProjectRenderMode = useMutation(api.tasks.updateProjectRenderMode);
@@ -123,7 +122,7 @@ export default function ScriptReviewScreen() {
         renderMode,
       });
 
-      // Mark as submitted (sets submittedAt timestamp)
+      // Mark as submitted (sets submittedAt timestamp and schedules generation server-side)
       console.log('[script-review] Marking project as submitted...');
       await markProjectSubmitted({ id: projectId });
 
@@ -138,64 +137,59 @@ export default function ScriptReviewScreen() {
         projectId: projectId,
       });
 
-      if (isTestRun) {
-        // Test run mode: Upload sample voice, music, and SRT, skip AI generation
-        console.log('[script-review] Test run mode: Loading sample assets...');
-        
-        // Load and upload sample voice
-        const sampleVoiceAsset = Asset.fromModule(require('@/assets/media/sample_voice.mp3'));
-        await sampleVoiceAsset.downloadAsync();
-        console.log('[script-review] Uploading sample voice...');
-        const audioStorageId = await uploadFileToConvex(
-          generateUploadUrl,
-          sampleVoiceAsset.localUri || sampleVoiceAsset.uri,
-          'audio/mp3'
-        );
-        console.log('[script-review] Sample voice uploaded, storage ID:', audioStorageId);
-
-        // Load and upload sample music
-        const sampleMusicAsset = Asset.fromModule(require('@/assets/media/sample_music.mp3'));
-        await sampleMusicAsset.downloadAsync();
-        console.log('[script-review] Uploading sample music...');
-        const musicStorageId = await uploadFileToConvex(
-          generateUploadUrl,
-          sampleMusicAsset.localUri || sampleMusicAsset.uri,
-          'audio/mp3'
-        );
-        console.log('[script-review] Sample music uploaded, storage ID:', musicStorageId);
-
-        // Load sample SRT
-        const sampleSrtAsset = Asset.fromModule(require('@/assets/media/sample_srt.srt'));
-        await sampleSrtAsset.downloadAsync();
-        const srtResponse = await fetch(sampleSrtAsset.localUri || sampleSrtAsset.uri);
-        const srtContent = await srtResponse.text();
-        console.log('[script-review] Sample SRT loaded, length:', srtContent.length);
-
-        // Setup test run project with sample assets
-        console.log('[script-review] Setting up test run project...');
-        const result = await setupTestRunProject({
-          projectId,
-          audioStorageId,
-          srtContent,
-          musicStorageId,
-        });
-
-        if (!result.success) {
-          throw new Error(result.error || 'Failed to setup test run');
-        }
-
-        console.log('[script-review] Test run setup complete! Rendering will start automatically.');
-      } else {
-        // Normal mode: Start media generation (Phase 2: voice, music, animations) - async in background
-        console.log('[script-review] Starting media asset generation...');
-        generateMediaAssets({ projectId }).catch((error) => {
-          console.error('[script-review] Media generation error:', error);
-          // Don't block navigation - the error will be reflected in project status
-        });
+      // For normal mode, navigate immediately since generation is scheduled server-side
+      if (!isTestRun) {
+        console.log('[script-review] Media generation scheduled server-side, navigating to feed...');
+        router.replace('/feed');
+        return; // Exit early - generation continues in background
       }
 
-      // Navigate to feed immediately
-      console.log('[script-review] Navigating to feed...');
+      // Test run mode: Upload sample assets before navigating
+      console.log('[script-review] Test run mode: Loading sample assets...');
+      
+      // Load and upload sample voice
+      const sampleVoiceAsset = Asset.fromModule(require('@/assets/media/sample_voice.mp3'));
+      await sampleVoiceAsset.downloadAsync();
+      console.log('[script-review] Uploading sample voice...');
+      const audioStorageId = await uploadFileToConvex(
+        generateUploadUrl,
+        sampleVoiceAsset.localUri || sampleVoiceAsset.uri,
+        'audio/mp3'
+      );
+      console.log('[script-review] Sample voice uploaded, storage ID:', audioStorageId);
+
+      // Load and upload sample music
+      const sampleMusicAsset = Asset.fromModule(require('@/assets/media/sample_music.mp3'));
+      await sampleMusicAsset.downloadAsync();
+      console.log('[script-review] Uploading sample music...');
+      const musicStorageId = await uploadFileToConvex(
+        generateUploadUrl,
+        sampleMusicAsset.localUri || sampleMusicAsset.uri,
+        'audio/mp3'
+      );
+      console.log('[script-review] Sample music uploaded, storage ID:', musicStorageId);
+
+      // Load sample SRT
+      const sampleSrtAsset = Asset.fromModule(require('@/assets/media/sample_srt.srt'));
+      await sampleSrtAsset.downloadAsync();
+      const srtResponse = await fetch(sampleSrtAsset.localUri || sampleSrtAsset.uri);
+      const srtContent = await srtResponse.text();
+      console.log('[script-review] Sample SRT loaded, length:', srtContent.length);
+
+      // Setup test run project with sample assets
+      console.log('[script-review] Setting up test run project...');
+      const result = await setupTestRunProject({
+        projectId,
+        audioStorageId,
+        srtContent,
+        musicStorageId,
+      });
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to setup test run');
+      }
+
+      console.log('[script-review] Test run setup complete! Rendering started. Navigating to feed...');
       router.replace('/feed');
     } catch (error) {
       console.error('[script-review] Approve error:', error);
