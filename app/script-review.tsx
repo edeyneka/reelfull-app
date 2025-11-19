@@ -34,8 +34,8 @@ export default function ScriptReviewScreen() {
   const updateProjectScript = useMutation(api.tasks.updateProjectScript);
   const regenerateScript = useAction(api.tasks.regenerateScript);
   const markProjectSubmitted = useMutation(api.tasks.markProjectSubmitted);
+  const markProjectSubmittedTestMode = useMutation(api.tasks.markProjectSubmittedTestMode);
   const generateUploadUrl = useMutation(api.tasks.generateUploadUrl);
-  const setupTestRunProject = useAction(api.tasks.setupTestRunProject);
   const updateProjectRenderMode = useMutation(api.tasks.updateProjectRenderMode);
 
   // Local state
@@ -122,10 +122,6 @@ export default function ScriptReviewScreen() {
         renderMode,
       });
 
-      // Mark as submitted (sets submittedAt timestamp and schedules generation server-side)
-      console.log('[script-review] Marking project as submitted...');
-      await markProjectSubmitted({ id: projectId });
-
       // Create a pending video entry in the feed
       console.log('[script-review] Adding pending video to feed...');
       await addVideo({
@@ -137,59 +133,61 @@ export default function ScriptReviewScreen() {
         projectId: projectId,
       });
 
-      // For normal mode, navigate immediately since generation is scheduled server-side
+      // For normal mode, mark as submitted and schedule generation server-side
       if (!isTestRun) {
+        console.log('[script-review] Marking project as submitted (schedules generation server-side)...');
+        await markProjectSubmitted({ id: projectId });
         console.log('[script-review] Media generation scheduled server-side, navigating to feed...');
         router.replace('/feed');
         return; // Exit early - generation continues in background
       }
 
-      // Test run mode: Upload sample assets before navigating
-      console.log('[script-review] Test run mode: Loading sample assets...');
+      // Test run mode: Upload sample assets and schedule test run setup (same pattern as normal mode)
+      // ⚠️  TEST MODE: Skips ALL AI generation - uses pre-recorded sample files instead
+      console.log('[script-review] ⚠️  TEST RUN MODE: Using sample files from assets/media (NO AI generation)');
+      console.log('[script-review] Loading sample assets...');
       
-      // Load and upload sample voice
+      // Load and upload sample voice (from assets/media/sample_voice.mp3)
+      // This replaces AI voice generation
       const sampleVoiceAsset = Asset.fromModule(require('@/assets/media/sample_voice.mp3'));
       await sampleVoiceAsset.downloadAsync();
-      console.log('[script-review] Uploading sample voice...');
+      console.log('[script-review] Uploading sample voice from assets/media/sample_voice.mp3...');
       const audioStorageId = await uploadFileToConvex(
         generateUploadUrl,
         sampleVoiceAsset.localUri || sampleVoiceAsset.uri,
         'audio/mp3'
       );
-      console.log('[script-review] Sample voice uploaded, storage ID:', audioStorageId);
+      console.log('[script-review] ✓ Sample voice uploaded, storage ID:', audioStorageId);
 
-      // Load and upload sample music
+      // Load and upload sample music (from assets/media/sample_music.mp3)
       const sampleMusicAsset = Asset.fromModule(require('@/assets/media/sample_music.mp3'));
       await sampleMusicAsset.downloadAsync();
-      console.log('[script-review] Uploading sample music...');
+      console.log('[script-review] Uploading sample music from assets/media/sample_music.mp3...');
       const musicStorageId = await uploadFileToConvex(
         generateUploadUrl,
         sampleMusicAsset.localUri || sampleMusicAsset.uri,
         'audio/mp3'
       );
-      console.log('[script-review] Sample music uploaded, storage ID:', musicStorageId);
+      console.log('[script-review] ✓ Sample music uploaded, storage ID:', musicStorageId);
 
-      // Load sample SRT
+      // Load sample SRT (from assets/media/sample_srt.srt)
+      // This replaces AI SRT generation
       const sampleSrtAsset = Asset.fromModule(require('@/assets/media/sample_srt.srt'));
       await sampleSrtAsset.downloadAsync();
       const srtResponse = await fetch(sampleSrtAsset.localUri || sampleSrtAsset.uri);
       const srtContent = await srtResponse.text();
-      console.log('[script-review] Sample SRT loaded, length:', srtContent.length);
+      console.log('[script-review] ✓ Sample SRT loaded from assets/media/sample_srt.srt, length:', srtContent.length);
 
-      // Setup test run project with sample assets
-      console.log('[script-review] Setting up test run project...');
-      const result = await setupTestRunProject({
-        projectId,
+      // Mark project as submitted in test mode (schedules test run setup server-side, same pattern as normal mode)
+      console.log('[script-review] Marking project as submitted in test mode (schedules setup server-side)...');
+      await markProjectSubmittedTestMode({
+        id: projectId,
         audioStorageId,
         srtContent,
         musicStorageId,
       });
 
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to setup test run');
-      }
-
-      console.log('[script-review] Test run setup complete! Rendering started. Navigating to feed...');
+      console.log('[script-review] Test run scheduled server-side, navigating to feed...');
       router.replace('/feed');
     } catch (error) {
       console.error('[script-review] Approve error:', error);
