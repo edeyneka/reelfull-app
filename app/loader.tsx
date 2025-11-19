@@ -73,11 +73,19 @@ export default function LoaderScreen() {
       
       renderTriggeredRef.current = true;
       
-      renderVideo({ projectId }).catch((error) => {
-        console.error('[loader] render error:', error);
-        Alert.alert('Error', `Render failed: ${error}`);
-        renderTriggeredRef.current = false; // Reset on error so user can retry
-      });
+      renderVideo({ projectId })
+        .then((result) => {
+          if (!result?.success) {
+            console.log('[loader] Render not started:', result?.message || 'Unknown reason');
+            // Don't show error - this is likely due to duplicate render prevention
+            // The render is either already in progress or already completed
+          }
+        })
+        .catch((error) => {
+          console.error('[loader] render error:', error);
+          Alert.alert('Error', `Render failed: ${error}`);
+          renderTriggeredRef.current = false; // Reset on error so user can retry
+        });
     } else if (project.status === "completed" && !hasAllMediaAssets && !renderTriggeredRef.current) {
       console.log('[loader] ⏳ Waiting for all media assets...');
       console.log('[loader]   - audioUrl:', project.audioUrl ? "✓" : "✗");

@@ -105,11 +105,12 @@ export function useVideoPolling() {
               updateVideoStatus(video.id, 'processing', undefined, undefined, project.thumbnailUrl);
             }
             
-            // Trigger render - any errors are non-critical since rendering continues via scheduled steps
+            // Trigger render - backend guard prevents duplicate renders
+            // Any errors are non-critical since rendering continues via scheduled steps
             renderVideo({ projectId: video.projectId as any }).catch((error) => {
-              console.warn('[VideoPolling] Render trigger returned error (non-critical, pipeline continues):', error);
+              console.warn('[VideoPolling] Render trigger returned error (non-critical, backend guards against duplicates):', error);
               // Don't mark as failed - rendering continues in background via scheduled steps
-              // We'll only mark as failed if backend sets project.status to 'failed'
+              // Backend guard prevents duplicate renders if multiple triggers happen simultaneously
             });
           }
           // Priority 4: Show processing for any intermediate states OR if completed but still rendering
