@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { Plus, Download, Settings, Loader2, AlertCircle, X, Trash2 } from 'lucide-react-native';
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
   Dimensions,
   FlatList,
@@ -22,7 +22,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import * as MediaLibrary from 'expo-media-library';
 import * as FileSystem from 'expo-file-system/legacy';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
@@ -299,7 +299,6 @@ export default function FeedScreen() {
   const [showActionSheet, setShowActionSheet] = useState(false);
   const [actionSheetPosition, setActionSheetPosition] = useState({ pageX: 0, pageY: 0, width: 0, height: 0, columnIndex: 0 });
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [shouldRefetch, setShouldRefetch] = useState(false);
   
   // Check if there are any pending/processing videos that need fresh data
   const hasPendingVideos = useMemo(() => 
@@ -307,17 +306,17 @@ export default function FeedScreen() {
     [videos]
   );
   
-  // Fetch from backend if: 
-  // 1. Haven't synced yet (initial load)
-  // 2. User pulls to refresh
-  // 3. There are pending/processing videos (to get latest thumbnails and status)
+  // Query projects normally (no fresh URL generation upfront)
   const backendProjects = useQuery(
     api.tasks.getProjects,
-    ((!syncedFromBackend || shouldRefetch || hasPendingVideos) && userId) ? { userId } : "skip"
+    ((!syncedFromBackend || isRefreshing || hasPendingVideos) && userId) ? { userId } : "skip"
   );
   
   // Convex mutation for deleting projects
   const deleteProjectMutation = useMutation(api.tasks.deleteProject);
+  
+  // Action to get fresh video URL on-demand (when user taps to view)
+  const getFreshVideoUrl = useAction(api.tasks.getFreshProjectVideoUrl);
 
   // Sync videos from backend when projects are loaded
   useEffect(() => {
@@ -325,17 +324,16 @@ export default function FeedScreen() {
       if (!syncedFromBackend) {
         console.log('[feed] Initial sync: Backend projects loaded, syncing...');
         syncVideosFromBackend(backendProjects);
-      } else if (shouldRefetch) {
+      } else if (isRefreshing) {
         console.log('[feed] Refresh: Backend projects loaded, syncing...');
         syncVideosFromBackend(backendProjects);
-        setShouldRefetch(false);
         setIsRefreshing(false);
       } else if (hasPendingVideos) {
-        console.log('[feed] Pending videos detected, syncing for fresh data including thumbnails...');
+        console.log('[feed] Pending videos detected, syncing for fresh data...');
         syncVideosFromBackend(backendProjects);
       }
     }
-  }, [backendProjects, syncedFromBackend, userId, syncVideosFromBackend, shouldRefetch, hasPendingVideos]);
+  }, [backendProjects, syncedFromBackend, userId, syncVideosFromBackend, isRefreshing, hasPendingVideos]);
 
   // Organize videos into rows of 3 for proper snake fill
   // Sort videos by creation time (most recent first)
@@ -349,11 +347,10 @@ export default function FeedScreen() {
   }, [videos]);
 
   // Handle pull-to-refresh
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     console.log('[feed] User initiated refresh');
     setIsRefreshing(true);
-    setShouldRefetch(true);
-  };
+  }, []);
   
   // Enable video polling for pending videos
   useVideoPolling();
@@ -541,10 +538,30 @@ export default function FeedScreen() {
         key={item.id}
         item={item} 
         isSelected={actionSheetVideo?.id === item.id}
-        onPress={() => {
+        onPress={async () => {
           // Only allow opening ready videos with valid URIs
           if (item.status === 'ready' && item.uri && item.uri.length > 0) {
-            setSelectedVideo(item);
+            // Fetch fresh URL on-demand before opening
+            if (item.projectId) {
+              console.log('[feed] Fetching fresh URL for video...');
+              try {
+                const freshUrl = await getFreshVideoUrl({ projectId: item.projectId as any });
+                if (freshUrl) {
+                  console.log('[feed] ✓ Got fresh URL');
+                  // Update the video with fresh URL before opening
+                  setSelectedVideo({ ...item, uri: freshUrl });
+                } else {
+                  // Use existing URL if fresh fetch failed
+                  setSelectedVideo(item);
+                }
+              } catch (error) {
+                console.error('[feed] Failed to fetch fresh URL:', error);
+                // Use existing URL as fallback
+                setSelectedVideo(item);
+              }
+            } else {
+              setSelectedVideo(item);
+            }
           } else if (item.status === 'ready' && (!item.uri || item.uri.length === 0)) {
             Alert.alert('Error', 'Video is not available. Please try again or contact support.');
           } else if (item.status === 'pending' || item.status === 'processing') {
@@ -616,6 +633,20 @@ export default function FeedScreen() {
 
     try {
       setIsDownloading(true);
+      
+      // Fetch fresh URL before downloading (in case the modal URL expired)
+      let downloadUrl = selectedVideo.uri;
+      if (selectedVideo.projectId) {
+        try {
+          const freshUrl = await getFreshVideoUrl({ projectId: selectedVideo.projectId as any });
+          if (freshUrl) {
+            downloadUrl = freshUrl;
+            console.log('[download] Using fresh URL for download');
+          }
+        } catch (error) {
+          console.error('[download] Failed to fetch fresh URL, using existing:', error);
+        }
+      }
 
       // Request permissions
       const { status } = await MediaLibrary.requestPermissionsAsync();
@@ -630,7 +661,7 @@ export default function FeedScreen() {
       if (Platform.OS === 'web') {
         // Web: trigger browser download
         const link = document.createElement('a');
-        link.href = selectedVideo.uri;
+        link.href = downloadUrl;
         link.download = `reelfull_${Date.now()}.mp4`;
         link.click();
         setDownloadSuccess(true);
@@ -638,11 +669,11 @@ export default function FeedScreen() {
         // Mobile: download to local file first, then save to media library
         const fileUri = `${FileSystem.documentDirectory}reelfull_${Date.now()}.mp4`;
         
-        console.log('[Download] Downloading video from:', selectedVideo.uri);
+        console.log('[Download] Downloading video from:', downloadUrl);
         console.log('[Download] To local path:', fileUri);
         
         // Download from remote URL to local file
-        const downloadResult = await FileSystem.downloadAsync(selectedVideo.uri, fileUri);
+        const downloadResult = await FileSystem.downloadAsync(downloadUrl, fileUri);
         
         if (downloadResult.status === 200) {
           console.log('[Download] Download complete, saving to media library...');
