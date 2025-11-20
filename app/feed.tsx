@@ -112,15 +112,28 @@ function VideoThumbnail({
     }).start();
   }, [isSelected, scaleAnim]);
 
+  // Optimized spinner animation with proper cleanup
   useEffect(() => {
     if (item.status === 'pending' || item.status === 'processing') {
-      Animated.loop(
+      // Reset animation value
+      spinAnim.setValue(0);
+      
+      // Start the loop animation
+      const animation = Animated.loop(
         Animated.timing(spinAnim, {
           toValue: 1,
           duration: 2000,
           useNativeDriver: true,
+          isInteraction: false, // Don't block interactions
         })
-      ).start();
+      );
+      
+      animation.start();
+      
+      // Stop animation on cleanup
+      return () => {
+        animation.stop();
+      };
     }
   }, [item.status, spinAnim]);
 

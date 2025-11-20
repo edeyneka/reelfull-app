@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Sparkles } from 'lucide-react-native';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, memo } from 'react';
 import { Animated, StyleSheet, Text, View, Alert, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery, useAction } from "convex/react";
@@ -18,20 +18,40 @@ export default function LoaderScreen() {
   const renderVideo = useAction(api.render.renderVideo);
 
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const pulseAnim = useRef(new Animated.Value(1)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
   const renderTriggeredRef = useRef(false);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Timer effect
+  // Timer effect - optimized to prevent unnecessary re-renders
   useEffect(() => {
     if (project?.submittedAt) {
-      const interval = setInterval(() => {
-        const elapsed = Math.floor((Date.now() - project.submittedAt) / 1000);
-        setElapsedSeconds(elapsed);
+      // Clear any existing timer
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+      
+      // Update immediately
+      const elapsed = Math.floor((Date.now() - project.submittedAt) / 1000);
+      setElapsedSeconds(elapsed);
+      
+      // Then update every second
+      timerRef.current = setInterval(() => {
+        const newElapsed = Math.floor((Date.now() - project.submittedAt) / 1000);
+        setElapsedSeconds(newElapsed);
       }, 1000);
-      return () => clearInterval(interval);
+      
+      return () => {
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
+      };
     } else {
       setElapsedSeconds(0);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
     }
   }, [project?.submittedAt]);
 
@@ -129,30 +149,21 @@ export default function LoaderScreen() {
     }
   }, [project?.renderedVideoUrl, project?.status, project?.error, projectId, router]);
 
+  // Single smooth rotation animation - simplified for better performance
   useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.2,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-
+    // Reset animation value
+    rotateAnim.setValue(0);
+    
+    // Start smooth continuous rotation
     Animated.loop(
       Animated.timing(rotateAnim, {
         toValue: 1,
-        duration: 3000,
+        duration: 2000, // Smoother, faster rotation
         useNativeDriver: true,
+        isInteraction: false, // Don't block interactions
       })
     ).start();
-  }, [pulseAnim, rotateAnim]);
+  }, [rotateAnim]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -183,7 +194,7 @@ export default function LoaderScreen() {
           style={[
             styles.iconContainer,
             {
-              transform: [{ scale: pulseAnim }, { rotate }],
+              transform: [{ rotate }],
             },
           ]}
         >
