@@ -303,7 +303,7 @@ return (
 export default function FeedScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { videos, deleteVideo, userId, syncedFromBackend, syncVideosFromBackend } = useApp();
+  const { videos, deleteVideo, userId, syncedFromBackend, syncVideosFromBackend, syncUserFromBackend } = useApp();
   const [selectedVideo, setSelectedVideo] = useState<VideoType | null>(null);
   const [isPromptExpanded, setIsPromptExpanded] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -319,6 +319,12 @@ export default function FeedScreen() {
     [videos]
   );
   
+  // Fetch current user profile from backend
+  const backendUser = useQuery(
+    api.users.getCurrentUser,
+    userId ? { userId } : "skip"
+  );
+  
   // Query projects normally (no fresh URL generation upfront)
   const backendProjects = useQuery(
     api.tasks.getProjects,
@@ -330,6 +336,14 @@ export default function FeedScreen() {
   
   // Action to get fresh video URL on-demand (when user taps to view)
   const getFreshVideoUrl = useAction(api.tasks.getFreshProjectVideoUrl);
+
+  // Sync user profile from backend when loaded
+  useEffect(() => {
+    if (backendUser && userId) {
+      console.log('[feed] Syncing user profile from backend');
+      syncUserFromBackend(backendUser);
+    }
+  }, [backendUser, userId, syncUserFromBackend]);
 
   // Sync videos from backend when projects are loaded
   useEffect(() => {

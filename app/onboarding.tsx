@@ -10,9 +10,12 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAction, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
 import { StylePreference } from '@/types';
@@ -24,11 +27,16 @@ const STYLE_OPTIONS: StylePreference[] = ['Playful', 'Professional', 'Dreamy'];
 export default function OnboardingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { saveUser } = useApp();
+  const { saveUser, userId } = useApp();
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');
   const [selectedStyle, setSelectedStyle] = useState<StylePreference | null>(null);
   const [voiceRecordingUri, setVoiceRecordingUri] = useState<string | undefined>();
+  const [isSaving, setIsSaving] = useState(false);
+  
+  // Convex hooks
+  const generateUploadUrl = useMutation(api.users.generateUploadUrl);
+  const completeOnboardingAction = useAction(api.users.completeOnboarding);
 
   const handleNext = () => {
     if (step === 1 && name.trim() && selectedStyle) {
@@ -42,20 +50,106 @@ export default function OnboardingScreen() {
     }
   };
 
+  // Helper function to map local style to backend style
+  const mapStyleToBackend = (style: StylePreference): 'playful' | 'professional' | 'travel' => {
+    if (style === 'Playful') return 'playful';
+    if (style === 'Professional') return 'professional';
+    if (style === 'Dreamy') return 'travel';
+    return 'playful'; // default
+  };
+
+  // Helper function to upload voice recording to Convex storage
+  const uploadVoiceRecording = async (uri: string): Promise<string | null> => {
+    try {
+      console.log('[onboarding] Uploading voice recording...');
+      
+      // Get upload URL
+      const uploadUrl = await generateUploadUrl();
+      
+      // Read the file
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      
+      // Upload to Convex storage
+      const uploadResponse = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': blob.type },
+        body: blob,
+      });
+      
+      if (!uploadResponse.ok) {
+        throw new Error('Failed to upload voice recording');
+      }
+      
+      const { storageId } = await uploadResponse.json();
+      console.log('[onboarding] Voice recording uploaded:', storageId);
+      return storageId;
+    } catch (error) {
+      console.error('[onboarding] Error uploading voice recording:', error);
+      return null;
+    }
+  };
+
   const handleVoiceRecordingComplete = async (uri: string) => {
-    setVoiceRecordingUri(uri);
-    // Auto-save and proceed
-    await saveUser({ 
-      name: name.trim(), 
-      style: selectedStyle!, 
-      voiceRecordingUri: uri 
-    });
-    router.replace('/feed');
+    if (!userId || !selectedStyle) return;
+    
+    setIsSaving(true);
+    try {
+      console.log('[onboarding] Completing onboarding with voice...');
+      
+      // Upload voice recording to Convex
+      const voiceStorageId = await uploadVoiceRecording(uri);
+      
+      // Save to backend
+      await completeOnboardingAction({
+        userId,
+        name: name.trim(),
+        preferredStyle: mapStyleToBackend(selectedStyle),
+        voiceRecordingStorageId: voiceStorageId || undefined,
+      });
+      
+      // Also save locally (will be synced from backend on next load)
+      await saveUser({ 
+        name: name.trim(), 
+        style: selectedStyle, 
+        voiceRecordingUri: uri 
+      });
+      
+      console.log('[onboarding] Onboarding complete!');
+      router.replace('/feed');
+    } catch (error) {
+      console.error('[onboarding] Error completing onboarding:', error);
+      Alert.alert('Error', 'Failed to save your profile. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleSkipVoice = async () => {
-    await saveUser({ name: name.trim(), style: selectedStyle! });
-    router.replace('/feed');
+    if (!userId || !selectedStyle) return;
+    
+    setIsSaving(true);
+    try {
+      console.log('[onboarding] Completing onboarding without voice...');
+      
+      // Save to backend
+      await completeOnboardingAction({
+        userId,
+        name: name.trim(),
+        preferredStyle: mapStyleToBackend(selectedStyle),
+      });
+      
+      // Also save locally (will be synced from backend on next load)
+      await saveUser({ name: name.trim(), style: selectedStyle });
+      
+      console.log('[onboarding] Onboarding complete!');
+      router.replace('/feed');
+    } catch (error) {
+      console.error('[onboarding] Error completing onboarding:', error);
+      Alert.alert('Error', 'Failed to save your profile. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const isStep1Valid = name.trim().length > 0 && selectedStyle !== null;
@@ -175,8 +269,11 @@ export default function OnboardingScreen() {
                     style={styles.skipButton}
                     onPress={handleSkipVoice}
                     activeOpacity={0.7}
+                    disabled={isSaving}
                   >
-                    <Text style={styles.skipButtonText}>Skip for now</Text>
+                    <Text style={[styles.skipButtonText, isSaving && { opacity: 0.5 }]}>
+                      {isSaving ? 'Saving...' : 'Skip for now'}
+                    </Text>
                   </TouchableOpacity>
                 </>
               )}

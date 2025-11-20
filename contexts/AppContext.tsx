@@ -13,6 +13,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
   const [videos, setVideos] = useState<Video[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [syncedFromBackend, setSyncedFromBackend] = useState(false);
+  const [backendUser, setBackendUser] = useState<any>(null);
 
   useEffect(() => {
     loadData();
@@ -59,6 +60,35 @@ export const [AppProvider, useApp] = createContextHook(() => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Sync user profile from backend when backendUser changes
+  const syncUserFromBackend = useCallback((backendUserData: any) => {
+    if (!backendUserData) return;
+    
+    console.log('[AppContext] Syncing user from backend:', backendUserData);
+    
+    // Map backend user data to local UserProfile format
+    const userProfile: UserProfile = {
+      name: backendUserData.name || '',
+      style: mapBackendStyleToLocal(backendUserData.preferredStyle),
+      voiceRecordingUri: backendUserData.voiceRecordingUrl,
+    };
+    
+    // Update local state and storage
+    setUser(userProfile);
+    setBackendUser(backendUserData);
+    AsyncStorage.setItem(USER_KEY, JSON.stringify(userProfile)).catch((err) => {
+      console.error('[AppContext] Error saving user to storage:', err);
+    });
+  }, []);
+
+  // Helper function to map backend style to local style
+  const mapBackendStyleToLocal = (backendStyle?: string): 'Playful' | 'Professional' | 'Dreamy' => {
+    if (backendStyle === 'playful') return 'Playful';
+    if (backendStyle === 'professional') return 'Professional';
+    if (backendStyle === 'travel') return 'Dreamy';
+    return 'Playful'; // default
   };
 
   const syncVideosFromBackend = useCallback(async (backendProjects: any[]) => {
@@ -259,6 +289,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
     videos,
     isLoading,
     syncedFromBackend,
+    backendUser,
     saveUser,
     saveUserId,
     addVideo,
@@ -266,5 +297,6 @@ export const [AppProvider, useApp] = createContextHook(() => {
     deleteVideo,
     clearData,
     syncVideosFromBackend,
-  }), [user, userId, videos, isLoading, syncedFromBackend, saveUser, saveUserId, addVideo, updateVideoStatus, deleteVideo, clearData, syncVideosFromBackend]);
+    syncUserFromBackend,
+  }), [user, userId, videos, isLoading, syncedFromBackend, backendUser, saveUser, saveUserId, addVideo, updateVideoStatus, deleteVideo, clearData, syncVideosFromBackend, syncUserFromBackend]);
 });

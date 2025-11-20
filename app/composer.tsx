@@ -21,7 +21,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { VideoView, useVideoPlayer } from 'expo-video';
-import { useMutation, useAction } from "convex/react";
+import { useMutation, useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
@@ -48,11 +48,25 @@ function VideoThumbnail({ uri, style }: { uri: string; style: any }) {
 export default function ComposerScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { user, userId } = useApp();
+  const { user, userId, syncUserFromBackend } = useApp();
   const [prompt, setPrompt] = useState('');
   const [mediaUris, setMediaUris] = useState<{ uri: string; type: 'video' | 'image'; id: string }[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isTestRun, setIsTestRun] = useState(false);
+  
+  // Fetch current user profile from backend
+  const backendUser = useQuery(
+    api.users.getCurrentUser,
+    userId ? { userId } : "skip"
+  );
+  
+  // Sync user profile from backend when loaded
+  useEffect(() => {
+    if (backendUser && userId) {
+      console.log('[composer] Syncing user profile from backend');
+      syncUserFromBackend(backendUser);
+    }
+  }, [backendUser, userId, syncUserFromBackend]);
   
   // Convex hooks
   const generateUploadUrl = useMutation(api.tasks.generateUploadUrl);
