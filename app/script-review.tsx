@@ -48,7 +48,8 @@ export default function ScriptReviewScreen() {
   // Initialize script and render mode from project
   useEffect(() => {
     if (project?.script && !editedScript) {
-      setEditedScript(project.script);
+      // Replace ??? with ? for display
+      setEditedScript(project.script.replace(/\?\?\?/g, "?"));
     }
     if (project?.renderMode) {
       setRenderMode(project.renderMode);
@@ -62,9 +63,11 @@ export default function ScriptReviewScreen() {
     }
 
     try {
+      // Replace ? with ??? before saving (but not if it's already ???)
+      const scriptToSave = editedScript.trim().replace(/\?(?!\?\?)/g, "???");
       await updateProjectScript({
         id: projectId,
-        script: editedScript.trim(),
+        script: scriptToSave,
       });
       setIsEditing(false);
       Alert.alert('Success', 'Script updated');
@@ -75,7 +78,8 @@ export default function ScriptReviewScreen() {
   };
 
   const handleCancelEdit = () => {
-    setEditedScript(project?.script || '');
+    // Replace ??? with ? for display
+    setEditedScript((project?.script || '').replace(/\?\?\?/g, "?"));
     setIsEditing(false);
   };
 
@@ -334,7 +338,7 @@ export default function ScriptReviewScreen() {
                 </View>
               ) : (
                 <View style={styles.scriptContainer}>
-                  <Text style={styles.scriptText}>{editedScript || project.script}</Text>
+                  <Text style={styles.scriptText}>{editedScript || (project.script ? project.script.replace(/\?\?\?/g, "?") : '')}</Text>
                 </View>
               )}
             </View>
