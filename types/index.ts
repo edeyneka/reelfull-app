@@ -13,6 +13,7 @@ export interface Video {
   id: string;
   uri: string;
   prompt: string;
+  script?: string; // The actual generated script
   createdAt: number;
   status: 'draft' | 'pending' | 'processing' | 'ready' | 'failed';
   projectId?: string;

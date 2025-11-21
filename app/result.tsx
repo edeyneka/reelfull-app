@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Check, Download } from 'lucide-react-native';
+import { Check, Download, Copy } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import {
   Alert,
@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as MediaLibrary from 'expo-media-library';
 import { VideoView, useVideoPlayer } from 'expo-video';
@@ -30,11 +31,13 @@ export default function ResultScreen() {
   const { addVideo } = useApp();
   const [isSaved, setIsSaved] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
 
   // Get project data
   const project = useQuery(api.tasks.getProject, projectId ? { id: projectId } : "skip");
 
   console.log('Result screen project:', project);
+  console.log('Result screen script available:', !!project?.script);
 
   // Swipe down gesture to go to feed
   const panGesture = Gesture.Pan()
@@ -62,10 +65,14 @@ export default function ResultScreen() {
     const handleSaveToFeed = async () => {
       if (!project || !videoUrl || isSaved) return;
 
+      // Transform script: replace "???" with "?"
+      const transformedScript = project.script?.replace(/\?\?\?/g, '?');
+
       const video = {
         id: project._id,
         uri: videoUrl,
         prompt: project.prompt,
+        script: transformedScript,
         createdAt: project.createdAt,
         status: 'ready' as const,
         projectId: project._id,
@@ -117,6 +124,26 @@ export default function ResultScreen() {
       Alert.alert('Error', 'Failed to download video. Please try again.');
     } finally {
       setIsDownloading(false);
+    }
+  };
+
+  const handleCopyScript = async () => {
+    if (!project?.script) return;
+
+    try {
+      // Transform script: replace "???" with "?"
+      const transformedScript = project.script.replace(/\?\?\?/g, '?');
+      
+      await Clipboard.setStringAsync(transformedScript);
+      setIsCopied(true);
+      
+      // Reset the copied state after 2 seconds
+      setTimeout(() => {
+        setIsCopied(false);
+      }, 2000);
+    } catch (error) {
+      console.error('Copy error:', error);
+      Alert.alert('Error', 'Failed to copy script. Please try again.');
     }
   };
 
@@ -182,6 +209,25 @@ export default function ResultScreen() {
             </View>
 
             <View style={styles.actions}>
+              <TouchableOpacity
+                style={styles.secondaryButton}
+                onPress={handleCopyScript}
+                disabled={!project?.script}
+                activeOpacity={0.8}
+              >
+                {isCopied ? (
+                  <Check size={24} color={Colors.orange} strokeWidth={2} />
+                ) : (
+                  <Copy size={24} color={Colors.white} strokeWidth={2} />
+                )}
+                <Text style={[
+                  styles.secondaryButtonText,
+                  isCopied && { color: Colors.orange }
+                ]}>
+                  {isCopied ? 'Copied!' : 'Copy Script'}
+                </Text>
+              </TouchableOpacity>
+
               <TouchableOpacity
                 style={styles.secondaryButton}
                 onPress={handleDownload}

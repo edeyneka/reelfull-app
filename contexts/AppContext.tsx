@@ -95,6 +95,9 @@ export const [AppProvider, useApp] = createContextHook(() => {
     try {
       console.log('[sync] Syncing videos from backend, count:', backendProjects.length);
       
+      // Helper function to transform script: replace "???" with "?"
+      const transformScript = (script?: string) => script?.replace(/\?\?\?/g, '?');
+      
       // Convert backend projects to Video format
       const backendVideos: Video[] = backendProjects
         .filter(project => project.status === 'completed' && project.renderedVideoUrl)
@@ -102,6 +105,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
           id: project._id,
           uri: project.renderedVideoUrl || '',
           prompt: project.prompt,
+          script: transformScript(project.script),
           createdAt: project.createdAt,
           status: 'ready' as const,
           projectId: project._id,
@@ -115,6 +119,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
           id: project._id,
           uri: '',
           prompt: project.prompt,
+          script: transformScript(project.script),
           createdAt: project.createdAt,
           status: 'draft' as const,
           projectId: project._id,
@@ -131,6 +136,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
           id: project._id,
           uri: '',
           prompt: project.prompt,
+          script: transformScript(project.script),
           createdAt: project.createdAt,
           status: project.status === 'rendering' ? 'processing' as const : 'pending' as const,
           projectId: project._id,
@@ -144,6 +150,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
           id: project._id,
           uri: '',
           prompt: project.prompt,
+          script: transformScript(project.script),
           createdAt: project.createdAt,
           status: 'failed' as const,
           projectId: project._id,

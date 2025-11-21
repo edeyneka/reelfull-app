@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Plus, Download, Settings, Loader2, AlertCircle, X, Trash2, FileText } from 'lucide-react-native';
+import { Plus, Download, Settings, Loader2, AlertCircle, X, Trash2, FileText, Copy, Check } from 'lucide-react-native';
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
   Dimensions,
@@ -16,6 +16,7 @@ import {
   Image,
   RefreshControl,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -91,8 +92,9 @@ function VideoThumbnail({
     const urlType = item.thumbnailUrl 
       ? (isImageUrl(item.thumbnailUrl) ? 'image' : 'video/other') 
       : 'missing';
-    console.log(`[Thumbnail] ${item.prompt}: status=${item.status}, thumbnailUrl=${urlType}, using=${effectiveThumbnailUrl ? 'image' : (shouldUseVideoPreview ? 'video' : 'placeholder')}`);
-  }, [item.thumbnailUrl, item.status, item.prompt, effectiveThumbnailUrl, shouldUseVideoPreview]);
+    const displayText = item.script || item.prompt;
+    console.log(`[Thumbnail] ${displayText}: status=${item.status}, thumbnailUrl=${urlType}, using=${effectiveThumbnailUrl ? 'image' : (shouldUseVideoPreview ? 'video' : 'placeholder')}`);
+  }, [item.thumbnailUrl, item.status, item.script, item.prompt, effectiveThumbnailUrl, shouldUseVideoPreview]);
 
   const handleLongPress = (event: any) => {
     if (thumbnailRef.current) {
@@ -184,7 +186,7 @@ function VideoThumbnail({
           )}
           <View style={styles.thumbnailOverlay}>
             <Text style={styles.thumbnailPrompt} numberOfLines={1} ellipsizeMode="tail">
-              {item.prompt}
+              {item.script || item.prompt}
             </Text>
           </View>
         </TouchableOpacity>
@@ -359,6 +361,7 @@ export default function FeedScreen() {
   const [isPromptExpanded, setIsPromptExpanded] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
   const [actionSheetVideo, setActionSheetVideo] = useState<VideoType | null>(null);
   const [showActionSheet, setShowActionSheet] = useState(false);
   const [actionSheetPosition, setActionSheetPosition] = useState({ pageX: 0, pageY: 0, width: 0, height: 0, columnIndex: 0 });
@@ -777,6 +780,26 @@ export default function FeedScreen() {
     }
   };
 
+  const handleCopyScript = async () => {
+    if (!selectedVideo?.script) return;
+
+    try {
+      // Transform script: replace "???" with "?"
+      const transformedScript = selectedVideo.script.replace(/\?\?\?/g, '?');
+      
+      await Clipboard.setStringAsync(transformedScript);
+      setIsCopied(true);
+      
+      // Reset the copied state after 2 seconds
+      setTimeout(() => {
+        setIsCopied(false);
+      }, 2000);
+    } catch (error) {
+      console.error('Copy error:', error);
+      Alert.alert('Error', 'Failed to copy script. Please try again.');
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
@@ -878,7 +901,19 @@ export default function FeedScreen() {
                   </View>
 
                   <View style={styles.promptSection}>
-                    <Text style={styles.promptText}>{selectedVideo.prompt}</Text>
+                    <TouchableOpacity
+                      style={styles.copyIconButton}
+                      onPress={handleCopyScript}
+                      activeOpacity={0.8}
+                      disabled={!selectedVideo?.script}
+                    >
+                      {isCopied ? (
+                        <Check size={18} color={Colors.orange} strokeWidth={2.5} />
+                      ) : (
+                        <Copy size={18} color={Colors.white} strokeWidth={2.5} />
+                      )}
+                    </TouchableOpacity>
+                    <Text style={styles.promptText} numberOfLines={2} ellipsizeMode="tail">{selectedVideo.script || selectedVideo.prompt}</Text>
                   </View>
 
                   <View style={styles.modalActions}>
@@ -1244,19 +1279,30 @@ const styles = StyleSheet.create({
   },
   promptSection: {
     marginBottom: 24,
-    paddingHorizontal: 4,
+    paddingHorizontal: 24,
     alignItems: 'center',
   },
   promptText: {
-    fontSize: 15,
+    fontSize: 13,
     fontStyle: 'italic',
     color: Colors.white,
-    lineHeight: 22,
+    lineHeight: 20,
     textAlign: 'center',
+    paddingRight: 40,
   },
   modalActions: {
     alignItems: 'center',
     gap: 16,
+  },
+  copyIconButton: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
   },
   downloadGradientButton: {
     width: '100%',

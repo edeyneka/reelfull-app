@@ -65,7 +65,7 @@ export function useVideoPolling() {
               updateVideoStatus(video.id, 'failed', undefined, project.error, project.thumbnailUrl);
               
               // Send failure notification
-              sendVideoFailedNotification(project.prompt || 'Your video');
+              sendVideoFailedNotification(project.script || project.prompt || 'Your video');
             }
           }
           // Priority 2: Check if video is completely ready (has renderedVideoUrl)
@@ -80,7 +80,7 @@ export function useVideoPolling() {
                 updateVideoStatus(video.id, 'ready', project.renderedVideoUrl, undefined, project.thumbnailUrl);
                 
                 // Send notification
-                sendVideoReadyNotification(project.prompt || 'Your video');
+                sendVideoReadyNotification(project.script || project.prompt || 'Your video');
               }
             }
           }
