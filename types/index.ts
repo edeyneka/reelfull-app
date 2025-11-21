@@ -14,7 +14,7 @@ export interface Video {
   uri: string;
   prompt: string;
   createdAt: number;
-  status: 'pending' | 'processing' | 'ready' | 'failed';
+  status: 'draft' | 'pending' | 'processing' | 'ready' | 'failed';
   projectId?: string;
   error?: string;
   thumbnailUrl?: string; // Thumbnail image URL for grid display

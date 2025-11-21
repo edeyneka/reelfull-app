@@ -52,8 +52,8 @@ export default function ScriptReviewScreen() {
       // Update editedScript when project script changes (e.g., after regeneration)
       // But only if we're not currently editing
       if (!isEditing && project.script !== lastProjectScript) {
-        // Replace ??? with ? for display
-        setEditedScript(project.script.replace(/\?\?\?/g, "?"));
+      // Replace ??? with ? for display
+      setEditedScript(project.script.replace(/\?\?\?/g, "?"));
         setLastProjectScript(project.script);
       } else if (!editedScript) {
         // Initial load
@@ -141,16 +141,8 @@ export default function ScriptReviewScreen() {
         renderMode,
       });
 
-      // Create a pending video entry in the feed
-      console.log('[script-review] Adding pending video to feed...');
-      await addVideo({
-        id: projectId,
-        uri: '', // Empty until video is ready
-        prompt: project.prompt,
-        createdAt: Date.now(),
-        status: 'pending',
-        projectId: projectId,
-      });
+      // Note: No need to manually add video to feed - it's already there as draft
+      // and will automatically update to pending/processing when status changes
 
       // For normal mode, mark as submitted and schedule generation server-side
       if (!isTestRun) {

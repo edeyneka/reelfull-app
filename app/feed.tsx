@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Plus, Download, Settings, Loader2, AlertCircle, X, Trash2 } from 'lucide-react-native';
+import { Plus, Download, Settings, Loader2, AlertCircle, X, Trash2, FileText } from 'lucide-react-native';
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
   Dimensions,
@@ -141,6 +141,57 @@ function VideoThumbnail({
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg'],
   });
+
+  // Show draft icon for draft videos (not yet approved)
+  if (item.status === 'draft') {
+    return (
+      <Animated.View 
+        ref={thumbnailRef} 
+        style={[
+          styles.thumbnailContainer,
+          { 
+            transform: [{ scale: scaleAnim }],
+            zIndex: isSelected ? 1000 : 1,
+          }
+        ]} 
+        collapsable={false}
+      >
+        <TouchableOpacity 
+          style={styles.thumbnailTouchable}
+          onPress={onPress}
+          onLongPress={handleLongPress}
+          activeOpacity={0.9}
+          delayLongPress={500}
+        >
+          {/* Show thumbnail in background if available */}
+          {effectiveThumbnailUrl ? (
+            <>
+              <Image
+                source={{ uri: effectiveThumbnailUrl }}
+                style={styles.thumbnail}
+                resizeMode="cover"
+              />
+              <View style={styles.draftOverlay}>
+                <FileText size={36} color={Colors.white} strokeWidth={2} />
+                <Text style={styles.draftText}>Draft</Text>
+              </View>
+            </>
+          ) : (
+            <View style={styles.draftThumbnail}>
+              <FileText size={36} color={Colors.white} strokeWidth={2} />
+              <Text style={styles.draftText}>Draft</Text>
+            </View>
+          )}
+          <View style={styles.thumbnailOverlay}>
+            <Text style={styles.thumbnailPrompt} numberOfLines={1} ellipsizeMode="tail">
+              {item.prompt}
+            </Text>
+          </View>
+        </TouchableOpacity>
+        {isSelected && <View style={styles.selectedBorder} />}
+      </Animated.View>
+    );
+  }
 
   // Show placeholder for pending/processing videos
   if (item.status === 'pending' || item.status === 'processing') {
@@ -566,8 +617,15 @@ export default function FeedScreen() {
         item={item} 
         isSelected={actionSheetVideo?.id === item.id}
         onPress={async () => {
+          // Navigate to script-review for draft videos
+          if (item.status === 'draft' && item.projectId) {
+            router.push({
+              pathname: '/script-review',
+              params: { projectId: item.projectId },
+            });
+          }
           // Only allow opening ready videos with valid URIs
-          if (item.status === 'ready' && item.uri && item.uri.length > 0) {
+          else if (item.status === 'ready' && item.uri && item.uri.length > 0) {
             // Fetch fresh URL on-demand before opening
             if (item.projectId) {
               console.log('[feed] Fetching fresh URL for video...');
@@ -1031,6 +1089,29 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: Fonts.regular,
     color: Colors.orange,
+  },
+  draftThumbnail: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.grayDark,
+    gap: 12,
+  },
+  draftOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+  },
+  draftText: {
+    fontSize: 13,
+    fontFamily: Fonts.regular,
+    color: Colors.white,
   },
   errorOverlay: {
     position: 'absolute',

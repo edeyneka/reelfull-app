@@ -108,6 +108,19 @@ export const [AppProvider, useApp] = createContextHook(() => {
           thumbnailUrl: project.thumbnailUrl, // Include thumbnail URL for grid display
         }));
 
+      // Add draft videos (not yet approved by user)
+      const draftVideos: Video[] = backendProjects
+        .filter(project => project.status === 'draft')
+        .map(project => ({
+          id: project._id,
+          uri: '',
+          prompt: project.prompt,
+          createdAt: project.createdAt,
+          status: 'draft' as const,
+          projectId: project._id,
+          thumbnailUrl: project.thumbnailUrl, // Include thumbnail URL for draft videos
+        }));
+
       // Add pending/processing videos
       const processingVideos: Video[] = backendProjects
         .filter(project => 
@@ -138,7 +151,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
           thumbnailUrl: project.thumbnailUrl, // Include thumbnail URL even for failed videos
         }));
 
-      const backendVideoList = [...backendVideos, ...processingVideos, ...failedVideos];
+      const backendVideoList = [...backendVideos, ...draftVideos, ...processingVideos, ...failedVideos];
       
       // Merge with existing local videos (in case there are any new ones not in backend yet)
       setVideos(currentVideos => {
