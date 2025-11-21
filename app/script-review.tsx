@@ -44,17 +44,27 @@ export default function ScriptReviewScreen() {
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [renderMode, setRenderMode] = useState<'remotion' | 'ffmpeg'>('ffmpeg');
+  const [lastProjectScript, setLastProjectScript] = useState<string>('');
 
   // Initialize script and render mode from project
   useEffect(() => {
-    if (project?.script && !editedScript) {
-      // Replace ??? with ? for display
-      setEditedScript(project.script.replace(/\?\?\?/g, "?"));
+    if (project?.script) {
+      // Update editedScript when project script changes (e.g., after regeneration)
+      // But only if we're not currently editing
+      if (!isEditing && project.script !== lastProjectScript) {
+        // Replace ??? with ? for display
+        setEditedScript(project.script.replace(/\?\?\?/g, "?"));
+        setLastProjectScript(project.script);
+      } else if (!editedScript) {
+        // Initial load
+        setEditedScript(project.script.replace(/\?\?\?/g, "?"));
+        setLastProjectScript(project.script);
+      }
     }
     if (project?.renderMode) {
       setRenderMode(project.renderMode);
     }
-  }, [project?.script, project?.renderMode]);
+  }, [project?.script, project?.renderMode, isEditing]);
 
   const handleSaveEdit = async () => {
     if (!projectId || !editedScript.trim()) {
@@ -88,8 +98,13 @@ export default function ScriptReviewScreen() {
 
     setIsRegenerating(true);
     try {
-      await regenerateScript({ projectId });
-      Alert.alert('Success', 'New script is being generated');
+      const result = await regenerateScript({ projectId });
+      if (result.success) {
+        // The new script will be automatically picked up by the useEffect
+        Alert.alert('Success', 'Script has been regenerated!');
+      } else {
+        throw new Error(result.error || 'Failed to regenerate script');
+      }
     } catch (error) {
       console.error('Regenerate script error:', error);
       Alert.alert('Error', 'Failed to regenerate script');
