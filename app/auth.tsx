@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAction, useMutation } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
@@ -31,6 +31,7 @@ export default function AuthScreen() {
   const sendOTP = useAction(api.phoneAuth.sendOTP);
   const verifyOTP = useMutation(api.users.verifyOTP);
   const verifyTwilioOTP = useAction(api.twilioVerify.verifyTwilioOTP);
+  const testAccountLogin = useMutation(api.users.testAccountLogin);
   
   // Track if we're using Twilio Verify or development mode
   const [useTwilioVerify, setUseTwilioVerify] = useState(false);
@@ -173,6 +174,41 @@ export default function AuthScreen() {
     setUseTwilioVerify(false); // Reset when changing phone
   };
 
+  const handleTestAccount = async () => {
+    setIsLoading(true);
+    try {
+      const testPhone = '+14244131728';
+      console.log('[Test Account] Accessing test account:', testPhone);
+      
+      // Use the dedicated test account login mutation
+      const result = await testAccountLogin({ phone: testPhone });
+      
+      if (result.success && result.userId) {
+        console.log('[Test Account] Success! User ID:', result.userId);
+        
+        // Save userId to context
+        await saveUserId(result.userId);
+        
+        // Navigate based on onboarding status
+        if (result.onboardingCompleted) {
+          router.replace('/feed');
+        } else {
+          router.replace('/onboarding');
+        }
+      } else {
+        Alert.alert('Error', 'Failed to access test account.');
+      }
+    } catch (error) {
+      console.error('[Test Account] Error:', error);
+      Alert.alert(
+        'Error',
+        error instanceof Error ? error.message : 'Failed to access test account. Please try again.'
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const isPhoneValid = () => {
     const digits = phoneNumber.replace(/\D/g, '');
     const expectedLength = selectedCountry.phoneLength || 10;
@@ -262,6 +298,16 @@ export default function AuthScreen() {
                         </>
                       )}
                     </LinearGradient>
+                  </TouchableOpacity>
+
+                  {/* Test Account Button */}
+                  <TouchableOpacity
+                    style={styles.testAccountButton}
+                    onPress={handleTestAccount}
+                    disabled={isLoading}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.testAccountText}>Use Test Account</Text>
                   </TouchableOpacity>
                 </>
               ) : (
@@ -455,6 +501,20 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.regular,
     color: Colors.grayLight,
     textDecorationLine: 'underline',
+  },
+  testAccountButton: {
+    marginTop: 24,
+    padding: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.grayLight,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  testAccountText: {
+    fontSize: 14,
+    fontFamily: Fonts.regular,
+    color: Colors.grayLight,
   },
 });
 
