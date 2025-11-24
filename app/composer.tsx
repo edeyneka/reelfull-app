@@ -28,6 +28,7 @@ import { useApp } from '@/contexts/AppContext';
 import { uploadMediaFiles } from '@/lib/api-helpers';
 import { Asset } from 'expo-asset';
 import { Fonts } from '@/constants/typography';
+import { ENABLE_TEST_RUN_MODE } from '@/constants/config';
 
 function VideoThumbnail({ uri, style }: { uri: string; style: any }) {
   const player = useVideoPlayer(uri, (player) => {
@@ -325,32 +326,36 @@ export default function ComposerScreen() {
               </View>
 
             <View style={styles.form}>
-              <View style={styles.testRunContainer}>
-                <View style={styles.testRunHeader}>
-                  <TestTube size={16} color={Colors.orange} />
-                  <Text style={styles.testRunLabel}>Test Run Mode</Text>
-                </View>
-                <Switch
-                  value={isTestRun}
-                  onValueChange={(value) => {
-                    setIsTestRun(value);
-                    if (value) {
-                      loadSampleMedia();
-                    } else {
-                      setMediaUris([]);
-                    }
-                  }}
-                  trackColor={{ false: Colors.gray, true: Colors.orangeLight }}
-                  thumbColor={isTestRun ? Colors.orange : Colors.grayLight}
-                  ios_backgroundColor={Colors.gray}
-                />
-              </View>
-              {isTestRun && (
-                <View style={styles.testRunInfo}>
-                  <Text style={styles.testRunInfoText}>
-                    ℹ️ Sample media, script, voice, and SRT will be used. Script generation and voice synthesis will be skipped.
-                  </Text>
-                </View>
+              {ENABLE_TEST_RUN_MODE && (
+                <>
+                  <View style={styles.testRunContainer}>
+                    <View style={styles.testRunHeader}>
+                      <TestTube size={16} color={Colors.orange} />
+                      <Text style={styles.testRunLabel}>Test Run Mode</Text>
+                    </View>
+                    <Switch
+                      value={isTestRun}
+                      onValueChange={(value) => {
+                        setIsTestRun(value);
+                        if (value) {
+                          loadSampleMedia();
+                        } else {
+                          setMediaUris([]);
+                        }
+                      }}
+                      trackColor={{ false: Colors.gray, true: Colors.orangeLight }}
+                      thumbColor={isTestRun ? Colors.orange : Colors.grayLight}
+                      ios_backgroundColor={Colors.gray}
+                    />
+                  </View>
+                  {isTestRun && (
+                    <View style={styles.testRunInfo}>
+                      <Text style={styles.testRunInfoText}>
+                        ℹ️ Sample media, script, voice, and SRT will be used. Script generation and voice synthesis will be skipped.
+                      </Text>
+                    </View>
+                  )}
+                </>
               )}
 
               <View style={styles.inputGroup}>

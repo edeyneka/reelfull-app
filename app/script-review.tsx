@@ -20,6 +20,7 @@ import { useApp } from '@/contexts/AppContext';
 import { Asset } from 'expo-asset';
 import { uploadFileToConvex } from '@/lib/api-helpers';
 import { Fonts } from '@/constants/typography';
+import { ENABLE_TEST_RUN_MODE } from '@/constants/config';
 
 export default function ScriptReviewScreen() {
   const router = useRouter();
@@ -289,7 +290,7 @@ export default function ScriptReviewScreen() {
         <View style={styles.placeholder} />
       </View>
 
-      {isTestRun && (
+      {ENABLE_TEST_RUN_MODE && isTestRun && (
         <View style={styles.testModeBadge}>
           <TestTube size={14} color={Colors.orange} />
           <Text style={styles.testModeText}>Test Run Mode</Text>
