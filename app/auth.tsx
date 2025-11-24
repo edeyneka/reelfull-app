@@ -300,15 +300,15 @@ export default function AuthScreen() {
                     </LinearGradient>
                   </TouchableOpacity>
 
-                  {/* Test Account Button */}
-                  <TouchableOpacity
+                  {/* Test Account Button - Commented out for production */}
+                  {/* <TouchableOpacity
                     style={styles.testAccountButton}
                     onPress={handleTestAccount}
                     disabled={isLoading}
                     activeOpacity={0.7}
                   >
                     <Text style={styles.testAccountText}>Use Test Account</Text>
-                  </TouchableOpacity>
+                  </TouchableOpacity> */}
                 </>
               ) : (
                 <>

@@ -350,8 +350,8 @@ export default function ScriptReviewScreen() {
               )}
             </View>
 
-            {/* Render Mode Toggle */}
-            <View style={styles.renderModeContainer}>
+            {/* Render Mode Toggle - Commented out for production (defaults to ffmpeg) */}
+            {/* <View style={styles.renderModeContainer}>
               <Text style={styles.renderModeLabel}>Rendering Engine:</Text>
               <View style={styles.renderModeToggle}>
                 <TouchableOpacity
@@ -387,7 +387,7 @@ export default function ScriptReviewScreen() {
                   <Text style={styles.renderModeDesc}>(Faster)</Text>
                 </TouchableOpacity>
               </View>
-            </View>
+            </View> */}
 
             <TouchableOpacity
               style={[styles.approveButton, isSubmitting && styles.approveButtonDisabled]}
