@@ -75,6 +75,7 @@ export default function IntroScreen() {
             style={styles.overlay}
           >
             <Text style={styles.title}>Reelful</Text>
+            <Text style={styles.subtitle}>Your memories, reimagined</Text>
             <TouchableOpacity 
               style={styles.buttonWrapper}
               onPress={() => {
@@ -88,20 +89,9 @@ export default function IntroScreen() {
                 end={{ x: 1, y: 0 }}
                 style={styles.button}
               >
-                <Text style={[styles.buttonText, styles.primaryButtonText]}>Get Started</Text>
+                <Text style={styles.buttonText}>Get Started</Text>
               </LinearGradient>
             </TouchableOpacity>
-            <View style={styles.buttonWrapper}>
-              <TouchableOpacity 
-                style={[styles.button, styles.secondaryButton]}
-                onPress={() => {
-                  setHasNavigated(true);
-                  router.replace('/auth');
-                }}
-              >
-                <Text style={[styles.buttonText, styles.secondaryButtonText]}>Log In</Text>
-              </TouchableOpacity>
-            </View>
           </LinearGradient>
         </Animated.View>
       )}
@@ -144,8 +134,16 @@ const styles = StyleSheet.create({
     fontSize: 42,
     fontFamily: Fonts.regular,
     color: Colors.white,
-    marginBottom: 30,
+    marginBottom: 8,
     letterSpacing: -1,
+  },
+  subtitle: {
+    fontSize: 16,
+    fontFamily: Fonts.regular,
+    color: '#FF8C1F',
+    marginBottom: 20,
+    letterSpacing: 0.5,
+    opacity: 0.95,
   },
   buttonWrapper: {
     width: '100%',
@@ -158,22 +156,11 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
   },
-  secondaryButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: Colors.white,
-  },
   buttonText: {
-    color: Colors.black,
+    color: Colors.white,
     fontSize: 17,
     fontFamily: 'Poppins-Medium',
     fontWeight: '500',
     letterSpacing: 0.3,
-  },
-  primaryButtonText: {
-    color: Colors.white,
-  },
-  secondaryButtonText: {
-    color: Colors.white,
   },
 });
