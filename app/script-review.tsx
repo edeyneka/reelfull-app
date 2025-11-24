@@ -141,8 +141,18 @@ export default function ScriptReviewScreen() {
         renderMode,
       });
 
-      // Note: No need to manually add video to feed - it's already there as draft
-      // and will automatically update to pending/processing when status changes
+      // Optimistically update video status to "processing" for instant UI feedback
+      console.log('[script-review] Optimistically updating video to processing state...');
+      addVideo({
+        id: projectId,
+        uri: '',
+        prompt: project.prompt,
+        script: scriptToSave,
+        createdAt: project.createdAt || Date.now(),
+        status: 'processing',
+        projectId: projectId,
+        thumbnailUrl: project.thumbnailUrl,
+      });
 
       // For normal mode, mark as submitted and schedule generation server-side
       if (!isTestRun) {
@@ -188,6 +198,19 @@ export default function ScriptReviewScreen() {
       const srtResponse = await fetch(sampleSrtAsset.localUri || sampleSrtAsset.uri);
       const srtContent = await srtResponse.text();
       console.log('[script-review] ✓ Sample SRT loaded from assets/media/sample_srt.srt, length:', srtContent.length);
+
+      // Optimistically update video status to "processing" for instant UI feedback (same as normal mode)
+      console.log('[script-review] Optimistically updating video to processing state...');
+      addVideo({
+        id: projectId,
+        uri: '',
+        prompt: project.prompt,
+        script: scriptToSave,
+        createdAt: project.createdAt || Date.now(),
+        status: 'processing',
+        projectId: projectId,
+        thumbnailUrl: project.thumbnailUrl,
+      });
 
       // Mark project as submitted in test mode (schedules test run setup server-side, same pattern as normal mode)
       console.log('[script-review] Marking project as submitted in test mode (schedules setup server-side)...');
