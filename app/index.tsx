@@ -159,8 +159,8 @@ const styles = StyleSheet.create({
   buttonText: {
     color: Colors.white,
     fontSize: 17,
-    fontFamily: 'Poppins-Medium',
-    fontWeight: '500',
+    fontFamily: Fonts.title,
+    fontWeight: '600',
     letterSpacing: 0.3,
   },
 });
