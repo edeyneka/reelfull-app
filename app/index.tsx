@@ -1,20 +1,32 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState, useRef } from 'react';
-import { StyleSheet, TouchableOpacity, View, Text, Animated } from 'react-native';
+import { StyleSheet, TouchableOpacity, View, Text, Animated, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Video, ResizeMode } from 'expo-av';
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
 import { Fonts } from '@/constants/typography';
+import { useFonts, Inter_400Regular, Inter_700Bold } from '@expo-google-fonts/inter';
 
 export default function IntroScreen() {
   const router = useRouter();
   const { userId, isLoading } = useApp();
   const [hasNavigated, setHasNavigated] = useState(false);
   const [showButtons, setShowButtons] = useState(false);
+  const [videoError, setVideoError] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const [fontsLoaded] = useFonts({
+    Inter_400Regular,
+    Inter_700Bold,
+  });
   
   const videoSource = require('../assets/third_intro_ultra.mp4');
+
+  // Handle video playback errors
+  const handleVideoError = (error: any) => {
+    console.error('[IntroScreen] Video playback error:', error);
+    setVideoError(true);
+  };
 
   // Navigate to the appropriate screen
   const navigateToNextScreen = () => {
@@ -32,7 +44,7 @@ export default function IntroScreen() {
 
   // Handle navigation based on user state
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading || !fontsLoaded) return;
 
     if (userId) {
       // User is already authenticated - show intro for 3 seconds then go to feed
@@ -52,10 +64,20 @@ export default function IntroScreen() {
       }, 3000);
       return () => clearTimeout(timer);
     }
-  }, [fadeAnim, userId, isLoading]);
+  }, [fadeAnim, userId, isLoading, fontsLoaded]);
+
+  // Show loading indicator while fonts are loading
+  if (!fontsLoaded) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color={Colors.white} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
+      {!videoError && (
       <Video
         source={videoSource}
         style={styles.gif}
@@ -63,7 +85,9 @@ export default function IntroScreen() {
         shouldPlay
         isLooping
         isMuted
+          onError={handleVideoError}
       />
+      )}
       <LinearGradient
         colors={['rgba(0,0,0,0.6)', 'transparent', 'rgba(0,0,0,0.8)']}
         style={styles.gradient}

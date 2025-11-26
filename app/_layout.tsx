@@ -9,14 +9,30 @@ import { useFonts, Inter_400Regular, Inter_700Bold } from '@expo-google-fonts/in
 import { registerForPushNotificationsAsync } from "@/lib/videoPollingService";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import Constants from 'expo-constants';
 
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
 
 // Initialize Convex client
-const convexUrl = process.env.EXPO_PUBLIC_CONVEX_URL;
-const convex = new ConvexReactClient(convexUrl || "");
+// Try multiple sources for the Convex URL
+const convexUrl = 
+  process.env.EXPO_PUBLIC_CONVEX_URL || 
+  Constants.expoConfig?.extra?.convexUrl ||
+  'https://industrious-ibex-578.convex.cloud';
+
+console.log('[App] Initializing Convex client...');
+console.log('[App] process.env.EXPO_PUBLIC_CONVEX_URL:', process.env.EXPO_PUBLIC_CONVEX_URL);
+console.log('[App] Constants.expoConfig.extra.convexUrl:', Constants.expoConfig?.extra?.convexUrl);
+console.log('[App] Final Convex URL:', convexUrl);
+
+if (!process.env.EXPO_PUBLIC_CONVEX_URL) {
+  console.warn('[App] EXPO_PUBLIC_CONVEX_URL is not set in process.env. Using fallback.');
+}
+
+const convex = new ConvexReactClient(convexUrl);
+console.log('[App] Convex client created with URL:', convexUrl);
 
 function AppContent() {
   const { userId } = useApp();

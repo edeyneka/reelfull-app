@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { Phone, ArrowRight } from 'lucide-react-native';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -22,6 +22,33 @@ import CountrySelector from '@/components/CountrySelector';
 import { Country, DEFAULT_COUNTRY } from '@/constants/countries';
 import { Fonts } from '@/constants/typography';
 
+// Retry helper with exponential backoff
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelay: number = 1000
+): Promise<T> {
+  let lastError: any;
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      lastError = error;
+      console.log(`[Retry] Attempt ${attempt + 1}/${maxRetries} failed:`, error.message);
+      
+      // Don't retry on the last attempt
+      if (attempt < maxRetries - 1) {
+        const delay = baseDelay * Math.pow(2, attempt); // Exponential backoff
+        console.log(`[Retry] Waiting ${delay}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  
+  throw lastError;
+}
+
 export default function AuthScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -42,6 +69,18 @@ export default function AuthScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [code, setCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(true);
+
+  // Give the Convex client more time to establish connection on mount
+  // Use a longer timeout for production builds where network may be slower
+  useEffect(() => {
+    console.log('[Auth] Waiting for Convex client to connect...');
+    const timer = setTimeout(() => {
+      setIsConnecting(false);
+      console.log('[Auth] Convex client ready (timeout complete)');
+    }, 3000); // Increased from 1s to 3s
+    return () => clearTimeout(timer);
+  }, []);
 
   const formatPhoneNumber = (value: string, country: Country) => {
     // Remove all non-digit characters
@@ -84,12 +123,19 @@ export default function AuthScreen() {
       // Format as E.164 for backend
       const formattedPhone = `${selectedCountry.dialCode}${digits}`;
       
-      console.log('Sending OTP to:', formattedPhone);
+      console.log('[Auth] Sending OTP to:', formattedPhone);
       
-      // Call real Convex backend
-      const result = await sendOTP({ phone: formattedPhone });
+      // Call Convex backend with retry logic
+      const result = await retryWithBackoff(
+        async () => {
+          console.log('[Auth] Attempting to send OTP...');
+          return await sendOTP({ phone: formattedPhone });
+        },
+        3, // 3 retries
+        1000 // 1 second initial delay
+      );
       
-      console.log('OTP result:', result);
+      console.log('[Auth] OTP result:', result);
       
       if (result.success) {
         // Remember if we're using Twilio Verify
@@ -108,9 +154,24 @@ export default function AuthScreen() {
       } else {
         Alert.alert('Error', result.error || 'Failed to send code');
       }
-    } catch (error) {
-      console.error('Send OTP error:', error);
-      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to send code');
+    } catch (error: any) {
+      console.error('[Auth] Send OTP error:', error);
+      
+      // Provide more helpful error message for connection issues
+      const errorMessage = error?.message || 'Failed to send code';
+      const isConnectionError = errorMessage.includes('Connection lost') || 
+                               errorMessage.includes('network') ||
+                               errorMessage.includes('timeout');
+      
+      if (isConnectionError) {
+        Alert.alert(
+          'Connection Error',
+          'Could not connect to the server. Please check your internet connection and try again.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        Alert.alert('Error', errorMessage);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -129,22 +190,27 @@ export default function AuthScreen() {
       const digits = phoneNumber.replace(/\D/g, '');
       const formattedPhone = `${selectedCountry.dialCode}${digits}`;
       
-      console.log('Verifying OTP...');
-      console.log('Using Twilio Verify:', useTwilioVerify);
+      console.log('[Auth] Verifying OTP...');
+      console.log('[Auth] Using Twilio Verify:', useTwilioVerify);
       
-      // Call the appropriate verification method
-      let result;
-      if (useTwilioVerify) {
-        // Use Twilio Verify (production mode)
-        console.log('Verifying with Twilio Verify...');
-        result = await verifyTwilioOTP({ phone: formattedPhone, code });
-      } else {
-        // Use local database verification (development mode)
-        console.log('Verifying with local database...');
-        result = await verifyOTP({ phone: formattedPhone, code });
-      }
+      // Call the appropriate verification method with retry logic
+      const result = await retryWithBackoff(
+        async () => {
+          if (useTwilioVerify) {
+            // Use Twilio Verify (production mode)
+            console.log('[Auth] Verifying with Twilio Verify...');
+            return await verifyTwilioOTP({ phone: formattedPhone, code });
+          } else {
+            // Use local database verification (development mode)
+            console.log('[Auth] Verifying with local database...');
+            return await verifyOTP({ phone: formattedPhone, code });
+          }
+        },
+        3,
+        1000
+      );
       
-      console.log('Verification result:', result);
+      console.log('[Auth] Verification result:', result);
       
       if (result.success) {
         // Save userId to context
@@ -159,9 +225,22 @@ export default function AuthScreen() {
           router.replace('/onboarding');
         }
       }
-    } catch (error) {
-      console.error('Verify OTP error:', error);
-      Alert.alert('Error', 'Invalid code. Please try again.');
+    } catch (error: any) {
+      console.error('[Auth] Verify OTP error:', error);
+      
+      const errorMessage = error?.message || 'Invalid code';
+      const isConnectionError = errorMessage.includes('Connection lost') || 
+                               errorMessage.includes('network') ||
+                               errorMessage.includes('timeout');
+      
+      if (isConnectionError) {
+        Alert.alert(
+          'Connection Error',
+          'Could not connect to the server. Please check your internet connection and try again.'
+        );
+      } else {
+        Alert.alert('Error', 'Invalid code. Please try again.');
+      }
       setCode('');
     } finally {
       setIsLoading(false);
@@ -274,14 +353,14 @@ export default function AuthScreen() {
                   </View>
 
                   <TouchableOpacity
-                    style={[styles.button, !isPhoneValid() && styles.buttonDisabled]}
+                    style={[styles.button, (!isPhoneValid() || isConnecting) && styles.buttonDisabled]}
                     onPress={handleSendCode}
-                    disabled={!isPhoneValid() || isLoading}
+                    disabled={!isPhoneValid() || isLoading || isConnecting}
                     activeOpacity={0.8}
                   >
                     <LinearGradient
                       colors={
-                        isPhoneValid() && !isLoading
+                        isPhoneValid() && !isLoading && !isConnecting
                           ? [Colors.orange, Colors.orangeLight]
                           : [Colors.gray, Colors.grayLight]
                       }
@@ -289,8 +368,11 @@ export default function AuthScreen() {
                       end={{ x: 1, y: 0 }}
                       style={styles.buttonGradient}
                     >
-                      {isLoading ? (
-                        <ActivityIndicator color={Colors.white} />
+                      {isLoading || isConnecting ? (
+                        <>
+                          <ActivityIndicator color={Colors.white} />
+                          {isConnecting && <Text style={styles.buttonText}>Connecting...</Text>}
+                        </>
                       ) : (
                         <>
                           <Text style={styles.buttonText}>Send Code</Text>
