@@ -5,6 +5,150 @@
  */
 
 import { Id } from "@/convex/_generated/dataModel";
+import * as FileSystem from 'expo-file-system/legacy';
+import * as MediaLibrary from 'expo-media-library';
+import { Platform } from 'react-native';
+
+/**
+ * Extract asset ID from a ph:// URI
+ * @param uri - The ph:// URI
+ * @returns The asset ID or null
+ */
+function extractAssetId(uri: string): string | null {
+  // ph://CC95F08C-88C3-4012-9D6D-64A413D254B3/L0/001
+  // or ph://ED7AC36B-A150-4C38-BB8C-B6D696F4F2ED/L0/001
+  const match = uri.match(/^ph:\/\/([A-F0-9-]+)/i);
+  return match ? match[1] : null;
+}
+
+/**
+ * Ensure a file is available locally (handles iCloud optimized storage)
+ * On iOS, files may be stored in iCloud and not fully downloaded locally.
+ * 
+ * Strategy:
+ * 1. For file:// URIs - verify file exists and has content
+ * 2. For ph:// URIs - try to get localUri via MediaLibrary (with permission check)
+ * 3. If all else fails, return original URI and let fetch handle it
+ * 
+ * @param uri - The file URI (may be ph://, assets-library://, or file://)
+ * @param type - The media type for generating the filename
+ * @param providedAssetId - Optional asset ID from expo-image-picker
+ * @returns Local file URI that can be safely fetched
+ */
+async function ensureLocalFile(uri: string, type: "image" | "video", providedAssetId?: string): Promise<string> {
+  // Only special handling needed on iOS
+  if (Platform.OS !== 'ios') {
+    return uri;
+  }
+
+  console.log(`[ensureLocalFile] Processing: ${uri.substring(0, 60)}...`);
+  console.log(`[ensureLocalFile] AssetId provided: ${providedAssetId || 'none'}`);
+
+  // For file:// URIs, verify the file exists and has content
+  if (uri.startsWith('file://')) {
+    try {
+      const fileInfo = await FileSystem.getInfoAsync(uri);
+      console.log(`[ensureLocalFile] File info:`, { exists: fileInfo.exists, size: fileInfo.size });
+      
+      if (fileInfo.exists && fileInfo.size && fileInfo.size > 0) {
+        console.log(`[ensureLocalFile] ✓ File ready: ${formatFileSize(fileInfo.size)}`);
+        return uri;
+      } else if (fileInfo.exists && (!fileInfo.size || fileInfo.size === 0)) {
+        // File exists but is empty - likely still downloading from iCloud
+        console.log('[ensureLocalFile] File exists but is empty - may be downloading from iCloud');
+        throw new Error('This video is still downloading from iCloud. Please wait for the download to complete in the Photos app, then try again.');
+      }
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('iCloud')) {
+        throw error;
+      }
+      console.log('[ensureLocalFile] File check error:', error);
+    }
+  }
+
+  // For ph:// URIs, try to get the local file path via MediaLibrary
+  if (uri.startsWith('ph://') && providedAssetId) {
+    console.log(`[ensureLocalFile] Attempting MediaLibrary lookup for asset: ${providedAssetId}`);
+    
+    try {
+      // First check if we have permission
+      const { status } = await MediaLibrary.getPermissionsAsync();
+      console.log(`[ensureLocalFile] MediaLibrary permission status: ${status}`);
+      
+      if (status !== 'granted') {
+        // Request permission if not granted
+        const { status: newStatus } = await MediaLibrary.requestPermissionsAsync();
+        if (newStatus !== 'granted') {
+          console.log('[ensureLocalFile] MediaLibrary permission denied');
+          throw new Error('Photo library access is required to upload videos. Please grant permission in Settings.');
+        }
+      }
+
+      // Try to get asset info
+      const assetInfo = await MediaLibrary.getAssetInfoAsync(providedAssetId);
+      
+      if (assetInfo) {
+        console.log(`[ensureLocalFile] Asset info received:`, {
+          localUri: assetInfo.localUri?.substring(0, 50),
+          uri: assetInfo.uri?.substring(0, 50),
+        });
+
+        // Use localUri if available
+        if (assetInfo.localUri) {
+          const fileInfo = await FileSystem.getInfoAsync(assetInfo.localUri);
+          if (fileInfo.exists && fileInfo.size && fileInfo.size > 0) {
+            console.log(`[ensureLocalFile] ✓ Using localUri: ${formatFileSize(fileInfo.size)}`);
+            return assetInfo.localUri;
+          }
+        }
+
+        // Try uri property
+        if (assetInfo.uri && assetInfo.uri.startsWith('file://')) {
+          const fileInfo = await FileSystem.getInfoAsync(assetInfo.uri);
+          if (fileInfo.exists && fileInfo.size && fileInfo.size > 0) {
+            console.log(`[ensureLocalFile] ✓ Using asset.uri: ${formatFileSize(fileInfo.size)}`);
+            return assetInfo.uri;
+          }
+        }
+      }
+    } catch (error) {
+      // Log but don't throw - we'll try the original URI as fallback
+      console.log('[ensureLocalFile] MediaLibrary lookup failed:', error);
+      
+      // Check if this is an iCloud-specific error
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('3164') || errorMessage.includes('PHPhotos')) {
+        console.log('[ensureLocalFile] PHPhotos error detected - video likely in iCloud');
+        throw new Error('This video is stored in iCloud and not downloaded to your device. Please open the Photos app, find this video, and wait for it to fully download before trying again.');
+      }
+      
+      if (error instanceof Error && (error.message.includes('iCloud') || error.message.includes('permission'))) {
+        throw error;
+      }
+    }
+  }
+
+  // Return original URI as last resort
+  console.log('[ensureLocalFile] Using original URI as fallback');
+  return uri;
+}
+
+/**
+ * Clean up temporary local files created during upload
+ * @param localUris - Array of local file URIs to clean up
+ */
+async function cleanupLocalFiles(localUris: string[]): Promise<void> {
+  for (const uri of localUris) {
+    if (uri.startsWith(FileSystem.cacheDirectory || '')) {
+      try {
+        await FileSystem.deleteAsync(uri, { idempotent: true });
+        console.log(`[cleanup] Deleted temp file: ${uri}`);
+      } catch (error) {
+        // Ignore cleanup errors
+      }
+    }
+  }
+}
 
 /**
  * Upload a file to Convex storage
@@ -46,13 +190,13 @@ export async function uploadFileToConvex(
 /**
  * Upload multiple media files to Convex storage (LEGACY - use uploadMediaFilesToR2 instead)
  * @param generateUploadUrl - Convex mutation function to get upload URL
- * @param mediaUris - Array of media items with URI and type
+ * @param mediaUris - Array of media items with URI, type, and optional assetId for iCloud files
  * @returns Array of upload metadata
  * @deprecated Use uploadMediaFilesToR2 for direct R2 uploads and bandwidth savings
  */
 export async function uploadMediaFiles(
   generateUploadUrl: () => Promise<string>,
-  mediaUris: Array<{ uri: string; type: "image" | "video" }>
+  mediaUris: Array<{ uri: string; type: "image" | "video"; assetId?: string }>
 ): Promise<
   Array<{
     storageId: Id<"_storage">;
@@ -62,54 +206,91 @@ export async function uploadMediaFiles(
   }>
 > {
   const uploads = [];
+  const localFilesToCleanup: string[] = [];
 
-  for (const media of mediaUris) {
-    try {
-      // 1. Generate upload URL
-      const uploadUrl = await generateUploadUrl();
+  try {
+    for (const media of mediaUris) {
+      try {
+        // 1. Generate upload URL
+        const uploadUrl = await generateUploadUrl();
 
-      // 2. Fetch file
-      const response = await fetch(media.uri);
-      const blob = await response.blob();
+        // 2. Ensure file is available locally (handles iCloud optimized storage)
+        console.log(`[uploadMediaFiles] Processing ${media.type}: ${media.uri.substring(0, 50)}...`);
+        const localUri = await ensureLocalFile(media.uri, media.type, media.assetId);
+        
+        // Track local files for cleanup
+        if (localUri !== media.uri) {
+          localFilesToCleanup.push(localUri);
+        }
 
-      // 3. Determine content type
-      const contentType = media.type === "video" ? "video/mp4" : "image/jpeg";
+        // 3. Fetch file from local URI
+        let blob: Blob;
+        try {
+          const response = await fetch(localUri);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch file: ${response.status} ${response.statusText}`);
+          }
+          blob = await response.blob();
+        } catch (fetchError) {
+          const errorMessage = fetchError instanceof Error ? fetchError.message : String(fetchError);
+          console.error('[uploadMediaFiles] Fetch error:', errorMessage);
+          
+          // Check for iCloud-related errors
+          if (errorMessage.includes('3164') || errorMessage.includes('PHPhotos') || errorMessage.includes('operation couldn\'t be completed')) {
+            throw new Error('This video is stored in iCloud and not available on your device. Please open the Photos app, find this video, and wait for it to fully download before trying again.');
+          }
+          throw fetchError;
+        }
 
-      // 4. Upload to Convex
-      const uploadResponse = await fetch(uploadUrl, {
-        method: "POST",
-        headers: { "Content-Type": contentType },
-        body: blob,
-      });
+        // 4. Validate blob has content
+        if (blob.size === 0) {
+          throw new Error('This video appears to still be downloading from iCloud. Please wait for the download to complete in the Photos app, then try again.');
+        }
 
-      if (!uploadResponse.ok) {
-        throw new Error(`Upload failed: ${uploadResponse.statusText}`);
+        console.log(`[uploadMediaFiles] Fetched ${media.type}, size: ${formatFileSize(blob.size)}`);
+
+        // 5. Determine content type
+        const contentType = media.type === "video" ? "video/mp4" : "image/jpeg";
+
+        // 6. Upload to Convex
+        const uploadResponse = await fetch(uploadUrl, {
+          method: "POST",
+          headers: { "Content-Type": contentType },
+          body: blob,
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error(`Upload failed: ${uploadResponse.statusText}`);
+        }
+
+        const { storageId } = await uploadResponse.json();
+
+        // 7. Add metadata
+        uploads.push({
+          storageId: storageId as Id<"_storage">,
+          filename: `${media.type}_${Date.now()}.${media.type === "video" ? "mp4" : "jpg"}`,
+          contentType,
+          size: blob.size,
+        });
+
+        console.log(`[uploadMediaFiles] ✓ Uploaded ${media.type}: ${storageId}`);
+      } catch (error) {
+        console.error(`[uploadMediaFiles] Failed to upload ${media.type}:`, error);
+        throw error;
       }
-
-      const { storageId } = await uploadResponse.json();
-
-      // 5. Add metadata
-      uploads.push({
-        storageId: storageId as Id<"_storage">,
-        filename: `${media.type}_${Date.now()}.${media.type === "video" ? "mp4" : "jpg"}`,
-        contentType,
-        size: blob.size,
-      });
-
-      console.log(`Uploaded ${media.type}: ${storageId}`);
-    } catch (error) {
-      console.error(`Failed to upload ${media.type}:`, error);
-      throw error;
     }
-  }
 
-  return uploads;
+    return uploads;
+  } finally {
+    // Clean up temporary local files
+    await cleanupLocalFiles(localFilesToCleanup);
+  }
 }
 
 /**
  * Upload multiple media files directly to R2 (RECOMMENDED - bypasses Convex for maximum savings)
  * @param generateR2UploadUrls - Convex mutation function to get R2 upload URLs
- * @param mediaUris - Array of media items with URI and type
+ * @param mediaUris - Array of media items with URI, type, and optional assetId for iCloud files
  * @param projectId - Optional project ID for organized storage
  * @returns Array of upload metadata with R2 keys and URLs
  */
@@ -120,7 +301,7 @@ export async function uploadMediaFilesToR2(
     key: string;
     r2Url?: string;
   }>>,
-  mediaUris: Array<{ uri: string; type: "image" | "video"; filename?: string }>,
+  mediaUris: Array<{ uri: string; type: "image" | "video"; filename?: string; assetId?: string }>,
   projectId?: string
 ): Promise<
   Array<{
@@ -146,50 +327,86 @@ export async function uploadMediaFilesToR2(
   const uploadUrls = await generateR2UploadUrls(fileMetadata, projectId);
   
   const uploads = [];
+  const localFilesToCleanup: string[] = [];
 
-  // 3. Upload each file directly to R2
-  for (let i = 0; i < mediaUris.length; i++) {
-    const media = mediaUris[i];
-    const uploadInfo = uploadUrls[i];
-    
-    try {
-      console.log(`[R2] Uploading ${uploadInfo.filename}...`);
+  try {
+    // 3. Upload each file directly to R2
+    for (let i = 0; i < mediaUris.length; i++) {
+      const media = mediaUris[i];
+      const uploadInfo = uploadUrls[i];
       
-      // Fetch file
-      const response = await fetch(media.uri);
-      const blob = await response.blob();
+      try {
+        console.log(`[R2] Processing ${uploadInfo.filename}...`);
+        
+        // Ensure file is available locally (handles iCloud optimized storage)
+        const localUri = await ensureLocalFile(media.uri, media.type, media.assetId);
+        
+        // Track local files for cleanup
+        if (localUri !== media.uri) {
+          localFilesToCleanup.push(localUri);
+        }
 
-      // Upload directly to R2
-      const uploadResponse = await fetch(uploadInfo.uploadUrl, {
-        method: "PUT",
-        headers: {
-          "Content-Type": fileMetadata[i].contentType,
-        },
-        body: blob,
-      });
+        // Fetch file from local URI
+        let blob: Blob;
+        try {
+          const response = await fetch(localUri);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch file: ${response.status} ${response.statusText}`);
+          }
+          blob = await response.blob();
+        } catch (fetchError) {
+          const errorMessage = fetchError instanceof Error ? fetchError.message : String(fetchError);
+          console.error('[R2] Fetch error:', errorMessage);
+          
+          // Check for iCloud-related errors
+          if (errorMessage.includes('3164') || errorMessage.includes('PHPhotos') || errorMessage.includes('operation couldn\'t be completed')) {
+            throw new Error('This video is stored in iCloud and not available on your device. Please open the Photos app, find this video, and wait for it to fully download before trying again.');
+          }
+          throw fetchError;
+        }
 
-      if (!uploadResponse.ok) {
-        throw new Error(`R2 upload failed: ${uploadResponse.statusText}`);
+        // Validate blob has content
+        if (blob.size === 0) {
+          throw new Error('This video appears to still be downloading from iCloud. Please wait for the download to complete in the Photos app, then try again.');
+        }
+
+        console.log(`[R2] Uploading ${uploadInfo.filename} (${formatFileSize(blob.size)})...`);
+
+        // Upload directly to R2
+        const uploadResponse = await fetch(uploadInfo.uploadUrl, {
+          method: "PUT",
+          headers: {
+            "Content-Type": fileMetadata[i].contentType,
+          },
+          body: blob,
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error(`R2 upload failed: ${uploadResponse.statusText}`);
+        }
+
+        // Add metadata
+        uploads.push({
+          filename: uploadInfo.filename,
+          contentType: fileMetadata[i].contentType,
+          size: blob.size,
+          r2Key: uploadInfo.key,
+          r2Url: uploadInfo.r2Url || "",
+        });
+
+        console.log(`[R2] ✓ Uploaded ${uploadInfo.filename} to R2`);
+      } catch (error) {
+        console.error(`[R2] Failed to upload ${uploadInfo.filename}:`, error);
+        throw error;
       }
-
-      // Add metadata
-      uploads.push({
-        filename: uploadInfo.filename,
-        contentType: fileMetadata[i].contentType,
-        size: blob.size,
-        r2Key: uploadInfo.key,
-        r2Url: uploadInfo.r2Url || "",
-      });
-
-      console.log(`[R2] ✓ Uploaded ${uploadInfo.filename} to R2`);
-    } catch (error) {
-      console.error(`[R2] Failed to upload ${uploadInfo.filename}:`, error);
-      throw error;
     }
-  }
 
-  console.log(`[R2] Successfully uploaded ${uploads.length} files to R2`);
-  return uploads;
+    console.log(`[R2] Successfully uploaded ${uploads.length} files to R2`);
+    return uploads;
+  } finally {
+    // Clean up temporary local files
+    await cleanupLocalFiles(localFilesToCleanup);
+  }
 }
 
 /**

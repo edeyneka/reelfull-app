@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import * as ImagePicker from 'expo-image-picker';
+import { VideoExportPreset } from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { VideoView, useVideoPlayer } from 'expo-video';
@@ -51,8 +52,9 @@ export default function ComposerScreen() {
   const insets = useSafeAreaInsets();
   const { user, userId, syncUserFromBackend } = useApp();
   const [prompt, setPrompt] = useState('');
-  const [mediaUris, setMediaUris] = useState<{ uri: string; type: 'video' | 'image'; id: string }[]>([]);
+  const [mediaUris, setMediaUris] = useState<{ uri: string; type: 'video' | 'image'; id: string; assetId?: string }[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [isPickingMedia, setIsPickingMedia] = useState(false);
   const [isTestRun, setIsTestRun] = useState(false);
   
   // Fetch current user profile from backend
@@ -155,20 +157,45 @@ export default function ComposerScreen() {
       return;
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['videos', 'images'],
-      allowsMultipleSelection: true,
-      quality: 1,
-    });
+    // Show loading indicator after 2 seconds (for iCloud downloads)
+    const loadingTimeout = setTimeout(() => {
+      setIsPickingMedia(true);
+    }, 2000);
+    
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['videos', 'images'],
+        allowsMultipleSelection: true,
+        quality: 1,
+        // Force video export/transcoding - this triggers iCloud download for optimized storage videos
+        videoExportPreset: VideoExportPreset.H264_1920x1080,
+        // Request compatible format which also helps with iCloud files
+        preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
+      });
 
-    if (!result.canceled && result.assets.length > 0) {
-      const newMedia = result.assets.map(asset => ({
-        uri: asset.uri,
-        type: (asset.type === 'video' ? 'video' : 'image') as 'video' | 'image',
-        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      }));
-      console.log('Selected media:', newMedia);
-      setMediaUris(prev => [...prev, ...newMedia]);
+      if (!result.canceled && result.assets.length > 0) {
+        // Log detailed asset info for debugging iCloud issues
+        console.log('[pickMedia] Selected assets:', result.assets.map(asset => ({
+          uri: asset.uri.substring(0, 80) + '...',
+          type: asset.type,
+          width: asset.width,
+          height: asset.height,
+          duration: asset.duration,
+          fileSize: asset.fileSize,
+          assetId: asset.assetId,
+        })));
+        
+        const newMedia = result.assets.map(asset => ({
+          uri: asset.uri,
+          type: (asset.type === 'video' ? 'video' : 'image') as 'video' | 'image',
+          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          assetId: asset.assetId ?? undefined, // Pass assetId for iCloud file handling (convert null to undefined)
+        }));
+        setMediaUris(prev => [...prev, ...newMedia]);
+      }
+    } finally {
+      clearTimeout(loadingTimeout);
+      setIsPickingMedia(false);
     }
   };
 
@@ -217,7 +244,7 @@ export default function ComposerScreen() {
       // Upload all media files to Convex
       const uploads = await uploadMediaFiles(
         generateUploadUrl,
-        mediaUris.map(m => ({ uri: m.uri, type: m.type }))
+        mediaUris.map(m => ({ uri: m.uri, type: m.type, assetId: m.assetId }))
       );
 
       console.log('Uploads complete:', uploads.length);
@@ -269,7 +296,28 @@ export default function ComposerScreen() {
       }
     } catch (error) {
       console.error('Error in composer:', error);
-      alert(`Failed to create project: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      // Provide user-friendly message for iCloud-related issues
+      if (
+        errorMessage.includes('iCloud') || 
+        errorMessage.includes('downloading') ||
+        errorMessage.includes('PHPhotos') ||
+        errorMessage.includes('3164') ||
+        errorMessage.includes('operation couldn\'t be completed')
+      ) {
+        alert(
+          'iCloud Video Not Available\n\n' +
+          'One or more videos are stored in iCloud and need to be downloaded first.\n\n' +
+          'To fix this:\n' +
+          '1. Open the Photos app\n' +
+          '2. Find the video(s) you want to use\n' +
+          '3. Wait for them to fully download (the cloud icon should disappear)\n' +
+          '4. Come back and try again'
+        );
+      } else {
+        alert(`Failed to create project: ${errorMessage}`);
+      }
     } finally {
       setIsUploading(false);
     }
@@ -392,16 +440,31 @@ export default function ComposerScreen() {
                   </ScrollView>
                 )}
                 {!isTestRun && (
-                  <TouchableOpacity
-                    style={styles.pickerButton}
-                    onPress={pickMedia}
-                    activeOpacity={0.7}
-                  >
-                    <Camera size={20} color={Colors.white} strokeWidth={2} />
-                    <Text style={styles.pickerButtonText}>
-                      {mediaUris.length > 0 ? 'Add More Media' : 'Select Photos/Videos'}
+                  <>
+                    <TouchableOpacity
+                      style={[styles.pickerButton, isPickingMedia && styles.pickerButtonLoading]}
+                      onPress={pickMedia}
+                      activeOpacity={0.7}
+                      disabled={isPickingMedia}
+                    >
+                      {isPickingMedia ? (
+                        <>
+                          <ActivityIndicator size="small" color={Colors.white} />
+                          <Text style={styles.pickerButtonText}>Loading media...</Text>
+                        </>
+                      ) : (
+                        <>
+                          <Camera size={20} color={Colors.white} strokeWidth={2} />
+                          <Text style={styles.pickerButtonText}>
+                            {mediaUris.length > 0 ? 'Add More Media' : 'Select Photos/Videos'}
+                          </Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                    <Text style={styles.iCloudHint}>
+                      ☁️ Videos stored in iCloud may take a moment to load
                     </Text>
-                  </TouchableOpacity>
+                  </>
                 )}
               </View>
 
@@ -565,9 +628,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
   },
+  pickerButtonLoading: {
+    opacity: 0.8,
+  },
   pickerButtonText: {
     fontSize: 16,
     color: Colors.white,
+    fontFamily: Fonts.regular,
+  },
+  iCloudHint: {
+    fontSize: 12,
+    color: Colors.grayLight,
+    textAlign: 'center',
+    marginTop: 8,
     fontFamily: Fonts.regular,
   },
   mediaScroll: {
