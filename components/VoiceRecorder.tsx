@@ -134,6 +134,13 @@ export default function VoiceRecorder({
         return;
       }
 
+      // Set audio mode to play in silent mode
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+      });
+
       const { sound: newSound } = await Audio.Sound.createAsync(
         { uri: recordingUri },
         { shouldPlay: true }

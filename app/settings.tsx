@@ -152,6 +152,13 @@ export default function SettingsScreen() {
 
   const playPreviewAudio = useCallback(async (url: string) => {
     try {
+      // Set audio mode to play in silent mode
+      await Audio.setAudioModeAsync({
+        playsInSilentModeIOS: true,
+        allowsRecordingIOS: false,
+        staysActiveInBackground: false,
+      });
+
       // Load and play preview
       const { sound: newSound } = await Audio.Sound.createAsync(
         { uri: url },
