@@ -39,13 +39,17 @@ export default function OnboardingScreen() {
   const completeOnboardingAction = useAction(api.users.completeOnboarding);
 
   const handleNext = () => {
-    if (step === 1 && name.trim() && selectedStyle) {
+    if (step === 1 && name.trim()) {
       setStep(2);
+    } else if (step === 2 && selectedStyle) {
+      setStep(3);
     }
   };
 
   const handleBack = () => {
-    if (step === 2) {
+    if (step === 3) {
+      setStep(2);
+    } else if (step === 2) {
       setStep(1);
     }
   };
@@ -152,7 +156,8 @@ export default function OnboardingScreen() {
     }
   };
 
-  const isStep1Valid = name.trim().length > 0 && selectedStyle !== null;
+  const isStep1Valid = name.trim().length > 0;
+  const isStep2Valid = selectedStyle !== null;
 
   return (
     <View style={styles.container}>
@@ -160,7 +165,7 @@ export default function OnboardingScreen() {
         colors={[Colors.black, Colors.grayDark]}
         style={styles.gradient}
       >
-        {step === 2 && (
+        {step > 1 && (
           <TouchableOpacity
             style={[styles.backButton, { top: insets.top + 20 }]}
             onPress={handleBack}
@@ -186,11 +191,13 @@ export default function OnboardingScreen() {
                 <Sparkles size={40} color={Colors.orange} strokeWidth={2} />
               </View>
               <Text style={styles.title}>
-                {step === 1 ? 'Welcome to Reelful' : 'Record Your Voice'}
+                {step === 1 ? 'Welcome to Reelful' : step === 2 ? 'Your Style' : 'Record Your Voice'}
               </Text>
               <Text style={styles.subtitle}>
                 {step === 1
                   ? "Let's personalize your experience"
+                  : step === 2
+                  ? 'Choose the style that best fits you'
                   : 'This helps us create more personalized content'}
               </Text>
             </View>
@@ -211,6 +218,29 @@ export default function OnboardingScreen() {
                     />
                   </View>
 
+                  <TouchableOpacity
+                    style={[styles.button, !isStep1Valid && styles.buttonDisabled]}
+                    onPress={handleNext}
+                    disabled={!isStep1Valid}
+                    activeOpacity={0.8}
+                  >
+                    <LinearGradient
+                      colors={
+                        isStep1Valid
+                          ? [Colors.orange, Colors.orangeLight]
+                          : [Colors.gray, Colors.grayLight]
+                      }
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.buttonGradient}
+                    >
+                      <Text style={styles.buttonText}>Next</Text>
+                      <ArrowRight size={20} color={Colors.white} strokeWidth={2.5} />
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </>
+              ) : step === 2 ? (
+                <>
                   <View style={styles.inputGroup}>
                     <Text style={styles.label}>Choose your style</Text>
                     <View style={styles.optionsContainer}>
@@ -238,14 +268,14 @@ export default function OnboardingScreen() {
                   </View>
 
                   <TouchableOpacity
-                    style={[styles.button, !isStep1Valid && styles.buttonDisabled]}
+                    style={[styles.button, !isStep2Valid && styles.buttonDisabled]}
                     onPress={handleNext}
-                    disabled={!isStep1Valid}
+                    disabled={!isStep2Valid}
                     activeOpacity={0.8}
                   >
                     <LinearGradient
                       colors={
-                        isStep1Valid
+                        isStep2Valid
                           ? [Colors.orange, Colors.orangeLight]
                           : [Colors.gray, Colors.grayLight]
                       }

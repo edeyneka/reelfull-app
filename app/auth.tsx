@@ -21,6 +21,7 @@ import { useApp } from '@/contexts/AppContext';
 import CountrySelector from '@/components/CountrySelector';
 import { Country, DEFAULT_COUNTRY } from '@/constants/countries';
 import { Fonts } from '@/constants/typography';
+import { Audio } from 'expo-av';
 
 // Retry helper with exponential backoff
 async function retryWithBackoff<T>(
@@ -47,6 +48,32 @@ async function retryWithBackoff<T>(
   }
   
   throw lastError;
+}
+
+// Request microphone permission after successful verification
+async function requestMicrophonePermission(): Promise<boolean> {
+  try {
+    console.log('[Auth] Requesting microphone permission...');
+    const { status } = await Audio.requestPermissionsAsync();
+    
+    if (status === 'granted') {
+      console.log('[Auth] Microphone permission granted');
+      return true;
+    } else {
+      console.log('[Auth] Microphone permission denied:', status);
+      // Don't block the flow if permission is denied
+      Alert.alert(
+        'Microphone Access',
+        'Microphone access is needed to record voice samples for personalized content. You can enable it later in Settings.',
+        [{ text: 'OK' }]
+      );
+      return false;
+    }
+  } catch (error) {
+    console.error('[Auth] Error requesting microphone permission:', error);
+    // Don't block the flow on error
+    return false;
+  }
 }
 
 export default function AuthScreen() {
@@ -216,6 +243,9 @@ export default function AuthScreen() {
         // Save userId to context
         await saveUserId(result.userId);
         
+        // Request microphone permission after successful verification
+        await requestMicrophonePermission();
+        
         // Navigate based on onboarding status
         if (result.onboardingCompleted) {
           Alert.alert('Welcome Back!', 'Redirecting to your feed...');
@@ -267,6 +297,9 @@ export default function AuthScreen() {
         
         // Save userId to context
         await saveUserId(result.userId);
+        
+        // Request microphone permission after successful verification
+        await requestMicrophonePermission();
         
         // Navigate based on onboarding status
         if (result.onboardingCompleted) {
