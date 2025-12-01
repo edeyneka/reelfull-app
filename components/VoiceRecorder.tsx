@@ -279,24 +279,26 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   scriptContainer: {
-    gap: 8,
+    gap: 12,
   },
   scriptTitle: {
     fontSize: 16,
     fontWeight: '600' as const,
     color: Colors.white,
+    opacity: 0.9,
   },
   scriptBox: {
-    backgroundColor: 'rgba(255, 107, 53, 0.05)',
+    backgroundColor: 'rgba(50, 50, 50, 0.85)',
     borderRadius: 12,
-    padding: 10,
+    padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 107, 53, 0.2)',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   scriptText: {
-    fontSize: 11,
-    lineHeight: 16,
-    color: Colors.grayLight,
+    fontSize: 13,
+    lineHeight: 20,
+    color: Colors.white,
+    opacity: 0.9,
   },
   recorderContainer: {
     alignItems: 'center',

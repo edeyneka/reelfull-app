@@ -13,6 +13,7 @@ import {
   Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Video, ResizeMode } from 'expo-av';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAction, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -158,13 +159,26 @@ export default function OnboardingScreen() {
 
   const isStep1Valid = name.trim().length > 0;
   const isStep2Valid = selectedStyle !== null;
+  
+  const videoSource = require('../assets/third_intro_ultra.mp4');
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={[Colors.black, Colors.grayDark]}
-        style={styles.gradient}
-      >
+      {/* Video Background */}
+      <Video
+        source={videoSource}
+        style={styles.videoBackground}
+        resizeMode={ResizeMode.COVER}
+        shouldPlay
+        isLooping
+        isMuted
+      />
+      
+      {/* Semi-transparent overlay */}
+      <View style={styles.overlay} />
+      
+      {/* Content */}
+      <View style={styles.contentContainer}>
         {step > 1 && (
           <TouchableOpacity
             style={[styles.backButton, { top: insets.top + 20 }]}
@@ -311,7 +325,7 @@ export default function OnboardingScreen() {
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
-      </LinearGradient>
+      </View>
     </View>
   );
 }
@@ -321,7 +335,24 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.black,
   },
-  gradient: {
+  videoBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+  },
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+  },
+  contentContainer: {
     flex: 1,
   },
   backButton: {
@@ -345,7 +376,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     padding: 16,
     borderRadius: 50,
-    backgroundColor: 'rgba(255, 107, 53, 0.1)',
+    backgroundColor: 'rgba(255, 107, 53, 0.2)',
   },
   title: {
     fontSize: 24,
@@ -372,27 +403,27 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   input: {
-    backgroundColor: Colors.gray,
+    backgroundColor: 'rgba(50, 50, 50, 0.8)',
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
     color: Colors.white,
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   optionsContainer: {
     gap: 12,
   },
   option: {
-    backgroundColor: Colors.gray,
+    backgroundColor: 'rgba(50, 50, 50, 0.8)',
     borderRadius: 12,
     padding: 16,
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   optionSelected: {
     borderColor: Colors.orange,
-    backgroundColor: 'rgba(255, 107, 53, 0.1)',
+    backgroundColor: 'rgba(255, 107, 53, 0.2)',
   },
   optionText: {
     fontSize: 16,
