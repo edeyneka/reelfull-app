@@ -204,28 +204,15 @@ export default function ComposerScreen() {
   };
 
   const loadSampleMedia = async () => {
-    try {
-      // Load sample videos from assets
-      const sampleAssets = [
-        require('@/assets/media/sample_video_1.MOV'),
-        require('@/assets/media/sample_video_2.MOV'),
-        require('@/assets/media/sample_video_3.MOV'),
-        require('@/assets/media/sample_animated_image.mp4'),
-      ];
-
-      const assets = await Asset.loadAsync(sampleAssets);
-      const sampleMedia = assets.map((asset, idx) => ({
-        uri: asset.localUri || asset.uri,
-        type: 'video' as const,
-        id: `sample-${idx}-${Date.now()}`,
-      }));
-
-      setMediaUris(sampleMedia);
-      console.log('Loaded sample media:', sampleMedia.length, 'files');
-    } catch (error) {
-      console.error('Failed to load sample media:', error);
-      alert('Failed to load sample media');
+    if (!ENABLE_TEST_RUN_MODE) {
+      console.warn('loadSampleMedia called but ENABLE_TEST_RUN_MODE is disabled');
+      return;
     }
+    
+    // When ENABLE_TEST_RUN_MODE is false, this function should never be called
+    // and the assets don't need to exist
+    console.warn('loadSampleMedia: Test mode is enabled but sample assets may not be available.');
+    alert('Test mode is enabled in config but sample assets are not available. Please add sample media files or disable test mode.');
   };
 
   const handleSubmit = async () => {
@@ -260,40 +247,22 @@ export default function ComposerScreen() {
 
       console.log('Project created:', projectId);
 
-      if (isTestRun) {
-        // Test run mode: Load sample script from assets
-        console.log('Test run mode: Loading sample script...');
-        const sampleScriptAsset = Asset.fromModule(require('@/assets/media/sample_script.txt'));
-        await sampleScriptAsset.downloadAsync();
-        const scriptResponse = await fetch(sampleScriptAsset.localUri || sampleScriptAsset.uri);
-        const sampleScript = await scriptResponse.text();
-        
-        // Update project with sample script directly
-        console.log('Setting sample script, length:', sampleScript.length);
-        await updateProjectScript({
-          id: projectId,
-          script: sampleScript.trim(),
-        });
-        
-        // Navigate to script review with test mode flag
-        router.replace({
-          pathname: '/script-review',
-          params: { 
-            projectId: projectId.toString(),
-            testRun: 'true',
-          },
-        });
-      } else {
-        // Normal mode: Start script generation
-        console.log('Starting script generation...');
-        await generateScriptOnly({ projectId });
-
-        // Navigate to script review
-        router.replace({
-          pathname: '/script-review',
-          params: { projectId: projectId.toString() },
-        });
+      if (ENABLE_TEST_RUN_MODE && isTestRun) {
+        // Test run mode: Sample assets required but not available in this build
+        console.error('Test run mode requested but sample assets are not available');
+        alert('Test mode is enabled but sample assets are not configured. Please disable test mode or add sample assets.');
+        return;
       }
+      
+      // Normal mode: Start script generation
+      console.log('Starting script generation...');
+      await generateScriptOnly({ projectId });
+
+      // Navigate to script review
+      router.replace({
+        pathname: '/script-review',
+        params: { projectId: projectId.toString() },
+      });
     } catch (error) {
       console.error('Error in composer:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
