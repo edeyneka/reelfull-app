@@ -684,7 +684,7 @@ export default function SettingsScreen() {
             {/* Voice Recording Modal */}
             {isEditingVoice && (
               <View style={styles.editModalOverlay}>
-                <View style={styles.voiceModalContent}>
+                <View style={styles.voiceCloneModalContent}>
                   <View style={styles.voiceModalHeader}>
                     <Text style={styles.editModalTitle}>Voice Clone</Text>
                     <TouchableOpacity
@@ -695,19 +695,14 @@ export default function SettingsScreen() {
                       <X size={24} color={Colors.white} strokeWidth={2} />
                     </TouchableOpacity>
                   </View>
-                  <ScrollView 
-                    showsVerticalScrollIndicator={false}
-                    style={styles.voiceModalScroll}
-                  >
-                    <Text style={styles.modalDescription}>
-                      Record a sample to create your AI voice clone
-                    </Text>
-                    <VoiceRecorder
-                      onRecordingComplete={handleVoiceRecordingComplete}
-                      initialRecordingUri={user.voiceRecordingUrl}
-                      showScript={true}
-                    />
-                  </ScrollView>
+                  <Text style={styles.modalDescription}>
+                    Record a sample to create your AI voice clone
+                  </Text>
+                  <VoiceRecorder
+                    onRecordingComplete={handleVoiceRecordingComplete}
+                    initialRecordingUri={user.voiceRecordingUrl}
+                    showScript={true}
+                  />
                 </View>
               </View>
             )}
@@ -1032,14 +1027,19 @@ const styles = StyleSheet.create({
     width: '92%',
     maxHeight: '92%',
   },
+  voiceCloneModalContent: {
+    backgroundColor: '#1c1c1e',
+    borderRadius: 16,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 20,
+    width: '92%',
+  },
   voiceModalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
-  },
-  voiceModalScroll: {
-    flexShrink: 1,
+    marginBottom: 12,
   },
   modalDescription: {
     fontSize: 14,

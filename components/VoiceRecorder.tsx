@@ -212,9 +212,9 @@ export default function VoiceRecorder({
                 style={styles.recordButtonGradient}
               >
                 {isRecording ? (
-                  <Square size={32} color={Colors.white} fill={Colors.white} />
+                  <Square size={26} color={Colors.white} fill={Colors.white} />
                 ) : (
-                  <Mic size={32} color={Colors.white} strokeWidth={2} />
+                  <Mic size={26} color={Colors.white} strokeWidth={2} />
                 )}
               </LinearGradient>
             </TouchableOpacity>
@@ -233,9 +233,9 @@ export default function VoiceRecorder({
                 activeOpacity={0.7}
               >
                 {isPlaying ? (
-                  <Pause size={28} color={Colors.orange} strokeWidth={2} />
+                  <Pause size={24} color={Colors.orange} strokeWidth={2} />
                 ) : (
-                  <Play size={28} color={Colors.orange} strokeWidth={2} />
+                  <Play size={24} color={Colors.orange} strokeWidth={2} />
                 )}
               </TouchableOpacity>
               <TouchableOpacity
@@ -243,7 +243,7 @@ export default function VoiceRecorder({
                 onPress={resetRecording}
                 activeOpacity={0.7}
               >
-                <RotateCcw size={28} color={Colors.grayLight} strokeWidth={2} />
+                <RotateCcw size={24} color={Colors.grayLight} strokeWidth={2} />
               </TouchableOpacity>
             </View>
             <Text style={styles.instruction}>
@@ -286,24 +286,24 @@ const styles = StyleSheet.create({
   scriptBox: {
     backgroundColor: 'rgba(255, 107, 53, 0.05)',
     borderRadius: 12,
-    padding: 12,
+    padding: 10,
     borderWidth: 1,
     borderColor: 'rgba(255, 107, 53, 0.2)',
   },
   scriptText: {
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 11,
+    lineHeight: 16,
     color: Colors.grayLight,
   },
   recorderContainer: {
     alignItems: 'center',
-    gap: 12,
-    paddingVertical: 12,
+    gap: 10,
+    paddingVertical: 8,
   },
   recordButton: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     overflow: 'hidden',
   },
   recordingActive: {
@@ -323,13 +323,13 @@ const styles = StyleSheet.create({
   },
   playbackControls: {
     flexDirection: 'row',
-    gap: 16,
+    gap: 14,
     alignItems: 'center',
   },
   controlButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: Colors.gray,
     alignItems: 'center',
     justifyContent: 'center',
@@ -337,14 +337,14 @@ const styles = StyleSheet.create({
     borderColor: Colors.grayLight,
   },
   confirmButton: {
-    marginTop: 12,
+    marginTop: 10,
     borderRadius: 12,
     overflow: 'hidden',
     width: '100%',
   },
   confirmButtonGradient: {
     flexDirection: 'row',
-    padding: 16,
+    padding: 14,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
