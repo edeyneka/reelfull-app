@@ -781,13 +781,15 @@ export default function FeedScreen() {
   };
 
   const handleCopyScript = async () => {
-    if (!selectedVideo?.script) return;
+    // Use script if available, otherwise fall back to prompt
+    const textToCopy = selectedVideo?.script || selectedVideo?.prompt;
+    if (!textToCopy) return;
 
     try {
-      // Transform script: replace "???" with "?"
-      const transformedScript = selectedVideo.script.replace(/\?\?\?/g, '?');
+      // Transform text: replace "???" with "?"
+      const transformedText = textToCopy.replace(/\?\?\?/g, '?');
       
-      await Clipboard.setStringAsync(transformedScript);
+      await Clipboard.setStringAsync(transformedText);
       setIsCopied(true);
       
       // Reset the copied state after 2 seconds
@@ -796,7 +798,7 @@ export default function FeedScreen() {
       }, 2000);
     } catch (error) {
       console.error('Copy error:', error);
-      Alert.alert('Error', 'Failed to copy script. Please try again.');
+      Alert.alert('Error', 'Failed to copy text. Please try again.');
     }
   };
 
@@ -905,7 +907,7 @@ export default function FeedScreen() {
                       style={styles.copyIconButton}
                       onPress={handleCopyScript}
                       activeOpacity={0.8}
-                      disabled={!selectedVideo?.script}
+                      disabled={!selectedVideo?.script && !selectedVideo?.prompt}
                     >
                       {isCopied ? (
                         <Check size={18} color={Colors.orange} strokeWidth={2.5} />

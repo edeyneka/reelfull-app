@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { Phone, ArrowRight } from 'lucide-react-native';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -97,18 +97,6 @@ export default function AuthScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [code, setCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(true);
-
-  // Give the Convex client more time to establish connection on mount
-  // Use a longer timeout for production builds where network may be slower
-  useEffect(() => {
-    console.log('[Auth] Waiting for Convex client to connect...');
-    const timer = setTimeout(() => {
-      setIsConnecting(false);
-      console.log('[Auth] Convex client ready (timeout complete)');
-    }, 3000); // Increased from 1s to 3s
-    return () => clearTimeout(timer);
-  }, []);
 
   const formatPhoneNumber = (value: string, country: Country) => {
     // Remove all non-digit characters
@@ -388,14 +376,14 @@ export default function AuthScreen() {
                   </View>
 
                   <TouchableOpacity
-                    style={[styles.button, (!isPhoneValid() || isConnecting) && styles.buttonDisabled]}
+                    style={[styles.button, !isPhoneValid() && styles.buttonDisabled]}
                     onPress={handleSendCode}
-                    disabled={!isPhoneValid() || isLoading || isConnecting}
+                    disabled={!isPhoneValid() || isLoading}
                     activeOpacity={0.8}
                   >
                     <LinearGradient
                       colors={
-                        isPhoneValid() && !isLoading && !isConnecting
+                        isPhoneValid() && !isLoading
                           ? [Colors.orange, Colors.orangeLight]
                           : [Colors.gray, Colors.grayLight]
                       }
@@ -403,11 +391,8 @@ export default function AuthScreen() {
                       end={{ x: 1, y: 0 }}
                       style={styles.buttonGradient}
                     >
-                      {isLoading || isConnecting ? (
-                        <>
-                          <ActivityIndicator color={Colors.white} />
-                          {isConnecting && <Text style={styles.buttonText}>Connecting...</Text>}
-                        </>
+                      {isLoading ? (
+                        <ActivityIndicator color={Colors.white} />
                       ) : (
                         <>
                           <Text style={styles.buttonText}>Send Code</Text>
