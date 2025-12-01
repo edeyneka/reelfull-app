@@ -665,6 +665,7 @@ const styles = StyleSheet.create({
     padding: 16,
     fontSize: 18,
     color: Colors.white,
+    letterSpacing: 0,
   },
   codeInput: {
     backgroundColor: 'rgba(50, 50, 50, 0.8)',

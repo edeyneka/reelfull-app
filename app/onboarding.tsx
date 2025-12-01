@@ -507,6 +507,7 @@ const styles = StyleSheet.create({
     color: Colors.white,
     borderWidth: 2,
     borderColor: 'rgba(255, 255, 255, 0.1)',
+    letterSpacing: 0,
   },
   optionsContainer: {
     gap: 12,
