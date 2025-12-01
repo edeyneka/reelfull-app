@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -339,11 +340,13 @@ export default function AuthScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.keyboardView}
         >
-          <View
-            style={[
+          <ScrollView
+            contentContainerStyle={[
               styles.content,
               { paddingTop: insets.top + 60, paddingBottom: insets.bottom + 20 },
             ]}
+            keyboardDismissMode="on-drag"
+            keyboardShouldPersistTaps="handled"
           >
             <View style={styles.header}>
               <View style={styles.iconContainer}>
@@ -380,7 +383,6 @@ export default function AuthScreen() {
                         onChangeText={(text) => setPhoneNumber(formatPhoneNumber(text, selectedCountry))}
                         keyboardType="phone-pad"
                         maxLength={20}
-                        autoFocus
                       />
                     </View>
                   </View>
@@ -437,7 +439,6 @@ export default function AuthScreen() {
                       onChangeText={setCode}
                       keyboardType="number-pad"
                       maxLength={6}
-                      autoFocus
                     />
                   </View>
 
@@ -487,7 +488,7 @@ export default function AuthScreen() {
                 </>
               )}
             </View>
-          </View>
+          </ScrollView>
         </KeyboardAvoidingView>
       </LinearGradient>
     </View>
@@ -506,7 +507,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    flex: 1,
+    flexGrow: 1,
     paddingHorizontal: 24,
   },
   header: {
