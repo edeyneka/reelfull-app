@@ -81,7 +81,6 @@ export default function ScriptReviewScreen() {
         script: scriptToSave,
       });
       setIsEditing(false);
-      Alert.alert('Success', 'Script updated');
     } catch (error) {
       console.error('Update script error:', error);
       Alert.alert('Error', 'Failed to update script');
@@ -102,7 +101,6 @@ export default function ScriptReviewScreen() {
       const result = await regenerateScript({ projectId });
       if (result.success) {
         // The new script will be automatically picked up by the useEffect
-        Alert.alert('Success', 'Script has been regenerated!');
       } else {
         throw new Error(result.error || 'Failed to regenerate script');
       }

@@ -160,10 +160,8 @@ export default function AuthScreen() {
         // Remember if we're using Twilio Verify
         setUseTwilioVerify(result.useTwilioVerify || false);
         
-        // Show message based on environment
-        if (result.useTwilioVerify) {
-          Alert.alert('Code Sent', 'Check your phone for the verification code');
-        } else {
+        // Show message only in development mode
+        if (!result.useTwilioVerify) {
           Alert.alert(
             'Development Mode',
             'Check the backend console for your OTP code (not sent via SMS)'
@@ -241,13 +239,10 @@ export default function AuthScreen() {
         // Navigate based on onboarding status (or test mode)
         if (ENABLE_TEST_RUN_MODE) {
           // Test mode: always go to onboarding for testing
-          Alert.alert('Test Mode', 'Redirecting to onboarding for testing...');
           router.replace('/onboarding');
         } else if (result.onboardingCompleted) {
-          Alert.alert('Welcome Back!', 'Redirecting to your feed...');
           router.replace('/feed');
         } else {
-          Alert.alert('Welcome!', "Let's set up your profile...");
           router.replace('/onboarding');
         }
       }
