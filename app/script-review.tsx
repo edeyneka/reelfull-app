@@ -164,66 +164,18 @@ export default function ScriptReviewScreen() {
         return; // Exit early - generation continues in background
       }
 
-      // Test run mode: Upload sample assets and schedule test run setup (same pattern as normal mode)
-      // ⚠️  TEST MODE: Skips ALL AI generation - uses pre-recorded sample files instead
-      console.log('[script-review] ⚠️  TEST RUN MODE: Using sample files from assets/media (NO AI generation)');
-      console.log('[script-review] Loading sample assets...');
-      
-      // Load and upload sample voice (from assets/media/sample_voice.mp3)
-      // This replaces AI voice generation
-      const sampleVoiceAsset = Asset.fromModule(require('@/assets/media/sample_voice.mp3'));
-      await sampleVoiceAsset.downloadAsync();
-      console.log('[script-review] Uploading sample voice from assets/media/sample_voice.mp3...');
-      const audioStorageId = await uploadFileToConvex(
-        generateUploadUrl,
-        sampleVoiceAsset.localUri || sampleVoiceAsset.uri,
-        'audio/mp3'
-      );
-      console.log('[script-review] ✓ Sample voice uploaded, storage ID:', audioStorageId);
+      // Test run mode requested but not available when ENABLE_TEST_RUN_MODE is false
+      if (!ENABLE_TEST_RUN_MODE) {
+        console.error('[script-review] Test run mode requested but ENABLE_TEST_RUN_MODE is disabled');
+        Alert.alert('Error', 'Test mode is not available in this build. Sample assets are not configured.');
+        setIsSubmitting(false);
+        return;
+      }
 
-      // Load and upload sample music (from assets/media/sample_music.mp3)
-      const sampleMusicAsset = Asset.fromModule(require('@/assets/media/sample_music.mp3'));
-      await sampleMusicAsset.downloadAsync();
-      console.log('[script-review] Uploading sample music from assets/media/sample_music.mp3...');
-      const musicStorageId = await uploadFileToConvex(
-        generateUploadUrl,
-        sampleMusicAsset.localUri || sampleMusicAsset.uri,
-        'audio/mp3'
-      );
-      console.log('[script-review] ✓ Sample music uploaded, storage ID:', musicStorageId);
-
-      // Load sample SRT (from assets/media/sample_srt.srt)
-      // This replaces AI SRT generation
-      const sampleSrtAsset = Asset.fromModule(require('@/assets/media/sample_srt.srt'));
-      await sampleSrtAsset.downloadAsync();
-      const srtResponse = await fetch(sampleSrtAsset.localUri || sampleSrtAsset.uri);
-      const srtContent = await srtResponse.text();
-      console.log('[script-review] ✓ Sample SRT loaded from assets/media/sample_srt.srt, length:', srtContent.length);
-
-      // Optimistically update video status to "processing" for instant UI feedback (same as normal mode)
-      console.log('[script-review] Optimistically updating video to processing state...');
-      addVideo({
-        id: projectId,
-        uri: '',
-        prompt: project.prompt,
-        script: scriptToSave,
-        createdAt: project.createdAt || Date.now(),
-        status: 'processing',
-        projectId: projectId,
-        thumbnailUrl: project.thumbnailUrl,
-      });
-
-      // Mark project as submitted in test mode (schedules test run setup server-side, same pattern as normal mode)
-      console.log('[script-review] Marking project as submitted in test mode (schedules setup server-side)...');
-      await markProjectSubmittedTestMode({
-        id: projectId,
-        audioStorageId,
-        srtContent,
-        musicStorageId,
-      });
-
-      console.log('[script-review] Test run scheduled server-side, navigating to feed...');
-      router.replace('/feed');
+      // If we reach here, test mode is enabled but this shouldn't happen in production
+      console.error('[script-review] Test run mode is enabled but sample assets are not configured');
+      Alert.alert('Error', 'Test mode is enabled but sample assets are missing. Please add sample media files or disable test mode.');
+      setIsSubmitting(false);
     } catch (error) {
       console.error('[script-review] Approve error:', error);
       Alert.alert('Error', `Failed to start generation: ${error instanceof Error ? error.message : 'Unknown error'}`);
