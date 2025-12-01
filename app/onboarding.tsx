@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { Sparkles, ArrowRight, ChevronLeft } from 'lucide-react-native';
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -11,9 +11,10 @@ import {
   TouchableOpacity,
   View,
   Alert,
+  Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Video, ResizeMode } from 'expo-av';
+import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAction, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -161,18 +162,112 @@ export default function OnboardingScreen() {
   const isStep2Valid = selectedStyle !== null;
   
   const videoSource = require('../assets/third_intro_ultra.mp4');
+  
+  // Crossfade video loop logic
+  const video1Ref = useRef<Video>(null);
+  const video2Ref = useRef<Video>(null);
+  const video1Opacity = useRef(new Animated.Value(1)).current;
+  const video2Opacity = useRef(new Animated.Value(0)).current;
+  const activeVideo = useRef<1 | 2>(1);
+  const isTransitioning = useRef(false);
+  
+  const FADE_DURATION = 800; // ms for crossfade
+  const TRIGGER_BEFORE_END = 1000; // ms before end to start transition
+  
+  const handleVideo1Status = useCallback((status: AVPlaybackStatus) => {
+    if (!status.isLoaded) return;
+    
+    const duration = status.durationMillis || 0;
+    const position = status.positionMillis || 0;
+    const timeLeft = duration - position;
+    
+    // Start crossfade when approaching end
+    if (activeVideo.current === 1 && timeLeft < TRIGGER_BEFORE_END && timeLeft > 0 && !isTransitioning.current) {
+      isTransitioning.current = true;
+      
+      // Start video 2 and crossfade
+      video2Ref.current?.setPositionAsync(0);
+      video2Ref.current?.playAsync();
+      
+      Animated.parallel([
+        Animated.timing(video1Opacity, {
+          toValue: 0,
+          duration: FADE_DURATION,
+          useNativeDriver: true,
+        }),
+        Animated.timing(video2Opacity, {
+          toValue: 1,
+          duration: FADE_DURATION,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        activeVideo.current = 2;
+        isTransitioning.current = false;
+        video1Ref.current?.pauseAsync();
+      });
+    }
+  }, [video1Opacity, video2Opacity]);
+  
+  const handleVideo2Status = useCallback((status: AVPlaybackStatus) => {
+    if (!status.isLoaded) return;
+    
+    const duration = status.durationMillis || 0;
+    const position = status.positionMillis || 0;
+    const timeLeft = duration - position;
+    
+    // Start crossfade when approaching end
+    if (activeVideo.current === 2 && timeLeft < TRIGGER_BEFORE_END && timeLeft > 0 && !isTransitioning.current) {
+      isTransitioning.current = true;
+      
+      // Start video 1 and crossfade
+      video1Ref.current?.setPositionAsync(0);
+      video1Ref.current?.playAsync();
+      
+      Animated.parallel([
+        Animated.timing(video2Opacity, {
+          toValue: 0,
+          duration: FADE_DURATION,
+          useNativeDriver: true,
+        }),
+        Animated.timing(video1Opacity, {
+          toValue: 1,
+          duration: FADE_DURATION,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        activeVideo.current = 1;
+        isTransitioning.current = false;
+        video2Ref.current?.pauseAsync();
+      });
+    }
+  }, [video1Opacity, video2Opacity]);
 
   return (
     <View style={styles.container}>
-      {/* Video Background */}
-      <Video
-        source={videoSource}
-        style={styles.videoBackground}
-        resizeMode={ResizeMode.COVER}
-        shouldPlay
-        isLooping
-        isMuted
-      />
+      {/* Video Background with Crossfade */}
+      <Animated.View style={[styles.videoContainer, { opacity: video1Opacity }]}>
+        <Video
+          ref={video1Ref}
+          source={videoSource}
+          style={styles.videoBackground}
+          resizeMode={ResizeMode.COVER}
+          shouldPlay
+          isMuted
+          onPlaybackStatusUpdate={handleVideo1Status}
+          progressUpdateIntervalMillis={100}
+        />
+      </Animated.View>
+      <Animated.View style={[styles.videoContainer, { opacity: video2Opacity }]}>
+        <Video
+          ref={video2Ref}
+          source={videoSource}
+          style={styles.videoBackground}
+          resizeMode={ResizeMode.COVER}
+          isMuted
+          onPlaybackStatusUpdate={handleVideo2Status}
+          progressUpdateIntervalMillis={100}
+        />
+      </Animated.View>
       
       {/* Semi-transparent overlay */}
       <View style={styles.overlay} />
@@ -335,12 +430,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.black,
   },
-  videoBackground: {
+  videoContainer: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
+  },
+  videoBackground: {
     width: '100%',
     height: '100%',
   },

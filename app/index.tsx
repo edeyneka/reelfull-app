@@ -1,8 +1,8 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { StyleSheet, TouchableOpacity, View, Text, Animated, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Video, ResizeMode } from 'expo-av';
+import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
 import { Fonts } from '@/constants/typography';
@@ -22,6 +22,65 @@ export default function IntroScreen() {
   });
   
   const videoSource = require('../assets/third_intro_ultra.mp4');
+  
+  // Crossfade video loop logic
+  const video1Ref = useRef<Video>(null);
+  const video2Ref = useRef<Video>(null);
+  const video1Opacity = useRef(new Animated.Value(1)).current;
+  const video2Opacity = useRef(new Animated.Value(0)).current;
+  const activeVideo = useRef<1 | 2>(1);
+  const isTransitioning = useRef(false);
+  
+  const FADE_DURATION = 800;
+  const TRIGGER_BEFORE_END = 1000;
+  
+  const handleVideo1Status = useCallback((status: AVPlaybackStatus) => {
+    if (!status.isLoaded) return;
+    
+    const duration = status.durationMillis || 0;
+    const position = status.positionMillis || 0;
+    const timeLeft = duration - position;
+    
+    if (activeVideo.current === 1 && timeLeft < TRIGGER_BEFORE_END && timeLeft > 0 && !isTransitioning.current) {
+      isTransitioning.current = true;
+      
+      video2Ref.current?.setPositionAsync(0);
+      video2Ref.current?.playAsync();
+      
+      Animated.parallel([
+        Animated.timing(video1Opacity, { toValue: 0, duration: FADE_DURATION, useNativeDriver: true }),
+        Animated.timing(video2Opacity, { toValue: 1, duration: FADE_DURATION, useNativeDriver: true }),
+      ]).start(() => {
+        activeVideo.current = 2;
+        isTransitioning.current = false;
+        video1Ref.current?.pauseAsync();
+      });
+    }
+  }, [video1Opacity, video2Opacity]);
+  
+  const handleVideo2Status = useCallback((status: AVPlaybackStatus) => {
+    if (!status.isLoaded) return;
+    
+    const duration = status.durationMillis || 0;
+    const position = status.positionMillis || 0;
+    const timeLeft = duration - position;
+    
+    if (activeVideo.current === 2 && timeLeft < TRIGGER_BEFORE_END && timeLeft > 0 && !isTransitioning.current) {
+      isTransitioning.current = true;
+      
+      video1Ref.current?.setPositionAsync(0);
+      video1Ref.current?.playAsync();
+      
+      Animated.parallel([
+        Animated.timing(video2Opacity, { toValue: 0, duration: FADE_DURATION, useNativeDriver: true }),
+        Animated.timing(video1Opacity, { toValue: 1, duration: FADE_DURATION, useNativeDriver: true }),
+      ]).start(() => {
+        activeVideo.current = 1;
+        isTransitioning.current = false;
+        video2Ref.current?.pauseAsync();
+      });
+    }
+  }, [video1Opacity, video2Opacity]);
 
   // Handle video playback errors
   const handleVideoError = (error: any) => {
@@ -85,15 +144,33 @@ export default function IntroScreen() {
   return (
     <View style={styles.container}>
       {!videoError && (
-      <Video
-        source={videoSource}
-        style={styles.gif}
-        resizeMode={ResizeMode.COVER}
-        shouldPlay
-        isLooping
-        isMuted
-          onError={handleVideoError}
-      />
+        <>
+          <Animated.View style={[styles.videoContainer, { opacity: video1Opacity }]}>
+            <Video
+              ref={video1Ref}
+              source={videoSource}
+              style={styles.videoBackground}
+              resizeMode={ResizeMode.COVER}
+              shouldPlay
+              isMuted
+              onPlaybackStatusUpdate={handleVideo1Status}
+              onError={handleVideoError}
+              progressUpdateIntervalMillis={100}
+            />
+          </Animated.View>
+          <Animated.View style={[styles.videoContainer, { opacity: video2Opacity }]}>
+            <Video
+              ref={video2Ref}
+              source={videoSource}
+              style={styles.videoBackground}
+              resizeMode={ResizeMode.COVER}
+              isMuted
+              onPlaybackStatusUpdate={handleVideo2Status}
+              onError={handleVideoError}
+              progressUpdateIntervalMillis={100}
+            />
+          </Animated.View>
+        </>
       )}
       <LinearGradient
         colors={['rgba(0,0,0,0.6)', 'transparent', 'rgba(0,0,0,0.8)']}
@@ -135,12 +212,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.black,
   },
-  gif: {
+  videoContainer: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
+  },
+  videoBackground: {
     width: '100%',
     height: '100%',
   },
