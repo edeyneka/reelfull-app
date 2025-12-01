@@ -15,12 +15,14 @@ interface VoiceRecorderProps {
   onRecordingComplete: (uri: string) => void;
   initialRecordingUri?: string;
   showScript?: boolean;
+  disabled?: boolean;
 }
 
 export default function VoiceRecorder({ 
   onRecordingComplete, 
   initialRecordingUri,
-  showScript = true 
+  showScript = true,
+  disabled = false,
 }: VoiceRecorderProps) {
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [recordingUri, setRecordingUri] = useState<string | undefined>(initialRecordingUri);
@@ -250,18 +252,19 @@ export default function VoiceRecorder({
               {isPlaying ? 'Playing...' : 'Tap play to review or re-record'}
             </Text>
             <TouchableOpacity
-              style={styles.confirmButton}
+              style={[styles.confirmButton, disabled && styles.confirmButtonDisabled]}
               onPress={confirmRecording}
               activeOpacity={0.8}
+              disabled={disabled}
             >
               <LinearGradient
-                colors={[Colors.orange, Colors.orangeLight]}
+                colors={disabled ? [Colors.gray, Colors.grayLight] : [Colors.orange, Colors.orangeLight]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.confirmButtonGradient}
               >
                 <Check size={20} color={Colors.white} strokeWidth={3} />
-                <Text style={styles.confirmButtonText}>Use This Recording</Text>
+                <Text style={styles.confirmButtonText}>{disabled ? 'Uploading...' : 'Use This Recording'}</Text>
               </LinearGradient>
             </TouchableOpacity>
           </>
@@ -353,6 +356,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700' as const,
     color: Colors.white,
+  },
+  confirmButtonDisabled: {
+    opacity: 0.7,
   },
 });
 

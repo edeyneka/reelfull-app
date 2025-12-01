@@ -293,6 +293,7 @@ export default function OnboardingScreen() {
                   <VoiceRecorder
                     onRecordingComplete={handleVoiceRecordingComplete}
                     showScript={true}
+                    disabled={isSaving}
                   />
                   
                   <TouchableOpacity

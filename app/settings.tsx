@@ -702,6 +702,7 @@ export default function SettingsScreen() {
                     onRecordingComplete={handleVoiceRecordingComplete}
                     initialRecordingUri={user.voiceRecordingUrl}
                     showScript={true}
+                    disabled={isLoading}
                   />
                 </View>
               </View>
@@ -741,6 +742,20 @@ export default function SettingsScreen() {
                             <Text style={styles.voiceOptionDesc}>Custom AI voice clone</Text>
                           </View>
                         </View>
+                        {user.voicePreviewStorageId && (
+                          <TouchableOpacity
+                            style={styles.previewButton}
+                            onPress={() => playVoicePreview(user.voicePreviewStorageId!, user.elevenlabsVoiceId)}
+                            activeOpacity={0.7}
+                            disabled={playingPreviewId === user.elevenlabsVoiceId && !previewUrl}
+                          >
+                            {playingPreviewId === user.elevenlabsVoiceId && !previewUrl ? (
+                              <ActivityIndicator size="small" color={Colors.orange} />
+                            ) : (
+                              <Volume2 size={18} color={Colors.orange} strokeWidth={2} />
+                            )}
+                          </TouchableOpacity>
+                        )}
                       </TouchableOpacity>
                     )}
 
