@@ -6,6 +6,7 @@ import { Video, ResizeMode } from 'expo-av';
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
 import { Fonts } from '@/constants/typography';
+import { ENABLE_TEST_RUN_MODE } from '@/constants/config';
 import { useFonts, Inter_400Regular, Inter_700Bold } from '@expo-google-fonts/inter';
 
 export default function IntroScreen() {
@@ -34,8 +35,14 @@ export default function IntroScreen() {
     setHasNavigated(true);
     
     if (userId) {
-      // User is authenticated, go to feed
-      router.replace('/feed');
+      // User is authenticated
+      if (ENABLE_TEST_RUN_MODE) {
+        // Test mode: always go to onboarding for testing
+        router.replace('/onboarding');
+      } else {
+        // Normal mode: go to feed
+        router.replace('/feed');
+      }
     } else {
       // No user, go to auth
       router.replace('/auth');

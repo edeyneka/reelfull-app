@@ -23,6 +23,7 @@ import CountrySelector from '@/components/CountrySelector';
 import { Country, DEFAULT_COUNTRY } from '@/constants/countries';
 import { Fonts } from '@/constants/typography';
 import { Audio } from 'expo-av';
+import { ENABLE_TEST_RUN_MODE } from '@/constants/config';
 
 // Retry helper with exponential backoff
 async function retryWithBackoff<T>(
@@ -235,8 +236,12 @@ export default function AuthScreen() {
         // Request microphone permission after successful verification
         await requestMicrophonePermission();
         
-        // Navigate based on onboarding status
-        if (result.onboardingCompleted) {
+        // Navigate based on onboarding status (or test mode)
+        if (ENABLE_TEST_RUN_MODE) {
+          // Test mode: always go to onboarding for testing
+          Alert.alert('Test Mode', 'Redirecting to onboarding for testing...');
+          router.replace('/onboarding');
+        } else if (result.onboardingCompleted) {
           Alert.alert('Welcome Back!', 'Redirecting to your feed...');
           router.replace('/feed');
         } else {
@@ -290,8 +295,11 @@ export default function AuthScreen() {
         // Request microphone permission after successful verification
         await requestMicrophonePermission();
         
-        // Navigate based on onboarding status
-        if (result.onboardingCompleted) {
+        // Navigate based on onboarding status (or test mode)
+        if (ENABLE_TEST_RUN_MODE) {
+          // Test mode: always go to onboarding for testing
+          router.replace('/onboarding');
+        } else if (result.onboardingCompleted) {
           router.replace('/feed');
         } else {
           router.replace('/onboarding');
