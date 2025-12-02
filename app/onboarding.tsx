@@ -23,6 +23,7 @@ import { useApp } from '@/contexts/AppContext';
 import { StylePreference } from '@/types';
 import VoiceRecorder from '@/components/VoiceRecorder';
 import { Fonts } from '@/constants/typography';
+import { ENABLE_STYLE_PREFERENCE, DEFAULT_STYLE } from '@/constants/config';
 
 const STYLE_OPTIONS: StylePreference[] = ['Playful', 'Professional', 'Dreamy'];
 
@@ -42,17 +43,30 @@ export default function OnboardingScreen() {
 
   const handleNext = () => {
     if (step === 1 && name.trim()) {
-      setStep(2);
-    } else if (step === 2 && selectedStyle) {
+      if (ENABLE_STYLE_PREFERENCE) {
+        setStep(2);
+      } else {
+        // Skip style selection, go directly to voice recording
+        setSelectedStyle(DEFAULT_STYLE as StylePreference);
+        setStep(2); // This is now the voice step when style is disabled
+      }
+    } else if (ENABLE_STYLE_PREFERENCE && step === 2 && selectedStyle) {
       setStep(3);
     }
   };
 
   const handleBack = () => {
-    if (step === 3) {
-      setStep(2);
-    } else if (step === 2) {
-      setStep(1);
+    if (ENABLE_STYLE_PREFERENCE) {
+      if (step === 3) {
+        setStep(2);
+      } else if (step === 2) {
+        setStep(1);
+      }
+    } else {
+      // When style is disabled, step 2 is voice recording
+      if (step === 2) {
+        setStep(1);
+      }
     }
   };
 
@@ -160,6 +174,11 @@ export default function OnboardingScreen() {
 
   const isStep1Valid = name.trim().length > 0;
   const isStep2Valid = selectedStyle !== null;
+  
+  // Determine if current step is the voice recording step
+  const isVoiceStep = ENABLE_STYLE_PREFERENCE ? step === 3 : step === 2;
+  // Determine if current step is the style selection step (only when enabled)
+  const isStyleStep = ENABLE_STYLE_PREFERENCE && step === 2;
   
   const videoSource = require('../assets/third_intro_ultra.mp4');
   
@@ -300,12 +319,12 @@ export default function OnboardingScreen() {
                 <Sparkles size={40} color={Colors.orange} strokeWidth={2} />
               </View>
               <Text style={styles.title}>
-                {step === 1 ? 'Welcome to Reelful' : step === 2 ? 'Your Style' : 'Record Your Voice'}
+                {step === 1 ? 'Welcome to Reelful' : isStyleStep ? 'Your Style' : 'Record Your Voice'}
               </Text>
               <Text style={styles.subtitle}>
                 {step === 1
                   ? "Let's personalize your experience"
-                  : step === 2
+                  : isStyleStep
                   ? 'Choose the style that best fits you'
                   : 'This helps us create more personalized content'}
               </Text>
@@ -348,7 +367,7 @@ export default function OnboardingScreen() {
                     </LinearGradient>
                   </TouchableOpacity>
                 </>
-              ) : step === 2 ? (
+              ) : isStyleStep ? (
                 <>
                   <View style={styles.inputGroup}>
                     <Text style={styles.label}>Choose your style</Text>

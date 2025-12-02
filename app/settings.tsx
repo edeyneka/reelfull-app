@@ -24,6 +24,7 @@ import { StylePreference, BackendStyle } from '@/types';
 import VoiceRecorder from '@/components/VoiceRecorder';
 import { uploadFileToConvex, mapStyleToBackend, mapStyleToApp } from '@/lib/api-helpers';
 import { Fonts } from '@/constants/typography';
+import { ENABLE_STYLE_PREFERENCE } from '@/constants/config';
 
 const STYLE_OPTIONS: StylePreference[] = ['Playful', 'Professional', 'Dreamy'];
 
@@ -504,19 +505,21 @@ export default function SettingsScreen() {
                 <ChevronRight size={20} color={Colors.grayLight} strokeWidth={2} />
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.menuItem}
-                onPress={() => setIsEditingStyle(true)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.menuItemLeft}>
-                  <View style={styles.menuIconContainer}>
-                    <Palette size={22} color={Colors.white} strokeWidth={2} />
+              {ENABLE_STYLE_PREFERENCE && (
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => setIsEditingStyle(true)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.menuItemLeft}>
+                    <View style={styles.menuIconContainer}>
+                      <Palette size={22} color={Colors.white} strokeWidth={2} />
+                    </View>
+                    <Text style={styles.menuItemText}>Content Preferences</Text>
                   </View>
-                  <Text style={styles.menuItemText}>Content Preferences</Text>
-                </View>
-                <ChevronRight size={20} color={Colors.grayLight} strokeWidth={2} />
-              </TouchableOpacity>
+                  <ChevronRight size={20} color={Colors.grayLight} strokeWidth={2} />
+                </TouchableOpacity>
+              )}
 
               <TouchableOpacity
                 style={styles.menuItem}
@@ -620,7 +623,7 @@ export default function SettingsScreen() {
             )}
 
             {/* Edit Style Modal */}
-            {isEditingStyle && (
+            {ENABLE_STYLE_PREFERENCE && isEditingStyle && (
               <View style={styles.editModalOverlay}>
                 <View style={styles.editModalContent}>
                   <View style={styles.editModalHeader}>
