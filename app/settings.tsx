@@ -572,266 +572,266 @@ export default function SettingsScreen() {
             >
               <Text style={styles.logoutText}>Log out</Text>
             </TouchableOpacity>
-
-            {/* Edit Name Modal */}
-            {isEditingName && (
-              <View style={styles.editModalOverlay}>
-                <View style={styles.editModalContent}>
-                  <View style={styles.editModalHeader}>
-                    <Text style={styles.editModalTitle}>Edit Name</Text>
-                    <TouchableOpacity
-                      onPress={handleCancelName}
-                      activeOpacity={0.7}
-                      disabled={isLoading}
-                    >
-                      <X size={24} color={Colors.white} strokeWidth={2} />
-                    </TouchableOpacity>
-                  </View>
-                  <TextInput
-                    style={styles.editInput}
-                    value={editedName}
-                    onChangeText={setEditedName}
-                    placeholder="Enter your name"
-                    placeholderTextColor={Colors.grayLight}
-                    autoCapitalize="words"
-                    editable={!isLoading}
-                  />
-                  <TouchableOpacity
-                    onPress={handleSaveName}
-                    activeOpacity={0.7}
-                    disabled={isLoading}
-                  >
-                    <LinearGradient
-                      colors={
-                        !isLoading
-                          ? [Colors.orange, Colors.orangeLight]
-                          : [Colors.gray, Colors.grayLight]
-                      }
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={styles.saveButton}
-                    >
-                      {isLoading ? (
-                        <ActivityIndicator size="small" color={Colors.white} />
-                      ) : (
-                        <Text style={styles.saveButtonText}>Save</Text>
-                      )}
-                    </LinearGradient>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-
-            {/* Edit Style Modal */}
-            {ENABLE_STYLE_PREFERENCE && isEditingStyle && (
-              <View style={styles.editModalOverlay}>
-                <View style={styles.editModalContent}>
-                  <View style={styles.editModalHeader}>
-                    <Text style={styles.editModalTitle}>Content Preferences</Text>
-                    <TouchableOpacity
-                      onPress={handleCancelStyle}
-                      activeOpacity={0.7}
-                      disabled={isLoading}
-                    >
-                      <X size={24} color={Colors.white} strokeWidth={2} />
-                    </TouchableOpacity>
-                  </View>
-                  <View style={styles.styleOptions}>
-                    {STYLE_OPTIONS.map((style) => (
-                      <TouchableOpacity
-                        key={style}
-                        style={[
-                          styles.styleOption,
-                          editedStyle === style && styles.styleOptionSelected,
-                        ]}
-                        onPress={() => setEditedStyle(style)}
-                        activeOpacity={0.7}
-                      >
-                        <Text
-                          style={[
-                            styles.styleOptionText,
-                            editedStyle === style && styles.styleOptionTextSelected,
-                          ]}
-                        >
-                          {style}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                  <TouchableOpacity
-                    onPress={handleSaveStyle}
-                    activeOpacity={0.7}
-                    disabled={isLoading}
-                  >
-                    <LinearGradient
-                      colors={
-                        !isLoading
-                          ? [Colors.orange, Colors.orangeLight]
-                          : [Colors.gray, Colors.grayLight]
-                      }
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={styles.saveButton}
-                    >
-                      {isLoading ? (
-                        <ActivityIndicator size="small" color={Colors.white} />
-                      ) : (
-                        <Text style={styles.saveButtonText}>Save</Text>
-                      )}
-                    </LinearGradient>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-
-            {/* Voice Recording Modal */}
-            {isEditingVoice && (
-              <View style={styles.editModalOverlay}>
-                <View style={styles.voiceCloneModalContent}>
-                  <View style={styles.voiceModalHeader}>
-                    <Text style={styles.editModalTitle}>Voice Clone</Text>
-                    <TouchableOpacity
-                      onPress={() => setIsEditingVoice(false)}
-                      activeOpacity={0.7}
-                      disabled={isLoading}
-                    >
-                      <X size={24} color={Colors.white} strokeWidth={2} />
-                    </TouchableOpacity>
-                  </View>
-                  <Text style={styles.modalDescription}>
-                    Record a sample to create your AI voice clone
-                  </Text>
-                  <VoiceRecorder
-                    onRecordingComplete={handleVoiceRecordingComplete}
-                    initialRecordingUri={user.voiceRecordingUrl}
-                    showScript={true}
-                    disabled={isLoading}
-                  />
-                </View>
-              </View>
-            )}
-
-            {/* Voice Selection Modal */}
-            {isSelectingVoice && (
-              <View style={styles.editModalOverlay}>
-                <View style={styles.voiceModalContent}>
-                  <View style={styles.editModalHeader}>
-                    <Text style={styles.editModalTitle}>Select Voice</Text>
-                    <TouchableOpacity
-                      onPress={() => setIsSelectingVoice(false)}
-                      activeOpacity={0.7}
-                    >
-                      <X size={24} color={Colors.white} strokeWidth={2} />
-                    </TouchableOpacity>
-                  </View>
-
-                  <ScrollView style={styles.voicesList}>
-                    {/* Custom Voice Option */}
-                    {user.elevenlabsVoiceId && (
-                      <TouchableOpacity
-                        style={[
-                          styles.voiceOption,
-                          user.selectedVoiceId === user.elevenlabsVoiceId && styles.voiceOptionSelected,
-                        ]}
-                        onPress={() => handleSelectVoice(user.elevenlabsVoiceId)}
-                        activeOpacity={0.7}
-                      >
-                        <View style={styles.voiceOptionContent}>
-                          <Headphones size={24} color={Colors.orange} strokeWidth={2} />
-                          <View style={styles.voiceOptionText}>
-                            <Text style={styles.voiceOptionName}>
-                              {user.name ? `${user.name}'s Voice` : 'Your Voice'}
-                            </Text>
-                            <Text style={styles.voiceOptionDesc}>Custom AI voice clone</Text>
-                          </View>
-                        </View>
-                        {user.voicePreviewStorageId && (
-                          <TouchableOpacity
-                            style={styles.previewButton}
-                            onPress={() => playVoicePreview(user.voicePreviewStorageId!, user.elevenlabsVoiceId)}
-                            activeOpacity={0.7}
-                            disabled={playingPreviewId === user.elevenlabsVoiceId && !previewUrl}
-                          >
-                            {playingPreviewId === user.elevenlabsVoiceId && !previewUrl ? (
-                              <ActivityIndicator size="small" color={Colors.orange} />
-                            ) : (
-                              <Volume2 size={18} color={Colors.orange} strokeWidth={2} />
-                            )}
-                          </TouchableOpacity>
-                        )}
-                      </TouchableOpacity>
-                    )}
-
-                    {/* Default Voices */}
-                    {defaultVoices?.map((voice: any) => (
-                      <TouchableOpacity
-                        key={voice._id}
-                        style={[
-                          styles.voiceOption,
-                          user.selectedVoiceId === voice.voiceId && styles.voiceOptionSelected,
-                        ]}
-                        onPress={() => handleSelectVoice(voice.voiceId)}
-                        activeOpacity={0.7}
-                      >
-                        <View style={styles.voiceOptionContent}>
-                          <Volume2 size={24} color={Colors.orange} strokeWidth={2} />
-                          <View style={styles.voiceOptionTextContainer}>
-                            <Text style={styles.voiceOptionName}>{voice.name}</Text>
-                            <Text style={styles.voiceOptionDesc}>
-                              {voice.description || 'Default voice'}
-                            </Text>
-                          </View>
-                        </View>
-                        {voice.previewStorageId && (
-                          <TouchableOpacity
-                            style={styles.previewButton}
-                            onPress={() => playVoicePreview(voice.previewStorageId!, voice.voiceId)}
-                            activeOpacity={0.7}
-                            disabled={playingPreviewId === voice.voiceId && !previewUrl}
-                          >
-                            {playingPreviewId === voice.voiceId && !previewUrl ? (
-                              <ActivityIndicator size="small" color={Colors.orange} />
-                            ) : (
-                              <Volume2 size={18} color={Colors.orange} strokeWidth={2} />
-                            )}
-                          </TouchableOpacity>
-                        )}
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              </View>
-            )}
-
-            {/* About Modal */}
-            {isAboutOpen && (
-              <View style={styles.editModalOverlay}>
-                <View style={styles.editModalContent}>
-                  <View style={styles.editModalHeader}>
-                    <Text style={styles.editModalTitle}>About Reelful</Text>
-                    <TouchableOpacity
-                      onPress={() => setIsAboutOpen(false)}
-                      activeOpacity={0.7}
-                    >
-                      <X size={24} color={Colors.white} strokeWidth={2} />
-                    </TouchableOpacity>
-                  </View>
-                  <View style={styles.aboutContent}>
-                    <Text style={styles.aboutDescription}>
-                      Upload your photos and videos with a short description and get a ready-to-share clip in minutes.
-                    </Text>
-                    <Text style={styles.aboutDescription}>
-                      Transform your memories into engaging content effortlessly.
-                    </Text>
-                    <View style={styles.madeWithLove}>
-                      <Text style={styles.madeWithLoveText}>Made with love </Text>
-                      <Text style={styles.orangeHeart}>🧡</Text>
-                    </View>
-                  </View>
-                </View>
-              </View>
-            )}
           </ScrollView>
+
+          {/* Edit Name Modal */}
+          {isEditingName && (
+            <View style={styles.editModalOverlay}>
+              <View style={styles.editModalContent}>
+                <View style={styles.editModalHeader}>
+                  <Text style={styles.editModalTitle}>Edit Name</Text>
+                  <TouchableOpacity
+                    onPress={handleCancelName}
+                    activeOpacity={0.7}
+                    disabled={isLoading}
+                  >
+                    <X size={24} color={Colors.white} strokeWidth={2} />
+                  </TouchableOpacity>
+                </View>
+                <TextInput
+                  style={styles.editInput}
+                  value={editedName}
+                  onChangeText={setEditedName}
+                  placeholder="Enter your name"
+                  placeholderTextColor={Colors.grayLight}
+                  autoCapitalize="words"
+                  editable={!isLoading}
+                />
+                <TouchableOpacity
+                  onPress={handleSaveName}
+                  activeOpacity={0.7}
+                  disabled={isLoading}
+                >
+                  <LinearGradient
+                    colors={
+                      !isLoading
+                        ? [Colors.orange, Colors.orangeLight]
+                        : [Colors.gray, Colors.grayLight]
+                    }
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.saveButton}
+                  >
+                    {isLoading ? (
+                      <ActivityIndicator size="small" color={Colors.white} />
+                    ) : (
+                      <Text style={styles.saveButtonText}>Save</Text>
+                    )}
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {/* Edit Style Modal */}
+          {ENABLE_STYLE_PREFERENCE && isEditingStyle && (
+            <View style={styles.editModalOverlay}>
+              <View style={styles.editModalContent}>
+                <View style={styles.editModalHeader}>
+                  <Text style={styles.editModalTitle}>Content Preferences</Text>
+                  <TouchableOpacity
+                    onPress={handleCancelStyle}
+                    activeOpacity={0.7}
+                    disabled={isLoading}
+                  >
+                    <X size={24} color={Colors.white} strokeWidth={2} />
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.styleOptions}>
+                  {STYLE_OPTIONS.map((style) => (
+                    <TouchableOpacity
+                      key={style}
+                      style={[
+                        styles.styleOption,
+                        editedStyle === style && styles.styleOptionSelected,
+                      ]}
+                      onPress={() => setEditedStyle(style)}
+                      activeOpacity={0.7}
+                    >
+                      <Text
+                        style={[
+                          styles.styleOptionText,
+                          editedStyle === style && styles.styleOptionTextSelected,
+                        ]}
+                      >
+                        {style}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <TouchableOpacity
+                  onPress={handleSaveStyle}
+                  activeOpacity={0.7}
+                  disabled={isLoading}
+                >
+                  <LinearGradient
+                    colors={
+                      !isLoading
+                        ? [Colors.orange, Colors.orangeLight]
+                        : [Colors.gray, Colors.grayLight]
+                    }
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.saveButton}
+                  >
+                    {isLoading ? (
+                      <ActivityIndicator size="small" color={Colors.white} />
+                    ) : (
+                      <Text style={styles.saveButtonText}>Save</Text>
+                    )}
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {/* Voice Recording Modal */}
+          {isEditingVoice && (
+            <View style={styles.editModalOverlay}>
+              <View style={styles.voiceCloneModalContent}>
+                <View style={styles.voiceModalHeader}>
+                  <Text style={styles.editModalTitle}>Voice Clone</Text>
+                  <TouchableOpacity
+                    onPress={() => setIsEditingVoice(false)}
+                    activeOpacity={0.7}
+                    disabled={isLoading}
+                  >
+                    <X size={24} color={Colors.white} strokeWidth={2} />
+                  </TouchableOpacity>
+                </View>
+                <Text style={styles.modalDescription}>
+                  Record a sample to create your AI voice clone
+                </Text>
+                <VoiceRecorder
+                  onRecordingComplete={handleVoiceRecordingComplete}
+                  initialRecordingUri={user.voiceRecordingUrl}
+                  showScript={true}
+                  disabled={isLoading}
+                />
+              </View>
+            </View>
+          )}
+
+          {/* Voice Selection Modal */}
+          {isSelectingVoice && (
+            <View style={styles.editModalOverlay}>
+              <View style={styles.voiceModalContent}>
+                <View style={styles.editModalHeader}>
+                  <Text style={styles.editModalTitle}>Select Voice</Text>
+                  <TouchableOpacity
+                    onPress={() => setIsSelectingVoice(false)}
+                    activeOpacity={0.7}
+                  >
+                    <X size={24} color={Colors.white} strokeWidth={2} />
+                  </TouchableOpacity>
+                </View>
+
+                <ScrollView style={styles.voicesList}>
+                  {/* Custom Voice Option */}
+                  {user.elevenlabsVoiceId && (
+                    <TouchableOpacity
+                      style={[
+                        styles.voiceOption,
+                        user.selectedVoiceId === user.elevenlabsVoiceId && styles.voiceOptionSelected,
+                      ]}
+                      onPress={() => handleSelectVoice(user.elevenlabsVoiceId)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.voiceOptionContent}>
+                        <Headphones size={24} color={Colors.orange} strokeWidth={2} />
+                        <View style={styles.voiceOptionText}>
+                          <Text style={styles.voiceOptionName}>
+                            {user.name ? `${user.name}'s Voice` : 'Your Voice'}
+                          </Text>
+                          <Text style={styles.voiceOptionDesc}>Custom AI voice clone</Text>
+                        </View>
+                      </View>
+                      {user.voicePreviewStorageId && (
+                        <TouchableOpacity
+                          style={styles.previewButton}
+                          onPress={() => playVoicePreview(user.voicePreviewStorageId!, user.elevenlabsVoiceId)}
+                          activeOpacity={0.7}
+                          disabled={playingPreviewId === user.elevenlabsVoiceId && !previewUrl}
+                        >
+                          {playingPreviewId === user.elevenlabsVoiceId && !previewUrl ? (
+                            <ActivityIndicator size="small" color={Colors.orange} />
+                          ) : (
+                            <Volume2 size={18} color={Colors.orange} strokeWidth={2} />
+                          )}
+                        </TouchableOpacity>
+                      )}
+                    </TouchableOpacity>
+                  )}
+
+                  {/* Default Voices */}
+                  {defaultVoices?.map((voice: any) => (
+                    <TouchableOpacity
+                      key={voice._id}
+                      style={[
+                        styles.voiceOption,
+                        user.selectedVoiceId === voice.voiceId && styles.voiceOptionSelected,
+                      ]}
+                      onPress={() => handleSelectVoice(voice.voiceId)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.voiceOptionContent}>
+                        <Volume2 size={24} color={Colors.orange} strokeWidth={2} />
+                        <View style={styles.voiceOptionTextContainer}>
+                          <Text style={styles.voiceOptionName}>{voice.name}</Text>
+                          <Text style={styles.voiceOptionDesc}>
+                            {voice.description || 'Default voice'}
+                          </Text>
+                        </View>
+                      </View>
+                      {voice.previewStorageId && (
+                        <TouchableOpacity
+                          style={styles.previewButton}
+                          onPress={() => playVoicePreview(voice.previewStorageId!, voice.voiceId)}
+                          activeOpacity={0.7}
+                          disabled={playingPreviewId === voice.voiceId && !previewUrl}
+                        >
+                          {playingPreviewId === voice.voiceId && !previewUrl ? (
+                            <ActivityIndicator size="small" color={Colors.orange} />
+                          ) : (
+                            <Volume2 size={18} color={Colors.orange} strokeWidth={2} />
+                          )}
+                        </TouchableOpacity>
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            </View>
+          )}
+
+          {/* About Modal */}
+          {isAboutOpen && (
+            <View style={styles.editModalOverlay}>
+              <View style={styles.editModalContent}>
+                <View style={styles.editModalHeader}>
+                  <Text style={styles.editModalTitle}>About Reelful</Text>
+                  <TouchableOpacity
+                    onPress={() => setIsAboutOpen(false)}
+                    activeOpacity={0.7}
+                  >
+                    <X size={24} color={Colors.white} strokeWidth={2} />
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.aboutContent}>
+                  <Text style={styles.aboutDescription}>
+                    Upload your photos and videos with a short description and get a ready-to-share clip in minutes.
+                  </Text>
+                  <Text style={styles.aboutDescription}>
+                    Transform your memories into engaging content effortlessly.
+                  </Text>
+                  <View style={styles.madeWithLove}>
+                    <Text style={styles.madeWithLoveText}>Made with love </Text>
+                    <Text style={styles.orangeHeart}>🧡</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+          )}
         </Animated.View>
       </GestureDetector>
     </Animated.View>
