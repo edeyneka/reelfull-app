@@ -220,6 +220,9 @@ export default function ComposerScreen() {
       return;
     }
 
+    // Show info alert
+    alert('Please wait until the script is generated to approve it');
+
     setIsUploading(true);
 
     try {
@@ -477,12 +480,12 @@ export default function ComposerScreen() {
                   style={styles.buttonGradient}
                 >
                   {isUploading ? (
-                    <>
+                    <View style={styles.buttonLoadingContent}>
                       <ActivityIndicator size="small" color={Colors.white} />
-                      <Text style={styles.buttonText}>Uploading...</Text>
-                    </>
+                      <Text style={styles.buttonText}>Generating Script...</Text>
+                    </View>
                   ) : (
-                    <Text style={styles.buttonText}>Generate Reel</Text>
+                    <Text style={styles.buttonText}>Generate Script</Text>
                   )}
                 </LinearGradient>
               </TouchableOpacity>
@@ -707,6 +710,11 @@ const styles = StyleSheet.create({
   buttonGradient: {
     padding: 16,
     alignItems: 'center',
+  },
+  buttonLoadingContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   buttonText: {
     fontSize: 17,

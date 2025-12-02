@@ -387,7 +387,7 @@ export default function ScriptReviewScreen() {
                 ) : (
                   <>
                     <Play size={20} color={Colors.white} strokeWidth={2.5} />
-                    <Text style={styles.approveButtonText}>Approve & Generate</Text>
+                    <Text style={styles.approveButtonText}>Approve & Generate Reel</Text>
                   </>
                 )}
               </LinearGradient>
