@@ -5,11 +5,13 @@ import { Audio } from 'expo-av';
 import { LinearGradient } from 'expo-linear-gradient';
 import Colors from '@/constants/colors';
 
-const SCRIPT_TEXT = `Morning rush? Meet your new ritual.
-The new AromaBrew One brings the café to your kitchen — freshly ground beans, perfect temperature, and silky crema every single time.
-Whether you crave a bold espresso or a smooth latte, it's ready in under a minute with just one touch.
-Sleek, smart, and effortless — designed to fit your countertop and your lifestyle.
-AromaBrew One. Wake up better.`;
+// const SCRIPT_TEXT = `Morning rush? Meet your new ritual.
+// The new AromaBrew One brings the café to your kitchen — freshly ground beans, perfect temperature, and silky crema every single time.
+// Whether you crave a bold espresso or a smooth latte, it's ready in under a minute with just one touch.
+// Sleek, smart, and effortless — designed to fit your countertop and your lifestyle.
+// AromaBrew One. Wake up better.`;
+
+const SCRIPT_TEXT = `Wow, Reelful is such a cool app! It helps me turn my photos and videos into a complete reel using just one prompt. I don’t need to record my voice, search for music, or spend hours editing. Reelful automatically adds voice-over, music, and captions. It makes content creation fast, fun, and effortless. I can’t wait to use Reelful for my next reel!`;
 
 interface VoiceRecorderProps {
   onRecordingComplete: (uri: string) => void;
