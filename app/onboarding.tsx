@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Sparkles, ArrowRight, ChevronLeft } from 'lucide-react-native';
+import { Sparkles, ArrowRight, ChevronLeft, Mic } from 'lucide-react-native';
 import { useState, useRef, useCallback } from 'react';
 import {
   KeyboardAvoidingView,
@@ -316,7 +316,11 @@ export default function OnboardingScreen() {
           >
             <View style={styles.header}>
               <View style={styles.iconContainer}>
-                <Sparkles size={40} color={Colors.orange} strokeWidth={2} />
+                {isVoiceStep ? (
+                  <Mic size={40} color={Colors.orange} strokeWidth={2} />
+                ) : (
+                  <Sparkles size={40} color={Colors.orange} strokeWidth={2} />
+                )}
               </View>
               <Text style={styles.title}>
                 {step === 1 ? 'Welcome to Reelful' : isStyleStep ? 'Your Style' : 'Record Your Voice'}
