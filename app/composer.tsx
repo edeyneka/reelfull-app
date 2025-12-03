@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { Image as LucideImage, Camera, X, TestTube } from 'lucide-react-native';
 import { useState, useRef, useEffect } from 'react';
 import {
+  Alert,
   Animated,
   Image,
   KeyboardAvoidingView,
@@ -221,7 +222,11 @@ export default function ComposerScreen() {
     }
 
     // Show info alert
-    alert('Please wait until the script is generated to approve it');
+    Alert.alert(
+      '⏳ Generating Script',
+      'Please wait while we generate your script. You\'ll be able to review and approve it on the next screen.',
+      [{ text: 'Got it', style: 'default' }]
+    );
 
     setIsUploading(true);
 

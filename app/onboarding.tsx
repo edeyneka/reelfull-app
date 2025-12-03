@@ -424,6 +424,12 @@ export default function OnboardingScreen() {
                     disabled={isSaving}
                   />
                   
+                  <View style={styles.voiceNoteContainer}>
+                    <Text style={styles.voiceNoteText}>
+                      💡 Don&apos;t want to record? No worries! You&apos;ll be able to choose from our default AI voices in the settings.
+                    </Text>
+                  </View>
+                  
                   <TouchableOpacity
                     style={styles.skipButton}
                     onPress={handleSkipVoice}
@@ -570,6 +576,21 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: Fonts.title,
     color: Colors.white,
+  },
+  voiceNoteContainer: {
+    backgroundColor: 'rgba(255, 107, 53, 0.1)',
+    borderRadius: 12,
+    padding: 14,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 107, 53, 0.3)',
+  },
+  voiceNoteText: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: Colors.grayLight,
+    textAlign: 'center',
+    fontFamily: Fonts.regular,
   },
   skipButton: {
     marginTop: 20,

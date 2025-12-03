@@ -32,7 +32,17 @@ export default function VoiceRecorder({
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Check permission status on mount (without requesting)
+  useEffect(() => {
+    const checkPermission = async () => {
+      const { status } = await Audio.getPermissionsAsync();
+      setHasPermission(status === 'granted');
+    };
+    checkPermission();
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -53,17 +63,43 @@ export default function VoiceRecorder({
     };
   }, []); // Empty deps - only run on unmount
 
-  const startRecording = async () => {
+  const handleRecordPress = async () => {
+    // If already recording, stop it
+    if (isRecording) {
+      await stopRecording();
+      return;
+    }
+
+    // Check if we already have permission
+    if (hasPermission) {
+      // Permission already granted, start recording
+      await startRecording();
+      return;
+    }
+
+    // Need to request permission
     try {
       const permission = await Audio.requestPermissionsAsync();
-      if (!permission.granted) {
+      if (permission.granted) {
+        // Permission just granted - update state but DON'T start recording
+        // User needs to tap again to start recording
+        setHasPermission(true);
+        // Don't start recording automatically - let user tap again
+      } else {
         Alert.alert(
           'Permission Required',
-          'Please grant microphone permissions to record your voice.'
+          'Please grant microphone permissions to record your voice. You can enable this in your device Settings.',
+          [{ text: 'OK' }]
         );
-        return;
       }
+    } catch (error) {
+      console.error('Failed to request permission:', error);
+      Alert.alert('Error', 'Failed to request microphone permission.');
+    }
+  };
 
+  const startRecording = async () => {
+    try {
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
@@ -202,7 +238,7 @@ export default function VoiceRecorder({
           <>
             <TouchableOpacity
               style={[styles.recordButton, isRecording && styles.recordingActive]}
-              onPress={isRecording ? stopRecording : startRecording}
+              onPress={handleRecordPress}
               activeOpacity={0.8}
             >
               <LinearGradient
@@ -225,6 +261,8 @@ export default function VoiceRecorder({
             <Text style={styles.instruction}>
               {isRecording
                 ? `Recording... ${formatDuration(duration)}`
+                : hasPermission === false
+                ? 'Tap to enable microphone'
                 : 'Tap to start recording'}
             </Text>
           </>
