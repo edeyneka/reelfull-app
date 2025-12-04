@@ -100,111 +100,112 @@ export default function PaywallScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       <LinearGradient
         colors={['#0A0A0A', '#1A1A1A', '#0A0A0A']}
         style={StyleSheet.absoluteFill}
       />
       
-      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-        <TouchableOpacity
-          style={styles.closeButton}
-          onPress={handleClose}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+      {/* Close button */}
+      <TouchableOpacity
+        style={[styles.closeButton, { top: insets.top + 12 }]}
+        onPress={handleClose}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+      >
+        <X size={24} color={Colors.white} />
+      </TouchableOpacity>
+
+      {/* Hero Section */}
+      <View style={styles.heroSection}>
+        <LinearGradient
+          colors={['#FF6B35', '#FF8C42', '#FFB347']}
+          style={styles.iconContainer}
         >
-          <X size={24} color={Colors.white} />
+          <Crown size={36} color={Colors.white} />
+        </LinearGradient>
+        <Text style={styles.title}>Unlock Reelful Pro</Text>
+        <Text style={styles.subtitle}>
+          Create unlimited stunning videos with premium AI features
+        </Text>
+      </View>
+
+      {/* Features */}
+      <View style={styles.featuresSection}>
+        {features.map((feature, index) => (
+          <View key={index} style={styles.featureRow}>
+            <View style={styles.featureIcon}>
+              <feature.icon size={18} color={Colors.orange} />
+            </View>
+            <Text style={styles.featureText}>{feature.text}</Text>
+          </View>
+        ))}
+      </View>
+
+      {/* Plans */}
+      <View style={styles.plansSection}>
+        <TouchableOpacity
+          style={[
+            styles.planCard,
+            selectedPlan === 'annual' && styles.planCardSelected,
+          ]}
+          onPress={() => handleSelectPlan('annual')}
+          activeOpacity={0.8}
+        >
+          <View style={styles.saveBadge}>
+            <Text style={styles.saveBadgeText}>SAVE 33%</Text>
+          </View>
+          <View style={styles.planHeader}>
+            <View style={[
+              styles.radioButton,
+              selectedPlan === 'annual' && styles.radioButtonSelected,
+            ]}>
+              {selectedPlan === 'annual' && (
+                <View style={styles.radioButtonInner} />
+              )}
+            </View>
+            <View style={styles.planInfo}>
+              <Text style={styles.planName}>Annual</Text>
+              <Text style={styles.planPrice}>
+                {annualPrice}
+                <Text style={styles.planPeriod}>/year</Text>
+              </Text>
+            </View>
+          </View>
+          <Text style={styles.planSubtext}>
+            Just {annualMonthlyPrice}/month, billed annually
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.planCard,
+            selectedPlan === 'monthly' && styles.planCardSelected,
+          ]}
+          onPress={() => handleSelectPlan('monthly')}
+          activeOpacity={0.8}
+        >
+          <View style={styles.planHeader}>
+            <View style={[
+              styles.radioButton,
+              selectedPlan === 'monthly' && styles.radioButtonSelected,
+            ]}>
+              {selectedPlan === 'monthly' && (
+                <View style={styles.radioButtonInner} />
+              )}
+            </View>
+            <View style={styles.planInfo}>
+              <Text style={styles.planName}>Monthly</Text>
+              <Text style={styles.planPrice}>
+                {monthlyPrice}
+                <Text style={styles.planPeriod}>/month</Text>
+              </Text>
+            </View>
+          </View>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.content}>
-        <View style={styles.heroSection}>
-          <LinearGradient
-            colors={['#FF6B35', '#FF8C42', '#FFB347']}
-            style={styles.iconContainer}
-          >
-            <Crown size={40} color={Colors.white} />
-          </LinearGradient>
-          <Text style={styles.title}>Unlock Reelful Pro</Text>
-          <Text style={styles.subtitle}>
-            Create unlimited stunning videos with premium AI features
-          </Text>
-        </View>
-
-        <View style={styles.featuresSection}>
-          {features.map((feature, index) => (
-            <View key={index} style={styles.featureRow}>
-              <View style={styles.featureIcon}>
-                <feature.icon size={20} color={Colors.orange} />
-              </View>
-              <Text style={styles.featureText}>{feature.text}</Text>
-            </View>
-          ))}
-        </View>
-
-        <View style={styles.plansSection}>
-          <TouchableOpacity
-            style={[
-              styles.planCard,
-              selectedPlan === 'annual' && styles.planCardSelected,
-            ]}
-            onPress={() => handleSelectPlan('annual')}
-            activeOpacity={0.8}
-          >
-            <View style={styles.saveBadge}>
-              <Text style={styles.saveBadgeText}>SAVE 67%</Text>
-            </View>
-            <View style={styles.planHeader}>
-              <View style={[
-                styles.radioButton,
-                selectedPlan === 'annual' && styles.radioButtonSelected,
-              ]}>
-                {selectedPlan === 'annual' && (
-                  <View style={styles.radioButtonInner} />
-                )}
-              </View>
-              <View style={styles.planInfo}>
-                <Text style={styles.planName}>Annual</Text>
-                <Text style={styles.planPrice}>
-                  {annualPrice}
-                  <Text style={styles.planPeriod}>/year</Text>
-                </Text>
-              </View>
-            </View>
-            <Text style={styles.planSubtext}>
-              Just {annualMonthlyPrice}/month, billed annually
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.planCard,
-              selectedPlan === 'monthly' && styles.planCardSelected,
-            ]}
-            onPress={() => handleSelectPlan('monthly')}
-            activeOpacity={0.8}
-          >
-            <View style={styles.planHeader}>
-              <View style={[
-                styles.radioButton,
-                selectedPlan === 'monthly' && styles.radioButtonSelected,
-              ]}>
-                {selectedPlan === 'monthly' && (
-                  <View style={styles.radioButtonInner} />
-                )}
-              </View>
-              <View style={styles.planInfo}>
-                <Text style={styles.planName}>Monthly</Text>
-                <Text style={styles.planPrice}>
-                  {monthlyPrice}
-                  <Text style={styles.planPeriod}>/month</Text>
-                </Text>
-              </View>
-            </View>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
+      {/* Footer */}
+      <View style={styles.footer}>
         <TouchableOpacity
           style={styles.subscribeButton}
           onPress={handleSubscribe}
@@ -249,83 +250,79 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0A0A0A',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
   },
   closeButton: {
+    position: 'absolute',
+    top: 16,
+    right: 20,
     width: 40,
     height: 40,
     borderRadius: 20,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 24,
+    zIndex: 10,
   },
   heroSection: {
     alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 32,
-  },
-  iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
+    marginTop: 50,
     marginBottom: 20,
   },
+  iconContainer: {
+    width: 70,
+    height: 70,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
   title: {
-    fontSize: 28,
+    fontSize: 26,
     fontFamily: Fonts.title,
     fontWeight: '700' as const,
     color: Colors.white,
-    marginBottom: 8,
+    marginBottom: 6,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontFamily: Fonts.regular,
     color: Colors.grayLight,
     textAlign: 'center',
-    lineHeight: 22,
-    paddingHorizontal: 20,
+    lineHeight: 20,
+    paddingHorizontal: 16,
   },
   featuresSection: {
-    marginBottom: 32,
+    marginBottom: 20,
   },
   featureRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   featureIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     backgroundColor: 'rgba(255, 107, 53, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 14,
+    marginRight: 12,
   },
   featureText: {
-    fontSize: 16,
+    fontSize: 15,
     fontFamily: Fonts.regular,
     color: Colors.white,
     flex: 1,
   },
   plansSection: {
-    gap: 12,
+    gap: 10,
   },
   planCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: 14,
+    padding: 16,
     borderWidth: 2,
     borderColor: 'transparent',
     position: 'relative',
@@ -337,15 +334,15 @@ const styles = StyleSheet.create({
   },
   saveBadge: {
     position: 'absolute',
-    top: 12,
-    right: 12,
+    top: 10,
+    right: 10,
     backgroundColor: Colors.orange,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
   saveBadgeText: {
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: Fonts.title,
     fontWeight: '700' as const,
     color: Colors.white,
@@ -356,87 +353,88 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   radioButton: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     borderWidth: 2,
     borderColor: Colors.grayLight,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 14,
+    marginRight: 12,
   },
   radioButtonSelected: {
     borderColor: Colors.orange,
   },
   radioButtonInner: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     backgroundColor: Colors.orange,
   },
   planInfo: {
     flex: 1,
   },
   planName: {
-    fontSize: 18,
+    fontSize: 16,
     fontFamily: Fonts.title,
     fontWeight: '600' as const,
     color: Colors.white,
-    marginBottom: 2,
+    marginBottom: 1,
   },
   planPrice: {
-    fontSize: 20,
+    fontSize: 18,
     fontFamily: Fonts.title,
     fontWeight: '700' as const,
     color: Colors.white,
   },
   planPeriod: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '400' as const,
     color: Colors.grayLight,
   },
   planSubtext: {
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: Fonts.regular,
     color: Colors.grayLight,
-    marginTop: 8,
-    marginLeft: 38,
+    marginTop: 6,
+    marginLeft: 34,
   },
   footer: {
-    paddingHorizontal: 24,
-    paddingTop: 16,
+    marginTop: 'auto',
+    paddingTop: 20,
+    paddingBottom: 8,
   },
   subscribeButton: {
     marginBottom: 12,
   },
   subscribeGradient: {
-    paddingVertical: 16,
-    borderRadius: 14,
+    paddingVertical: 14,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   subscribeText: {
-    fontSize: 17,
+    fontSize: 16,
     fontFamily: Fonts.title,
     fontWeight: '600' as const,
     color: Colors.white,
     letterSpacing: 0.3,
   },
   restoreButton: {
-    paddingVertical: 12,
+    paddingVertical: 10,
     alignItems: 'center',
   },
   restoreText: {
-    fontSize: 15,
+    fontSize: 14,
     fontFamily: Fonts.regular,
     color: Colors.grayLight,
   },
   legalText: {
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: Fonts.regular,
     color: 'rgba(255, 255, 255, 0.4)',
     textAlign: 'center',
-    lineHeight: 16,
-    marginTop: 8,
+    lineHeight: 14,
+    marginTop: 4,
   },
 });

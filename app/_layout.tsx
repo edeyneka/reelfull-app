@@ -88,7 +88,7 @@ function AppContent() {
       <Stack.Screen 
         name="paywall" 
         options={{ 
-          presentation: "modal",
+          presentation: "fullScreenModal",
           animation: 'slide_from_bottom',
         }} 
       />
@@ -104,7 +104,9 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (fontsLoaded) {
-      SplashScreen.hideAsync();
+      SplashScreen.hideAsync().catch(() => {
+        // Ignore error - can happen when modal is presented
+      });
     }
   }, [fontsLoaded]);
 
