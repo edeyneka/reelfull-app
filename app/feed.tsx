@@ -27,6 +27,7 @@ import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
+import { usePaywall } from '@/contexts/PaywallContext';
 import { Video as VideoType } from '@/types';
 import { useVideoPolling, registerForPushNotificationsAsync } from '@/lib/videoPollingService';
 import { Fonts } from '@/constants/typography';
@@ -357,6 +358,7 @@ export default function FeedScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { videos, deleteVideo, userId, syncedFromBackend, syncVideosFromBackend, syncUserFromBackend } = useApp();
+  const { subscriptionState, isInitialized: isPaywallInitialized } = usePaywall();
   const [selectedVideo, setSelectedVideo] = useState<VideoType | null>(null);
   const [isPromptExpanded, setIsPromptExpanded] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -366,6 +368,7 @@ export default function FeedScreen() {
   const [showActionSheet, setShowActionSheet] = useState(false);
   const [actionSheetPosition, setActionSheetPosition] = useState({ pageX: 0, pageY: 0, width: 0, height: 0, columnIndex: 0 });
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [hasShownPaywall, setHasShownPaywall] = useState(false);
   
   // Check if there are any pending/processing videos that need fresh data
   const hasPendingVideos = useMemo(() => 
@@ -440,6 +443,40 @@ export default function FeedScreen() {
   useEffect(() => {
     registerForPushNotificationsAsync();
   }, []);
+
+  // Show paywall popup if user has 2+ generations and is not subscribed
+  useEffect(() => {
+    // Count ready/completed videos (actual generations)
+    const completedGenerations = videos.filter(
+      v => v.status === 'ready' || v.status === 'draft'
+    ).length;
+    
+    console.log('[feed] Checking paywall trigger:', {
+      completedGenerations,
+      isSubscribed: subscriptionState.isPro,
+      hasShownPaywall,
+      isPaywallInitialized,
+      syncedFromBackend,
+    });
+    
+    // Show paywall if:
+    // 1. User has 2 or more completed generations
+    // 2. User is not subscribed
+    // 3. Paywall hasn't been shown yet in this session
+    // 4. Paywall is initialized
+    // 5. Data has been synced from backend
+    if (
+      completedGenerations >= 2 &&
+      !subscriptionState.isPro &&
+      !hasShownPaywall &&
+      isPaywallInitialized &&
+      syncedFromBackend
+    ) {
+      console.log('[feed] Showing paywall - user has 2+ generations');
+      setHasShownPaywall(true);
+      router.push('/paywall');
+    }
+  }, [videos, subscriptionState.isPro, hasShownPaywall, isPaywallInitialized, syncedFromBackend, router]);
   
   const modalPlayer = useVideoPlayer(
     selectedVideo?.uri && selectedVideo?.status === 'ready' ? selectedVideo.uri : null,
