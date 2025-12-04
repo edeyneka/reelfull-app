@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { User, Palette, X, Mic, Volume2, Headphones, Info, ChevronRight } from 'lucide-react-native';
+import { User, Palette, X, Mic, Volume2, Headphones, Info, ChevronRight, Crown } from 'lucide-react-native';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   ScrollView,
@@ -20,6 +20,7 @@ import { api } from "@/convex/_generated/api";
 import { Audio } from 'expo-av';
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
+import { usePaywall } from '@/contexts/PaywallContext';
 import { StylePreference, BackendStyle } from '@/types';
 import VoiceRecorder from '@/components/VoiceRecorder';
 import { uploadFileToConvex, mapStyleToBackend, mapStyleToApp } from '@/lib/api-helpers';
@@ -32,6 +33,7 @@ export default function SettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { userId, saveUser, clearData } = useApp();
+  const { subscriptionState } = usePaywall();
   
   // Convex queries
   const user = useQuery(api.users.getCurrentUser, userId ? { userId } : "skip");
@@ -493,6 +495,25 @@ export default function SettingsScreen() {
             <View style={styles.menuSection}>
               <TouchableOpacity
                 style={styles.menuItem}
+                onPress={() => router.push('/paywall')}
+                activeOpacity={0.7}
+              >
+                <View style={styles.menuItemLeft}>
+                  <View style={[styles.menuIconContainer, styles.proIconContainer]}>
+                    <Crown size={22} color={Colors.orange} strokeWidth={2} />
+                  </View>
+                  <View>
+                    <Text style={styles.menuItemText}>Reelful Pro</Text>
+                    <Text style={styles.menuItemSubtext}>
+                      {subscriptionState.isPro ? 'Active' : 'Unlock premium features'}
+                    </Text>
+                  </View>
+                </View>
+                <ChevronRight size={20} color={Colors.grayLight} strokeWidth={2} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.menuItem}
                 onPress={() => setIsEditingName(true)}
                 activeOpacity={0.7}
               >
@@ -943,6 +964,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.white,
     fontFamily: Fonts.regular,
+  },
+  menuItemSubtext: {
+    fontSize: 12,
+    color: Colors.grayLight,
+    fontFamily: Fonts.regular,
+    marginTop: 2,
+  },
+  proIconContainer: {
+    backgroundColor: 'rgba(255, 107, 53, 0.15)',
+    borderRadius: 8,
   },
   // Logout
   logoutButton: {
