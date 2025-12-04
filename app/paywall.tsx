@@ -111,8 +111,9 @@ export default function PaywallScreen() {
         style={[styles.closeButton, { top: insets.top + 12 }]}
         onPress={handleClose}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        activeOpacity={0.7}
       >
-        <X size={24} color={Colors.white} />
+        <X size={24} color={Colors.white} strokeWidth={2} />
       </TouchableOpacity>
 
       {/* Hero Section */}
@@ -256,10 +257,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 16,
     right: 20,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    width: 32,
+    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 10,
@@ -401,8 +400,8 @@ const styles = StyleSheet.create({
   },
   footer: {
     marginTop: 'auto',
-    paddingTop: 20,
-    paddingBottom: 8,
+    paddingTop: 12,
+    paddingBottom: 28,
   },
   subscribeButton: {
     marginBottom: 12,
