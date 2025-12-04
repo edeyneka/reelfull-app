@@ -5,6 +5,7 @@ import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ConvexProvider, ConvexReactClient } from "convex/react";
 import { AppProvider, useApp } from "@/contexts/AppContext";
+import { PaywallProvider } from "@/contexts/PaywallContext";
 import { useFonts, Inter_400Regular, Inter_700Bold } from '@expo-google-fonts/inter';
 import { registerForPushNotificationsAsync } from "@/lib/videoPollingService";
 import { useMutation } from "convex/react";
@@ -84,6 +85,13 @@ function AppContent() {
           contentStyle: { backgroundColor: 'transparent' }
         }} 
       />
+      <Stack.Screen 
+        name="paywall" 
+        options={{ 
+          presentation: "modal",
+          animation: 'slide_from_bottom',
+        }} 
+      />
     </Stack>
   );
 }
@@ -109,8 +117,10 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <GestureHandlerRootView style={{ flex: 1 }}>
           <AppProvider>
-            <AppContent />
-          </AppProvider>
+              <PaywallProvider>
+                <AppContent />
+              </PaywallProvider>
+            </AppProvider>
         </GestureHandlerRootView>
       </QueryClientProvider>
     </ConvexProvider>
