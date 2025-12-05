@@ -88,8 +88,9 @@ function AppContent() {
       <Stack.Screen 
         name="paywall" 
         options={{ 
-          presentation: "fullScreenModal",
-          animation: 'slide_from_bottom',
+          presentation: "transparentModal",
+          animation: 'fade',
+          contentStyle: { backgroundColor: 'transparent' },
         }} 
       />
     </Stack>

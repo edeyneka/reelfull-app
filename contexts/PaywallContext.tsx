@@ -106,13 +106,22 @@ export const [PaywallProvider, usePaywall] = createContextHook(() => {
       }
 
       console.log('[Paywall] Purchasing package:', pkg.identifier);
-      const { customerInfo } = await Purchases.purchasePackage(pkg);
-      setCustomerInfo(customerInfo);
+      const { customerInfo: newCustomerInfo } = await Purchases.purchasePackage(pkg);
+      setCustomerInfo(newCustomerInfo);
       
-      const hasAccess = customerInfo.entitlements.active['pro'] !== undefined;
-      console.log('[Paywall] Purchase successful, has pro access:', hasAccess);
+      // Check for any active entitlements (pro, premium, etc.)
+      const activeEntitlements = Object.keys(newCustomerInfo.entitlements.active);
+      const hasActiveEntitlement = activeEntitlements.length > 0;
+      const hasProAccess = newCustomerInfo.entitlements.active['pro'] !== undefined;
       
-      return hasAccess;
+      console.log('[Paywall] Purchase successful!');
+      console.log('[Paywall] Active entitlements:', activeEntitlements);
+      console.log('[Paywall] Has pro entitlement:', hasProAccess);
+      console.log('[Paywall] Active subscriptions:', newCustomerInfo.activeSubscriptions);
+      
+      // Purchase succeeded if transaction completed - return true
+      // The entitlement might take a moment to propagate, but purchase was successful
+      return true;
     } catch (err: any) {
       if (err.userCancelled) {
         console.log('[Paywall] User cancelled purchase');
@@ -132,11 +141,18 @@ export const [PaywallProvider, usePaywall] = createContextHook(() => {
       }
 
       console.log('[Paywall] Restoring purchases...');
-      const customerInfo = await Purchases.restorePurchases();
-      setCustomerInfo(customerInfo);
+      const restoredInfo = await Purchases.restorePurchases();
+      setCustomerInfo(restoredInfo);
       
-      const hasAccess = customerInfo.entitlements.active['pro'] !== undefined;
-      console.log('[Paywall] Restore complete, has pro access:', hasAccess);
+      // Check for any active entitlements or subscriptions
+      const activeEntitlements = Object.keys(restoredInfo.entitlements.active);
+      const hasActiveSubscription = restoredInfo.activeSubscriptions.length > 0;
+      const hasAccess = activeEntitlements.length > 0 || hasActiveSubscription;
+      
+      console.log('[Paywall] Restore complete!');
+      console.log('[Paywall] Active entitlements:', activeEntitlements);
+      console.log('[Paywall] Active subscriptions:', restoredInfo.activeSubscriptions);
+      console.log('[Paywall] Has access:', hasAccess);
       
       return hasAccess;
     } catch (err) {
@@ -168,14 +184,21 @@ export const [PaywallProvider, usePaywall] = createContextHook(() => {
       };
     }
 
+    // Check for 'pro' entitlement first, then any active entitlement
     const proEntitlement = customerInfo.entitlements.active['pro'];
-    const isSubscribed = proEntitlement !== undefined;
+    const activeEntitlements = Object.values(customerInfo.entitlements.active);
+    const firstActiveEntitlement = activeEntitlements[0];
+    
+    // User is subscribed if they have any active entitlement OR active subscription
+    const hasActiveEntitlement = activeEntitlements.length > 0;
+    const hasActiveSubscription = customerInfo.activeSubscriptions.length > 0;
+    const isSubscribed = hasActiveEntitlement || hasActiveSubscription;
     
     return {
       isSubscribed,
       isPro: isSubscribed,
       activeSubscription: customerInfo.activeSubscriptions[0] || null,
-      expirationDate: proEntitlement?.expirationDate || null,
+      expirationDate: proEntitlement?.expirationDate || firstActiveEntitlement?.expirationDate || null,
     };
   }, [customerInfo]);
 

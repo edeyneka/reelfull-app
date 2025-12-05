@@ -1,11 +1,13 @@
 import { useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   View,
   Text,
   TouchableOpacity,
   ActivityIndicator,
+  Animated,
+  Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,6 +18,101 @@ import { usePaywall } from '@/contexts/PaywallContext';
 import * as Haptics from 'expo-haptics';
 
 type PlanType = 'monthly' | 'annual';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const CONFETTI_COUNT = 50;
+const CONFETTI_COLORS = ['#FF6B35', '#FF8C42', '#FFB347', '#FFA500', '#FF7F50', '#FFFFFF'];
+
+// Confetti particle component
+function ConfettiParticle({ delay, startX }: { delay: number; startX: number }) {
+  const translateY = useRef(new Animated.Value(-20)).current;
+  const translateX = useRef(new Animated.Value(0)).current;
+  const rotate = useRef(new Animated.Value(0)).current;
+  const opacity = useRef(new Animated.Value(1)).current;
+  
+  const color = CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)];
+  const size = 8 + Math.random() * 8;
+  const horizontalDrift = (Math.random() - 0.5) * 100;
+  
+  useEffect(() => {
+    const duration = 2000 + Math.random() * 1000;
+    
+    Animated.sequence([
+      Animated.delay(delay),
+      Animated.parallel([
+        Animated.timing(translateY, {
+          toValue: SCREEN_HEIGHT + 50,
+          duration,
+          useNativeDriver: true,
+        }),
+        Animated.timing(translateX, {
+          toValue: horizontalDrift,
+          duration,
+          useNativeDriver: true,
+        }),
+        Animated.timing(rotate, {
+          toValue: 360 * (2 + Math.random() * 3),
+          duration,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacity, {
+          toValue: 0,
+          duration,
+          delay: duration * 0.7,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start();
+  }, [delay, translateY, translateX, rotate, opacity, horizontalDrift]);
+  
+  const rotateInterpolate = rotate.interpolate({
+    inputRange: [0, 360],
+    outputRange: ['0deg', '360deg'],
+  });
+  
+  return (
+    <Animated.View
+      style={[
+        styles.confettiParticle,
+        {
+          left: startX,
+          width: size,
+          height: size * 0.6,
+          backgroundColor: color,
+          opacity,
+          transform: [
+            { translateY },
+            { translateX },
+            { rotate: rotateInterpolate },
+          ],
+        },
+      ]}
+    />
+  );
+}
+
+// Confetti container component
+function Confetti({ show }: { show: boolean }) {
+  if (!show) return null;
+  
+  const particles = Array.from({ length: CONFETTI_COUNT }, (_, i) => ({
+    id: i,
+    delay: Math.random() * 500,
+    startX: Math.random() * SCREEN_WIDTH,
+  }));
+  
+  return (
+    <View style={styles.confettiContainer} pointerEvents="none">
+      {particles.map((particle) => (
+        <ConfettiParticle
+          key={particle.id}
+          delay={particle.delay}
+          startX={particle.startX}
+        />
+      ))}
+    </View>
+  );
+}
 
 export default function PaywallScreen() {
   const router = useRouter();
@@ -31,11 +128,57 @@ export default function PaywallScreen() {
   const [selectedPlan, setSelectedPlan] = useState<PlanType>('annual');
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  
+  // Animations
+  const backdropAnim = useRef(new Animated.Value(0)).current;
+  const contentAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+
+  // Animate in on mount
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(backdropAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(contentAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [backdropAnim, contentAnim, slideAnim]);
+
+  const fadeOutAndClose = useCallback((delay: number = 0) => {
+    setTimeout(() => {
+      Animated.parallel([
+        Animated.timing(backdropAnim, {
+          toValue: 0,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+        Animated.timing(contentAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        router.back();
+      });
+    }, delay);
+  }, [backdropAnim, contentAnim, router]);
 
   const handleClose = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.back();
-  }, [router]);
+    fadeOutAndClose(0);
+  }, [fadeOutAndClose]);
 
   const handleSelectPlan = useCallback((plan: PlanType) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -57,12 +200,14 @@ export default function PaywallScreen() {
       const success = await purchasePackage(pkg);
       if (success) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        router.back();
+        setShowConfetti(true);
+        // Wait for confetti animation, then fade out and close
+        fadeOutAndClose(1700);
       }
     } finally {
       setIsPurchasing(false);
     }
-  }, [selectedPlan, monthlyPackage, annualPackage, purchasePackage, router]);
+  }, [selectedPlan, monthlyPackage, annualPackage, purchasePackage, fadeOutAndClose]);
 
   const handleRestore = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -72,12 +217,14 @@ export default function PaywallScreen() {
       const success = await restorePurchases();
       if (success) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        router.back();
+        setShowConfetti(true);
+        // Wait for confetti animation, then fade out and close
+        fadeOutAndClose(1700);
       }
     } finally {
       setIsRestoring(false);
     }
-  }, [restorePurchases, router]);
+  }, [restorePurchases, fadeOutAndClose]);
 
   const monthlyPrice = monthlyPackage?.product?.priceString || '$9.99';
   const annualPrice = annualPackage?.product?.priceString || '$39.99';
@@ -93,42 +240,59 @@ export default function PaywallScreen() {
 
   if (isLoading) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <ActivityIndicator size="large" color={Colors.orange} />
+      <View style={styles.modalWrapper}>
+        <View style={[styles.container, { paddingTop: insets.top }]}>
+          <ActivityIndicator size="large" color={Colors.orange} />
+        </View>
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      <LinearGradient
-        colors={['#0A0A0A', '#1A1A1A', '#0A0A0A']}
-        style={StyleSheet.absoluteFill}
+    <View style={styles.modalWrapper}>
+      {/* Backdrop */}
+      <Animated.View 
+        style={[
+          styles.backdrop, 
+          { opacity: backdropAnim }
+        ]} 
       />
       
-      {/* Close button */}
-      <TouchableOpacity
-        style={[styles.closeButton, { top: insets.top + 12 }]}
-        onPress={handleClose}
-        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        activeOpacity={0.7}
+      {/* Content */}
+      <Animated.View 
+        style={[
+          styles.container, 
+          { 
+            paddingTop: insets.top, 
+            paddingBottom: insets.bottom,
+            opacity: contentAnim,
+            transform: [{ translateY: slideAnim }],
+          }
+        ]}
       >
-        <X size={24} color={Colors.white} strokeWidth={2} />
-      </TouchableOpacity>
-
-      {/* Hero Section */}
-      <View style={styles.heroSection}>
-        <LinearGradient
-          colors={['#FF6B35', '#FF8C42', '#FFB347']}
-          style={styles.iconContainer}
+        {/* Close button */}
+        <TouchableOpacity
+          style={[styles.closeButton, { top: insets.top + 12 }]}
+          onPress={handleClose}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          activeOpacity={0.7}
         >
-          <Crown size={36} color={Colors.white} />
-        </LinearGradient>
-        <Text style={styles.title}>Unlock Reelful Pro</Text>
-        <Text style={styles.subtitle}>
-          Create unlimited stunning videos with premium AI features
-        </Text>
-      </View>
+          <X size={24} color={Colors.white} strokeWidth={2} />
+        </TouchableOpacity>
+
+        {/* Hero Section */}
+        <View style={styles.heroSection}>
+          <LinearGradient
+            colors={['#FF6B35', '#FF8C42', '#FFB347']}
+            style={styles.iconContainer}
+          >
+            <Crown size={36} color={Colors.white} />
+          </LinearGradient>
+          <Text style={styles.title}>Unlock Reelful Pro</Text>
+          <Text style={styles.subtitle}>
+            Create unlimited stunning videos with premium AI features
+          </Text>
+        </View>
 
       {/* Features */}
       <View style={styles.featuresSection}>
@@ -243,14 +407,24 @@ export default function PaywallScreen() {
           Cancel anytime. Subscription auto-renews unless canceled at least 24 hours before the end of the current period.
         </Text>
       </View>
+      </Animated.View>
+
+      {/* Confetti overlay - on top of everything */}
+      <Confetti show={showConfetti} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  modalWrapper: {
+    flex: 1,
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+  },
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0A',
     paddingHorizontal: 24,
   },
   closeButton: {
@@ -435,5 +609,18 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 14,
     marginTop: 4,
+  },
+  confettiContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 100,
+  },
+  confettiParticle: {
+    position: 'absolute',
+    top: -20,
+    borderRadius: 2,
   },
 });
