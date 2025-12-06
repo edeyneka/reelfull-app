@@ -20,22 +20,22 @@ import * as Haptics from 'expo-haptics';
 type PlanType = 'monthly' | 'annual';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const CONFETTI_COUNT = 50;
-const CONFETTI_COLORS = ['#FF6B35', '#FF8C42', '#FFB347', '#FFA500', '#FF7F50', '#FFFFFF'];
+const CONFETTI_COUNT = 150;
+const CONFETTI_COLORS = ['#FF6B35', '#FF8C42', '#FFB347', '#FFA500', '#FF7F50', '#FFFFFF', '#FFD700', '#FF4500'];
 
 // Confetti particle component
 function ConfettiParticle({ delay, startX }: { delay: number; startX: number }) {
   const translateY = useRef(new Animated.Value(-20)).current;
   const translateX = useRef(new Animated.Value(0)).current;
   const rotate = useRef(new Animated.Value(0)).current;
-  const opacity = useRef(new Animated.Value(1)).current;
   
   const color = CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)];
-  const size = 8 + Math.random() * 8;
-  const horizontalDrift = (Math.random() - 0.5) * 100;
+  const size = 6 + Math.random() * 12;
+  const horizontalDrift = (Math.random() - 0.5) * 120;
   
   useEffect(() => {
-    const duration = 2000 + Math.random() * 1000;
+    // Faster fall: 1.5-2.5 seconds
+    const duration = 1500 + Math.random() * 1000;
     
     Animated.sequence([
       Animated.delay(delay),
@@ -55,15 +55,9 @@ function ConfettiParticle({ delay, startX }: { delay: number; startX: number }) 
           duration,
           useNativeDriver: true,
         }),
-        Animated.timing(opacity, {
-          toValue: 0,
-          duration,
-          delay: duration * 0.7,
-          useNativeDriver: true,
-        }),
       ]),
     ]).start();
-  }, [delay, translateY, translateX, rotate, opacity, horizontalDrift]);
+  }, [delay, translateY, translateX, rotate, horizontalDrift]);
   
   const rotateInterpolate = rotate.interpolate({
     inputRange: [0, 360],
@@ -79,7 +73,6 @@ function ConfettiParticle({ delay, startX }: { delay: number; startX: number }) 
           width: size,
           height: size * 0.6,
           backgroundColor: color,
-          opacity,
           transform: [
             { translateY },
             { translateX },
@@ -97,7 +90,7 @@ function Confetti({ show }: { show: boolean }) {
   
   const particles = Array.from({ length: CONFETTI_COUNT }, (_, i) => ({
     id: i,
-    delay: Math.random() * 500,
+    delay: Math.random() * 800,
     startX: Math.random() * SCREEN_WIDTH,
   }));
   
@@ -201,8 +194,8 @@ export default function PaywallScreen() {
       if (success) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setShowConfetti(true);
-        // Wait for confetti animation, then fade out and close
-        fadeOutAndClose(1700);
+        // Wait for all confetti to fall, then fade out and close
+        fadeOutAndClose(2500);
       }
     } finally {
       setIsPurchasing(false);
@@ -218,8 +211,8 @@ export default function PaywallScreen() {
       if (success) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setShowConfetti(true);
-        // Wait for confetti animation, then fade out and close
-        fadeOutAndClose(1700);
+        // Wait for all confetti to fall, then fade out and close
+        fadeOutAndClose(2500);
       }
     } finally {
       setIsRestoring(false);
