@@ -182,9 +182,9 @@ export default function PaywallScreen() {
     }, delay);
   }, [backdropAnim, contentAnim, router]);
 
-  // Navigate to feed after successful subscription/restore
-  // Uses replace to ensure clean navigation (no back to paywall)
-  const navigateToFeedAfterSuccess = useCallback((delay: number = 0) => {
+  // Navigate after successful subscription/restore
+  // Uses back() to return to the previous screen (settings or feed)
+  const navigateAfterSuccess = useCallback((delay: number = 0) => {
     setTimeout(() => {
       Animated.parallel([
         Animated.timing(backdropAnim, {
@@ -198,8 +198,8 @@ export default function PaywallScreen() {
           useNativeDriver: true,
         }),
       ]).start(() => {
-        // Use replace to go to feed - prevents going back to paywall
-        router.replace('/feed');
+        // Go back to previous screen (settings if opened from there, feed otherwise)
+        router.back();
       });
     }, delay);
   }, [backdropAnim, contentAnim, router]);
@@ -235,14 +235,13 @@ export default function PaywallScreen() {
       if (success) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setShowConfetti(true);
-        // Wait for all confetti to fall, then navigate to feed
-        // Use navigateToFeedAfterSuccess to ensure clean navigation
-        navigateToFeedAfterSuccess(2500);
+        // Wait for all confetti to fall, then dismiss all modals
+        navigateAfterSuccess(2500);
       }
     } finally {
       setIsPurchasing(false);
     }
-  }, [selectedPlan, monthlyPackage, annualPackage, purchasePackage, navigateToFeedAfterSuccess]);
+  }, [selectedPlan, monthlyPackage, annualPackage, purchasePackage, navigateAfterSuccess]);
 
   const handleRestore = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -253,14 +252,13 @@ export default function PaywallScreen() {
       if (success) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setShowConfetti(true);
-        // Wait for all confetti to fall, then navigate to feed
-        // Use navigateToFeedAfterSuccess to ensure clean navigation
-        navigateToFeedAfterSuccess(2500);
+        // Wait for all confetti to fall, then dismiss all modals
+        navigateAfterSuccess(2500);
       }
     } finally {
       setIsRestoring(false);
     }
-  }, [restorePurchases, navigateToFeedAfterSuccess]);
+  }, [restorePurchases, navigateAfterSuccess]);
 
   const monthlyPrice = monthlyPackage?.product?.priceString || '$9.99';
   const annualPrice = annualPackage?.product?.priceString || '$39.99';
