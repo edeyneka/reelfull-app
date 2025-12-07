@@ -12,9 +12,12 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X, Sparkles, Zap, Crown } from 'lucide-react-native';
+import { useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 import Colors from '@/constants/colors';
 import { Fonts } from '@/constants/typography';
 import { usePaywall } from '@/contexts/PaywallContext';
+import { useApp } from '@/contexts/AppContext';
 import * as Haptics from 'expo-haptics';
 
 type PlanType = 'monthly' | 'annual';
@@ -110,6 +113,7 @@ function Confetti({ show }: { show: boolean }) {
 export default function PaywallScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { userId } = useApp();
   const {
     monthlyPackage,
     annualPackage,
@@ -117,6 +121,16 @@ export default function PaywallScreen() {
     restorePurchases,
     isLoading,
   } = usePaywall();
+  
+  // Query video generation status to check if user has reached free tier limit
+  const videoGenerationStatus = useQuery(
+    api.users.getVideoGenerationStatus,
+    userId ? { userId } : "skip"
+  );
+  
+  // If user has reached the limit, they cannot dismiss the paywall
+  const hasReachedLimit = videoGenerationStatus?.hasReachedLimit ?? false;
+  const canDismiss = !hasReachedLimit;
   
   const [selectedPlan, setSelectedPlan] = useState<PlanType>('annual');
   const [isPurchasing, setIsPurchasing] = useState(false);
@@ -168,10 +182,37 @@ export default function PaywallScreen() {
     }, delay);
   }, [backdropAnim, contentAnim, router]);
 
+  // Navigate to feed after successful subscription/restore
+  // Uses replace to ensure clean navigation (no back to paywall)
+  const navigateToFeedAfterSuccess = useCallback((delay: number = 0) => {
+    setTimeout(() => {
+      Animated.parallel([
+        Animated.timing(backdropAnim, {
+          toValue: 0,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+        Animated.timing(contentAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        // Use replace to go to feed - prevents going back to paywall
+        router.replace('/feed');
+      });
+    }, delay);
+  }, [backdropAnim, contentAnim, router]);
+
   const handleClose = useCallback(() => {
+    // Prevent dismissing if user has reached free tier limit
+    if (!canDismiss) {
+      console.log('[Paywall] Cannot dismiss - user has reached free tier limit');
+      return;
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     fadeOutAndClose(0);
-  }, [fadeOutAndClose]);
+  }, [fadeOutAndClose, canDismiss]);
 
   const handleSelectPlan = useCallback((plan: PlanType) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -194,13 +235,14 @@ export default function PaywallScreen() {
       if (success) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setShowConfetti(true);
-        // Wait for all confetti to fall, then fade out and close
-        fadeOutAndClose(2500);
+        // Wait for all confetti to fall, then navigate to feed
+        // Use navigateToFeedAfterSuccess to ensure clean navigation
+        navigateToFeedAfterSuccess(2500);
       }
     } finally {
       setIsPurchasing(false);
     }
-  }, [selectedPlan, monthlyPackage, annualPackage, purchasePackage, fadeOutAndClose]);
+  }, [selectedPlan, monthlyPackage, annualPackage, purchasePackage, navigateToFeedAfterSuccess]);
 
   const handleRestore = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -211,13 +253,14 @@ export default function PaywallScreen() {
       if (success) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setShowConfetti(true);
-        // Wait for all confetti to fall, then fade out and close
-        fadeOutAndClose(2500);
+        // Wait for all confetti to fall, then navigate to feed
+        // Use navigateToFeedAfterSuccess to ensure clean navigation
+        navigateToFeedAfterSuccess(2500);
       }
     } finally {
       setIsRestoring(false);
     }
-  }, [restorePurchases, fadeOutAndClose]);
+  }, [restorePurchases, navigateToFeedAfterSuccess]);
 
   const monthlyPrice = monthlyPackage?.product?.priceString || '$9.99';
   const annualPrice = annualPackage?.product?.priceString || '$39.99';
@@ -263,15 +306,17 @@ export default function PaywallScreen() {
           }
         ]}
       >
-        {/* Close button */}
-        <TouchableOpacity
-          style={[styles.closeButton, { top: insets.top + 12 }]}
-          onPress={handleClose}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          activeOpacity={0.7}
-        >
-          <X size={24} color={Colors.white} strokeWidth={2} />
-        </TouchableOpacity>
+        {/* Close button - only shown if user can dismiss (hasn't reached free tier limit) */}
+        {canDismiss && (
+          <TouchableOpacity
+            style={[styles.closeButton, { top: insets.top + 12 }]}
+            onPress={handleClose}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            activeOpacity={0.7}
+          >
+            <X size={24} color={Colors.white} strokeWidth={2} />
+          </TouchableOpacity>
+        )}
 
         {/* Hero Section */}
         <View style={styles.heroSection}>
@@ -283,7 +328,10 @@ export default function PaywallScreen() {
           </LinearGradient>
           <Text style={styles.title}>Unlock Reelful Pro</Text>
           <Text style={styles.subtitle}>
-            Create unlimited stunning videos with premium AI features
+            {hasReachedLimit 
+              ? "You've used all 3 free videos. Subscribe to continue creating unlimited stunning videos!"
+              : "Create unlimited stunning videos with premium AI features"
+            }
           </Text>
         </View>
 

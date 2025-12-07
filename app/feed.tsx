@@ -393,6 +393,12 @@ export default function FeedScreen() {
   
   // Action to get fresh video URL on-demand (when user taps to view)
   const getFreshVideoUrl = useAction(api.tasks.getFreshProjectVideoUrl);
+  
+  // Query video generation status (total count including deleted videos)
+  const videoGenerationStatus = useQuery(
+    api.users.getVideoGenerationStatus,
+    userId ? { userId } : "skip"
+  );
 
   // Sync user profile from backend when loaded
   useEffect(() => {
@@ -444,15 +450,18 @@ export default function FeedScreen() {
     registerForPushNotificationsAsync();
   }, []);
 
-  // Show paywall popup if user has 2+ generations and is not subscribed
+  // Show paywall popup if user has reached free tier limit and is not subscribed
   useEffect(() => {
-    // Count ready/completed videos (actual generations)
-    const completedGenerations = videos.filter(
-      v => v.status === 'ready' || v.status === 'draft'
-    ).length;
+    // Use backend counter for total videos generated (includes deleted ones)
+    // This prevents users from bypassing limit by deleting videos
+    const hasReachedLimit = videoGenerationStatus?.hasReachedLimit ?? false;
+    const generatedCount = videoGenerationStatus?.generatedCount ?? 0;
+    const limit = videoGenerationStatus?.limit ?? 3;
     
     console.log('[feed] Checking paywall trigger:', {
-      completedGenerations,
+      generatedCount,
+      limit,
+      hasReachedLimit,
       isSubscribed: subscriptionState.isPro,
       hasShownPaywall,
       isPaywallInitialized,
@@ -460,23 +469,25 @@ export default function FeedScreen() {
     });
     
     // Show paywall if:
-    // 1. User has 2 or more completed generations
+    // 1. User has reached free tier limit (3 videos total, including deleted)
     // 2. User is not subscribed
     // 3. Paywall hasn't been shown yet in this session
     // 4. Paywall is initialized
     // 5. Data has been synced from backend
+    // 6. Video generation status is loaded
     if (
-      completedGenerations >= 2 &&
+      hasReachedLimit &&
       !subscriptionState.isPro &&
       !hasShownPaywall &&
       isPaywallInitialized &&
-      syncedFromBackend
+      syncedFromBackend &&
+      videoGenerationStatus !== undefined
     ) {
-      console.log('[feed] Showing paywall - user has 2+ generations');
+      console.log(`[feed] Showing paywall - user has generated ${generatedCount}/${limit} videos (limit reached)`);
       setHasShownPaywall(true);
       router.push('/paywall');
     }
-  }, [videos, subscriptionState.isPro, hasShownPaywall, isPaywallInitialized, syncedFromBackend, router]);
+  }, [videoGenerationStatus, subscriptionState.isPro, hasShownPaywall, isPaywallInitialized, syncedFromBackend, router]);
   
   const modalPlayer = useVideoPlayer(
     selectedVideo?.uri && selectedVideo?.status === 'ready' ? selectedVideo.uri : null,
