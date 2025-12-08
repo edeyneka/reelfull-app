@@ -358,7 +358,7 @@ export default function FeedScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { videos, deleteVideo, userId, syncedFromBackend, syncVideosFromBackend, syncUserFromBackend } = useApp();
-  const { subscriptionState, isInitialized: isPaywallInitialized } = usePaywall();
+  const { subscriptionState } = usePaywall();
   const [selectedVideo, setSelectedVideo] = useState<VideoType | null>(null);
   const [isPromptExpanded, setIsPromptExpanded] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -368,7 +368,6 @@ export default function FeedScreen() {
   const [showActionSheet, setShowActionSheet] = useState(false);
   const [actionSheetPosition, setActionSheetPosition] = useState({ pageX: 0, pageY: 0, width: 0, height: 0, columnIndex: 0 });
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [hasShownPaywall, setHasShownPaywall] = useState(false);
   
   // Check if there are any pending/processing videos that need fresh data
   const hasPendingVideos = useMemo(() => 
@@ -450,44 +449,29 @@ export default function FeedScreen() {
     registerForPushNotificationsAsync();
   }, []);
 
-  // Show paywall popup if user has reached free tier limit and is not subscribed
-  useEffect(() => {
-    // Use backend counter for total videos generated (includes deleted ones)
-    // This prevents users from bypassing limit by deleting videos
+  // Handle create new video - check limit before allowing
+  const handleCreateNew = useCallback(() => {
     const hasReachedLimit = videoGenerationStatus?.hasReachedLimit ?? false;
     const generatedCount = videoGenerationStatus?.generatedCount ?? 0;
     const limit = videoGenerationStatus?.limit ?? 3;
     
-    console.log('[feed] Checking paywall trigger:', {
+    console.log('[feed] Create new pressed:', {
       generatedCount,
       limit,
       hasReachedLimit,
       isSubscribed: subscriptionState.isPro,
-      hasShownPaywall,
-      isPaywallInitialized,
-      syncedFromBackend,
     });
     
-    // Show paywall if:
-    // 1. User has reached free tier limit (3 videos total, including deleted)
-    // 2. User is not subscribed
-    // 3. Paywall hasn't been shown yet in this session
-    // 4. Paywall is initialized
-    // 5. Data has been synced from backend
-    // 6. Video generation status is loaded
-    if (
-      hasReachedLimit &&
-      !subscriptionState.isPro &&
-      !hasShownPaywall &&
-      isPaywallInitialized &&
-      syncedFromBackend &&
-      videoGenerationStatus !== undefined
-    ) {
+    // If user has reached limit and is not subscribed, show paywall
+    if (hasReachedLimit && !subscriptionState.isPro) {
       console.log(`[feed] Showing paywall - user has generated ${generatedCount}/${limit} videos (limit reached)`);
-      setHasShownPaywall(true);
       router.push('/paywall');
+      return;
     }
-  }, [videoGenerationStatus, subscriptionState.isPro, hasShownPaywall, isPaywallInitialized, syncedFromBackend, router]);
+    
+    // Otherwise, proceed to composer
+    router.push('/composer');
+  }, [videoGenerationStatus, subscriptionState.isPro, router]);
   
   const modalPlayer = useVideoPlayer(
     selectedVideo?.uri && selectedVideo?.status === 'ready' ? selectedVideo.uri : null,
@@ -890,7 +874,7 @@ export default function FeedScreen() {
 
       <TouchableOpacity
         style={[styles.fab, { bottom: insets.bottom + 24 }]}
-        onPress={() => router.push('/composer')}
+        onPress={handleCreateNew}
         activeOpacity={0.8}
       >
         <Plus size={32} color={Colors.white} strokeWidth={3} />

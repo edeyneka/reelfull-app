@@ -156,10 +156,23 @@ export default function ScriptReviewScreen() {
       // For normal mode, mark as submitted and schedule generation server-side
       if (!isTestRun) {
         console.log('[script-review] Marking project as submitted (schedules generation server-side)...');
-        await markProjectSubmitted({ id: projectId });
-        console.log('[script-review] Media generation scheduled server-side, navigating to feed...');
-        router.replace('/feed');
-        return; // Exit early - generation continues in background
+        try {
+          await markProjectSubmitted({ id: projectId });
+          console.log('[script-review] Media generation scheduled server-side, navigating to feed...');
+          router.replace('/feed');
+          return; // Exit early - generation continues in background
+        } catch (submitError) {
+          // Check if this is a free tier limit error
+          const errorMessage = submitError instanceof Error ? submitError.message : String(submitError);
+          if (errorMessage.includes('FREE_TIER_LIMIT_REACHED')) {
+            console.log('[script-review] User has reached free tier limit, showing paywall');
+            setIsSubmitting(false);
+            router.push('/paywall');
+            return;
+          }
+          // Re-throw other errors to be caught by outer catch
+          throw submitError;
+        }
       }
 
       // Test run mode requested but not available when ENABLE_TEST_RUN_MODE is false

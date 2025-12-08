@@ -128,9 +128,8 @@ export default function PaywallScreen() {
     userId ? { userId } : "skip"
   );
   
-  // If user has reached the limit, they cannot dismiss the paywall
+  // Check if limit is reached (for display purposes only - user can always dismiss)
   const hasReachedLimit = videoGenerationStatus?.hasReachedLimit ?? false;
-  const canDismiss = !hasReachedLimit;
   
   const [selectedPlan, setSelectedPlan] = useState<PlanType>('annual');
   const [isPurchasing, setIsPurchasing] = useState(false);
@@ -205,14 +204,10 @@ export default function PaywallScreen() {
   }, [backdropAnim, contentAnim, router]);
 
   const handleClose = useCallback(() => {
-    // Prevent dismissing if user has reached free tier limit
-    if (!canDismiss) {
-      console.log('[Paywall] Cannot dismiss - user has reached free tier limit');
-      return;
-    }
+    // Always allow dismissing - user can go back to gallery to view previous projects
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     fadeOutAndClose(0);
-  }, [fadeOutAndClose, canDismiss]);
+  }, [fadeOutAndClose]);
 
   const handleSelectPlan = useCallback((plan: PlanType) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -304,17 +299,15 @@ export default function PaywallScreen() {
           }
         ]}
       >
-        {/* Close button - only shown if user can dismiss (hasn't reached free tier limit) */}
-        {canDismiss && (
-          <TouchableOpacity
-            style={[styles.closeButton, { top: insets.top + 12 }]}
-            onPress={handleClose}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            activeOpacity={0.7}
-          >
-            <X size={24} color={Colors.white} strokeWidth={2} />
-          </TouchableOpacity>
-        )}
+        {/* Close button - always shown so user can go back to gallery */}
+        <TouchableOpacity
+          style={[styles.closeButton, { top: insets.top + 12 }]}
+          onPress={handleClose}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          activeOpacity={0.7}
+        >
+          <X size={24} color={Colors.white} strokeWidth={2} />
+        </TouchableOpacity>
 
         {/* Hero Section */}
         <View style={styles.heroSection}>
