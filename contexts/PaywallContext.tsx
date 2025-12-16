@@ -1,5 +1,5 @@
 import createContextHook from '@nkzw/create-context-hook';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { Platform } from 'react-native';
 import Purchases, { 
   PurchasesPackage, 
@@ -7,6 +7,9 @@ import Purchases, {
   PurchasesOffering,
   LOG_LEVEL
 } from 'react-native-purchases';
+import { useMutation } from 'convex/react';
+import { api } from '@/convex/_generated/api';
+import { useApp } from './AppContext';
 
 const RC_API_KEY = process.env.EXPO_PUBLIC_RC_KEY || '';
 
@@ -23,6 +26,13 @@ export const [PaywallProvider, usePaywall] = createContextHook(() => {
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const syncedRef = useRef(false);
+  
+  // Get userId from AppContext for syncing subscription status
+  const { userId } = useApp();
+  
+  // Mutation to sync subscription status to backend
+  const updateSubscriptionStatus = useMutation(api.users.updateSubscriptionStatus);
 
   useEffect(() => {
     initializePurchases();
@@ -201,6 +211,31 @@ export const [PaywallProvider, usePaywall] = createContextHook(() => {
       expirationDate: proEntitlement?.expirationDate || firstActiveEntitlement?.expirationDate || null,
     };
   }, [customerInfo]);
+
+  // Sync subscription status to backend on app load when user is subscribed
+  useEffect(() => {
+    const syncSubscriptionToBackend = async () => {
+      if (!userId || !isInitialized || syncedRef.current) return;
+      
+      // Only sync if user has an active subscription
+      if (subscriptionState.isSubscribed) {
+        try {
+          console.log('[Paywall] Syncing subscription status to backend on load');
+          await updateSubscriptionStatus({
+            userId,
+            isPremium: true,
+            subscriptionExpiresAt: subscriptionState.expirationDate || undefined,
+          });
+          syncedRef.current = true;
+          console.log('[Paywall] Subscription status synced to backend');
+        } catch (err) {
+          console.error('[Paywall] Failed to sync subscription status to backend:', err);
+        }
+      }
+    };
+    
+    syncSubscriptionToBackend();
+  }, [userId, isInitialized, subscriptionState.isSubscribed, subscriptionState.expirationDate, updateSubscriptionStatus]);
 
   const monthlyPackage = useMemo(() => {
     return offerings?.availablePackages.find(

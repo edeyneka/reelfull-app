@@ -12,7 +12,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X, Sparkles, Zap, Crown } from 'lucide-react-native';
-import { useQuery } from 'convex/react';
+import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import Colors from '@/constants/colors';
 import { Fonts } from '@/constants/typography';
@@ -120,7 +120,11 @@ export default function PaywallScreen() {
     purchasePackage,
     restorePurchases,
     isLoading,
+    subscriptionState,
   } = usePaywall();
+  
+  // Mutation to sync subscription status to backend
+  const updateSubscriptionStatus = useMutation(api.users.updateSubscriptionStatus);
   
   // Query video generation status to check if user has reached free tier limit
   const videoGenerationStatus = useQuery(
@@ -228,6 +232,21 @@ export default function PaywallScreen() {
     try {
       const success = await purchasePackage(pkg);
       if (success) {
+        // Sync subscription status to backend
+        if (userId) {
+          try {
+            await updateSubscriptionStatus({
+              userId,
+              isPremium: true,
+              subscriptionExpiresAt: subscriptionState.expirationDate || undefined,
+            });
+            console.log('[Paywall] Subscription status synced to backend');
+          } catch (syncError) {
+            console.error('[Paywall] Failed to sync subscription status:', syncError);
+            // Continue anyway - purchase was successful
+          }
+        }
+        
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setShowConfetti(true);
         // Wait for all confetti to fall, then dismiss all modals
@@ -236,7 +255,7 @@ export default function PaywallScreen() {
     } finally {
       setIsPurchasing(false);
     }
-  }, [selectedPlan, monthlyPackage, annualPackage, purchasePackage, navigateAfterSuccess]);
+  }, [selectedPlan, monthlyPackage, annualPackage, purchasePackage, navigateAfterSuccess, userId, updateSubscriptionStatus, subscriptionState]);
 
   const handleRestore = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -245,6 +264,21 @@ export default function PaywallScreen() {
     try {
       const success = await restorePurchases();
       if (success) {
+        // Sync subscription status to backend
+        if (userId) {
+          try {
+            await updateSubscriptionStatus({
+              userId,
+              isPremium: true,
+              subscriptionExpiresAt: subscriptionState.expirationDate || undefined,
+            });
+            console.log('[Paywall] Subscription status synced to backend after restore');
+          } catch (syncError) {
+            console.error('[Paywall] Failed to sync subscription status:', syncError);
+            // Continue anyway - restore was successful
+          }
+        }
+        
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setShowConfetti(true);
         // Wait for all confetti to fall, then dismiss all modals
@@ -253,7 +287,7 @@ export default function PaywallScreen() {
     } finally {
       setIsRestoring(false);
     }
-  }, [restorePurchases, navigateAfterSuccess]);
+  }, [restorePurchases, navigateAfterSuccess, userId, updateSubscriptionStatus, subscriptionState]);
 
   const monthlyPrice = monthlyPackage?.product?.priceString || '$9.99';
   const annualPrice = annualPackage?.product?.priceString || '$39.99';
