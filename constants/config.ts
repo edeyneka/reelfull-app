@@ -5,7 +5,7 @@
  */
 
 // Set to true to force onboarding flow for testing (even for registered users)
-export const ENABLE_TEST_RUN_MODE = false;
+export const ENABLE_TEST_RUN_MODE = true;
 
 // Set to false to hide style preference during onboarding and settings
 // When hidden, the default style "professional" is used automatically

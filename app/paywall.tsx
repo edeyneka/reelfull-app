@@ -8,10 +8,12 @@ import {
   ActivityIndicator,
   Animated,
   Dimensions,
+  TextInput,
+  Keyboard,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { X, Sparkles, Zap, Crown } from 'lucide-react-native';
+import { X, Sparkles, Zap, Crown, Ticket, Check } from 'lucide-react-native';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import Colors from '@/constants/colors';
@@ -139,6 +141,15 @@ export default function PaywallScreen() {
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  
+  // Promo code state
+  const [promoCode, setPromoCode] = useState('');
+  const [isApplyingPromo, setIsApplyingPromo] = useState(false);
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [promoSuccess, setPromoSuccess] = useState<string | null>(null);
+  
+  // Promo code mutation
+  const redeemPromoCode = useMutation(api.users.redeemPromoCode);
   
   // Animations
   const backdropAnim = useRef(new Animated.Value(0)).current;
@@ -289,6 +300,48 @@ export default function PaywallScreen() {
     }
   }, [restorePurchases, navigateAfterSuccess, userId, updateSubscriptionStatus, subscriptionState]);
 
+  const handleApplyPromoCode = useCallback(async () => {
+    if (!promoCode.trim()) {
+      setPromoError('Please enter a promo code');
+      return;
+    }
+    
+    if (!userId) {
+      setPromoError('Please sign in first');
+      return;
+    }
+    
+    Keyboard.dismiss();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setIsApplyingPromo(true);
+    setPromoError(null);
+    setPromoSuccess(null);
+    
+    try {
+      const result = await redeemPromoCode({
+        userId,
+        code: promoCode.trim(),
+      });
+      
+      if (result.success) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        setPromoSuccess(`🎉 Premium activated for ${result.durationDays} days!`);
+        setShowConfetti(true);
+        // Wait for confetti, then close
+        navigateAfterSuccess(2500);
+      } else {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        setPromoError(result.error || 'Failed to apply promo code');
+      }
+    } catch (err) {
+      console.error('[Paywall] Error applying promo code:', err);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      setPromoError('Failed to apply promo code');
+    } finally {
+      setIsApplyingPromo(false);
+    }
+  }, [promoCode, userId, redeemPromoCode, navigateAfterSuccess]);
+
   const monthlyPrice = monthlyPackage?.product?.priceString || '$9.99';
   const annualPrice = annualPackage?.product?.priceString || '$39.99';
   const annualMonthlyPrice = annualPackage?.product?.price 
@@ -349,7 +402,7 @@ export default function PaywallScreen() {
             colors={['#FF6B35', '#FF8C42', '#FFB347']}
             style={styles.iconContainer}
           >
-            <Crown size={36} color={Colors.white} />
+            <Crown size={30} color={Colors.white} />
           </LinearGradient>
           <Text style={styles.title}>Unlock Reelful Pro</Text>
           <Text style={styles.subtitle}>
@@ -435,6 +488,59 @@ export default function PaywallScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Promo Code Section */}
+      <View style={styles.promoSection}>
+        <View style={styles.promoHeader}>
+          <Ticket size={16} color={Colors.grayLight} />
+          <View style={styles.promoLabelContainer}>
+            <Text style={styles.promoLabel}>Have a promo code?</Text>
+            <Text style={styles.promoDescription}>
+              Valid for 1 month from activation, then charged monthly
+            </Text>
+          </View>
+        </View>
+        <View style={styles.promoInputRow}>
+          <TextInput
+            style={styles.promoInput}
+            placeholder="Enter code"
+            placeholderTextColor="rgba(255,255,255,0.3)"
+            value={promoCode}
+            onChangeText={(text) => {
+              setPromoCode(text);
+              setPromoError(null);
+              setPromoSuccess(null);
+            }}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            editable={!isApplyingPromo}
+          />
+          <TouchableOpacity
+            style={[
+              styles.promoApplyButton,
+              (!promoCode.trim() || isApplyingPromo) && styles.promoApplyButtonDisabled,
+            ]}
+            onPress={handleApplyPromoCode}
+            disabled={!promoCode.trim() || isApplyingPromo}
+            activeOpacity={0.7}
+          >
+            {isApplyingPromo ? (
+              <ActivityIndicator size="small" color={Colors.white} />
+            ) : (
+              <Text style={styles.promoApplyText}>Apply</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+        {promoError && (
+          <Text style={styles.promoErrorText}>{promoError}</Text>
+        )}
+        {promoSuccess && (
+          <View style={styles.promoSuccessRow}>
+            <Check size={14} color="#4CAF50" />
+            <Text style={styles.promoSuccessText}>{promoSuccess}</Text>
+          </View>
+        )}
+      </View>
+
       {/* Footer */}
       <View style={styles.footer}>
         <TouchableOpacity
@@ -487,7 +593,7 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+    backgroundColor: '#000000',
   },
   container: {
     flex: 1,
@@ -505,16 +611,16 @@ const styles = StyleSheet.create({
   },
   heroSection: {
     alignItems: 'center',
-    marginTop: 50,
-    marginBottom: 20,
+    marginTop: 30,
+    marginBottom: 14,
   },
   iconContainer: {
-    width: 70,
-    height: 70,
-    borderRadius: 20,
+    width: 60,
+    height: 60,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 14,
+    marginBottom: 10,
   },
   title: {
     fontSize: 26,
@@ -533,12 +639,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   featuresSection: {
-    marginBottom: 20,
+    marginBottom: 14,
   },
   featureRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   featureIcon: {
     width: 36,
@@ -556,12 +662,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   plansSection: {
-    gap: 10,
+    gap: 8,
   },
   planCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 14,
-    padding: 16,
+    padding: 14,
     borderWidth: 2,
     borderColor: 'transparent',
     position: 'relative',
@@ -688,5 +794,82 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -20,
     borderRadius: 2,
+  },
+  promoSection: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  promoHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    marginBottom: 10,
+  },
+  promoLabelContainer: {
+    flex: 1,
+  },
+  promoLabel: {
+    fontSize: 13,
+    fontFamily: Fonts.regular,
+    color: Colors.grayLight,
+  },
+  promoDescription: {
+    fontSize: 10,
+    fontFamily: Fonts.regular,
+    color: 'rgba(255, 255, 255, 0.4)',
+    marginTop: 2,
+    lineHeight: 13,
+  },
+  promoInputRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  promoInput: {
+    flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    fontFamily: Fonts.regular,
+    color: Colors.white,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  promoApplyButton: {
+    backgroundColor: Colors.orange,
+    borderRadius: 10,
+    paddingHorizontal: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 70,
+  },
+  promoApplyButtonDisabled: {
+    backgroundColor: 'rgba(255, 107, 53, 0.4)',
+  },
+  promoApplyText: {
+    fontSize: 14,
+    fontFamily: Fonts.title,
+    fontWeight: '600' as const,
+    color: Colors.white,
+  },
+  promoErrorText: {
+    fontSize: 12,
+    fontFamily: Fonts.regular,
+    color: '#FF6B6B',
+    marginTop: 8,
+  },
+  promoSuccessRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
+  },
+  promoSuccessText: {
+    fontSize: 12,
+    fontFamily: Fonts.regular,
+    color: '#4CAF50',
   },
 });
