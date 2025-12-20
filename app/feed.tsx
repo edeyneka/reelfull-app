@@ -26,6 +26,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Colors from '@/constants/colors';
+import { ENABLE_TEST_RUN_MODE } from '@/constants/config';
 import { useApp } from '@/contexts/AppContext';
 import { usePaywall } from '@/contexts/PaywallContext';
 import { Video as VideoType } from '@/types';
@@ -451,15 +452,20 @@ export default function FeedScreen() {
 
   // Handle create new video - check limit before allowing
   const handleCreateNew = useCallback(() => {
-    const hasReachedLimit = videoGenerationStatus?.hasReachedLimit ?? false;
     const generatedCount = videoGenerationStatus?.generatedCount ?? 0;
     const limit = videoGenerationStatus?.limit ?? 3;
+    
+    // In test mode, override hasReachedLimit to ignore backend isPremium
+    const hasReachedLimit = ENABLE_TEST_RUN_MODE 
+      ? generatedCount >= limit 
+      : (videoGenerationStatus?.hasReachedLimit ?? false);
     
     console.log('[feed] Create new pressed:', {
       generatedCount,
       limit,
       hasReachedLimit,
       isSubscribed: subscriptionState.isPro,
+      testMode: ENABLE_TEST_RUN_MODE,
     });
     
     // If user has reached limit and is not subscribed, show paywall

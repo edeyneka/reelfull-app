@@ -10,6 +10,9 @@ import {
   Dimensions,
   TextInput,
   Keyboard,
+  KeyboardAvoidingView,
+  ScrollView,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -147,9 +150,30 @@ export default function PaywallScreen() {
   const [isApplyingPromo, setIsApplyingPromo] = useState(false);
   const [promoError, setPromoError] = useState<string | null>(null);
   const [promoSuccess, setPromoSuccess] = useState<string | null>(null);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   
   // Promo code mutation
   const redeemPromoCode = useMutation(api.users.redeemPromoCode);
+
+  // Track keyboard visibility to adjust bottom padding
+  useEffect(() => {
+    const keyboardWillShow = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => setIsKeyboardVisible(true)
+    );
+    const keyboardWillHide = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setIsKeyboardVisible(false)
+    );
+
+    return () => {
+      keyboardWillShow.remove();
+      keyboardWillHide.remove();
+    };
+  }, []);
+  
+  // ScrollView ref for auto-scrolling
+  const scrollViewRef = useRef<ScrollView>(null);
   
   // Animations
   const backdropAnim = useRef(new Animated.Value(0)).current;
@@ -230,6 +254,10 @@ export default function PaywallScreen() {
   }, []);
 
   const handleSubscribe = useCallback(async () => {
+    // Hide keyboard and scroll back to top
+    Keyboard.dismiss();
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+    
     const pkg = selectedPlan === 'monthly' ? monthlyPackage : annualPackage;
     
     if (!pkg) {
@@ -375,29 +403,45 @@ export default function PaywallScreen() {
       />
       
       {/* Content */}
-      <Animated.View 
-        style={[
-          styles.container, 
-          { 
-            paddingTop: insets.top, 
-            paddingBottom: insets.bottom,
-            opacity: contentAnim,
-            transform: [{ translateY: slideAnim }],
-          }
-        ]}
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={0}
       >
-        {/* Close button - always shown so user can go back to gallery */}
-        <TouchableOpacity
-          style={[styles.closeButton, { top: insets.top + 12 }]}
-          onPress={handleClose}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          activeOpacity={0.7}
+        <Animated.View 
+          style={[
+            styles.container, 
+            { 
+              paddingTop: insets.top, 
+              paddingBottom: isKeyboardVisible ? 0 : insets.bottom,
+              opacity: contentAnim,
+              transform: [{ translateY: slideAnim }],
+            }
+          ]}
         >
-          <X size={24} color={Colors.white} strokeWidth={2} />
-        </TouchableOpacity>
+          {/* Close button - always shown so user can go back to gallery */}
+          <TouchableOpacity
+            style={[styles.closeButton, { top: insets.top + 12 }]}
+            onPress={handleClose}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            activeOpacity={0.7}
+          >
+            <X size={24} color={Colors.white} strokeWidth={2} />
+          </TouchableOpacity>
 
-        {/* Hero Section */}
-        <View style={styles.heroSection}>
+          <ScrollView
+            ref={scrollViewRef}
+            style={styles.scrollView}
+            contentContainerStyle={[
+              styles.scrollContent,
+              isKeyboardVisible && { paddingBottom: 0 }
+            ]}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            bounces={false}
+          >
+            {/* Hero Section */}
+            <View style={styles.heroSection}>
           <LinearGradient
             colors={['#FF6B35', '#FF8C42', '#FFB347']}
             style={styles.iconContainer}
@@ -510,6 +554,12 @@ export default function PaywallScreen() {
               setPromoError(null);
               setPromoSuccess(null);
             }}
+            onFocus={() => {
+              // Auto-scroll to show Subscribe button when promo input is focused
+              setTimeout(() => {
+                scrollViewRef.current?.scrollToEnd({ animated: true });
+              }, 300);
+            }}
             autoCapitalize="characters"
             autoCorrect={false}
             editable={!isApplyingPromo}
@@ -541,45 +591,47 @@ export default function PaywallScreen() {
         )}
       </View>
 
-      {/* Footer */}
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={styles.subscribeButton}
-          onPress={handleSubscribe}
-          disabled={isPurchasing}
-          activeOpacity={0.8}
-        >
-          <LinearGradient
-            colors={['#FF6B35', '#FF8C42']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.subscribeGradient}
-          >
-            {isPurchasing ? (
-              <ActivityIndicator size="small" color={Colors.white} />
-            ) : (
-              <Text style={styles.subscribeText}>Subscribe Now</Text>
-            )}
-          </LinearGradient>
-        </TouchableOpacity>
+            {/* Footer */}
+            <View style={styles.footer}>
+              <TouchableOpacity
+                style={styles.subscribeButton}
+                onPress={handleSubscribe}
+                disabled={isPurchasing}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={['#FF6B35', '#FF8C42']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.subscribeGradient}
+                >
+                  {isPurchasing ? (
+                    <ActivityIndicator size="small" color={Colors.white} />
+                  ) : (
+                    <Text style={styles.subscribeText}>Subscribe Now</Text>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.restoreButton}
-          onPress={handleRestore}
-          disabled={isRestoring}
-        >
-          {isRestoring ? (
-            <ActivityIndicator size="small" color={Colors.grayLight} />
-          ) : (
-            <Text style={styles.restoreText}>Restore Purchases</Text>
-          )}
-        </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.restoreButton}
+                onPress={handleRestore}
+                disabled={isRestoring}
+              >
+                {isRestoring ? (
+                  <ActivityIndicator size="small" color={Colors.grayLight} />
+                ) : (
+                  <Text style={styles.restoreText}>Restore Purchases</Text>
+                )}
+              </TouchableOpacity>
 
-        <Text style={styles.legalText}>
-          Cancel anytime. Subscription auto-renews unless canceled at least 24 hours before the end of the current period.
-        </Text>
-      </View>
-      </Animated.View>
+              <Text style={styles.legalText}>
+                Cancel anytime. Subscription auto-renews unless canceled at least 24 hours before the end of the current period.
+              </Text>
+            </View>
+          </ScrollView>
+        </Animated.View>
+      </KeyboardAvoidingView>
 
       {/* Confetti overlay - on top of everything */}
       <Confetti show={showConfetti} />
@@ -595,9 +647,19 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: '#000000',
   },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   container: {
     flex: 1,
     paddingHorizontal: 24,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 20,
   },
   closeButton: {
     position: 'absolute',

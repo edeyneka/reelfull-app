@@ -10,6 +10,7 @@ import Purchases, {
 import { useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { useApp } from './AppContext';
+import { ENABLE_TEST_RUN_MODE } from '@/constants/config';
 
 const RC_API_KEY = process.env.EXPO_PUBLIC_RC_KEY || '';
 
@@ -185,6 +186,17 @@ export const [PaywallProvider, usePaywall] = createContextHook(() => {
   }, []);
 
   const subscriptionState: SubscriptionState = useMemo(() => {
+    // In test mode, always return not premium to test the paywall flow
+    if (ENABLE_TEST_RUN_MODE) {
+      console.log('[Paywall] Test mode enabled - forcing isPremium = false');
+      return {
+        isSubscribed: false,
+        isPro: false,
+        activeSubscription: null,
+        expirationDate: null,
+      };
+    }
+
     if (Platform.OS === 'web' || !customerInfo) {
       return {
         isSubscribed: false,
