@@ -39,6 +39,7 @@ export default function ScriptReviewScreen() {
   const generateUploadUrl = useMutation(api.tasks.generateUploadUrl);
   const updateProjectRenderMode = useMutation(api.tasks.updateProjectRenderMode);
   const updateProjectVoiceSpeed = useMutation(api.tasks.updateProjectVoiceSpeed);
+  const updateProjectAudioSettings = useMutation(api.tasks.updateProjectAudioSettings);
 
   // Local state
   const [isEditing, setIsEditing] = useState(false);
@@ -48,6 +49,8 @@ export default function ScriptReviewScreen() {
   const [renderMode, setRenderMode] = useState<'remotion' | 'ffmpeg'>('ffmpeg');
   const [lastProjectScript, setLastProjectScript] = useState<string>('');
   const [voiceSpeed, setVoiceSpeed] = useState<number>(1.15); // Default to "Fast" (1.15)
+  const [includeMusic, setIncludeMusic] = useState<boolean>(true); // Default to include music
+  const [includeCaptions, setIncludeCaptions] = useState<boolean>(true); // Default to include captions
 
   // Initialize script and render mode from project
   useEffect(() => {
@@ -70,7 +73,14 @@ export default function ScriptReviewScreen() {
     if (project?.voiceSpeed) {
       setVoiceSpeed(project.voiceSpeed);
     }
-  }, [project?.script, project?.renderMode, project?.voiceSpeed, isEditing]);
+    // Load music/captions settings (default to true if not set)
+    if (project?.includeMusic !== undefined) {
+      setIncludeMusic(project.includeMusic);
+    }
+    if (project?.includeCaptions !== undefined) {
+      setIncludeCaptions(project.includeCaptions);
+    }
+  }, [project?.script, project?.renderMode, project?.voiceSpeed, project?.includeMusic, project?.includeCaptions, isEditing]);
 
   const handleSaveEdit = async () => {
     if (!projectId || !editedScript.trim()) {
@@ -150,6 +160,14 @@ export default function ScriptReviewScreen() {
       await updateProjectVoiceSpeed({
         id: projectId,
         voiceSpeed,
+      });
+
+      // Save music and captions settings
+      console.log('[script-review] Saving audio settings - music:', includeMusic, 'captions:', includeCaptions);
+      await updateProjectAudioSettings({
+        id: projectId,
+        includeMusic,
+        includeCaptions,
       });
 
       // Optimistically update video status to "processing" for instant UI feedback
@@ -379,6 +397,31 @@ export default function ScriptReviewScreen() {
               </View>
             </View>
 
+            {/* Audio Options - Music and Captions checkboxes */}
+            <View style={styles.audioOptionsContainer}>
+              <TouchableOpacity
+                style={styles.checkboxRow}
+                onPress={() => setIncludeMusic(!includeMusic)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.checkbox, includeMusic && styles.checkboxChecked]}>
+                  {includeMusic && <Check size={14} color={Colors.white} strokeWidth={3} />}
+                </View>
+                <Text style={styles.checkboxLabel}>Add Music</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.checkboxRow}
+                onPress={() => setIncludeCaptions(!includeCaptions)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.checkbox, includeCaptions && styles.checkboxChecked]}>
+                  {includeCaptions && <Check size={14} color={Colors.white} strokeWidth={3} />}
+                </View>
+                <Text style={styles.checkboxLabel}>Add Captions</Text>
+              </TouchableOpacity>
+            </View>
+
             {/* Render Mode Toggle - Commented out for production (defaults to ffmpeg) */}
             {/* <View style={styles.renderModeContainer}>
               <Text style={styles.renderModeLabel}>Rendering Engine:</Text>
@@ -594,7 +637,7 @@ const styles = StyleSheet.create({
     color: Colors.grayLight,
   },
   voiceSpeedContainer: {
-    marginTop: 24,
+    marginTop: 2,
     gap: 12,
   },
   voiceSpeedLabel: {
@@ -631,6 +674,35 @@ const styles = StyleSheet.create({
   voiceSpeedTextActive: {
     color: Colors.orange,
     fontWeight: '600',
+  },
+  audioOptionsContainer: {
+    marginTop: 20,
+    flexDirection: 'row',
+    gap: 24,
+  },
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: Colors.grayLight,
+    backgroundColor: Colors.grayDark,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: Colors.orange,
+    borderColor: Colors.orange,
+  },
+  checkboxLabel: {
+    fontSize: 15,
+    fontFamily: Fonts.regular,
+    color: Colors.white,
   },
   renderModeContainer: {
     marginTop: 24,
