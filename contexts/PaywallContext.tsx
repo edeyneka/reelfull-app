@@ -29,6 +29,10 @@ export const [PaywallProvider, usePaywall] = createContextHook(() => {
   const [error, setError] = useState<string | null>(null);
   const syncedRef = useRef(false);
   
+  // Session-level flag for test mode: tracks if user completed paywall this session
+  // Resets on app reload, allowing paywall to show again
+  const [hasCompletedPaywallThisSession, setHasCompletedPaywallThisSession] = useState(false);
+  
   // Get userId from AppContext for syncing subscription status
   const { userId } = useApp();
   
@@ -185,6 +189,12 @@ export const [PaywallProvider, usePaywall] = createContextHook(() => {
     }
   }, []);
 
+  // Mark paywall as completed for this session (used in test mode)
+  const markPaywallCompleted = useCallback(() => {
+    console.log('[Paywall] Marking paywall as completed for this session');
+    setHasCompletedPaywallThisSession(true);
+  }, []);
+
   const subscriptionState: SubscriptionState = useMemo(() => {
     // In test mode, always return not premium to test the paywall flow
     if (ENABLE_TEST_RUN_MODE) {
@@ -274,6 +284,9 @@ export const [PaywallProvider, usePaywall] = createContextHook(() => {
     restorePurchases,
     identifyUser,
     fetchCustomerInfo,
+    // Test mode session tracking
+    hasCompletedPaywallThisSession,
+    markPaywallCompleted,
   }), [
     isInitialized,
     isLoading,
@@ -286,5 +299,7 @@ export const [PaywallProvider, usePaywall] = createContextHook(() => {
     purchasePackage,
     restorePurchases,
     identifyUser,
+    hasCompletedPaywallThisSession,
+    markPaywallCompleted,
   ]);
 });

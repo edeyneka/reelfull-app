@@ -126,6 +126,7 @@ export default function PaywallScreen() {
     restorePurchases,
     isLoading,
     subscriptionState,
+    markPaywallCompleted,
   } = usePaywall();
   
   // Mutation to sync subscription status to backend
@@ -271,6 +272,9 @@ export default function PaywallScreen() {
     try {
       const success = await purchasePackage(pkg);
       if (success) {
+        // Mark paywall as completed for this session (for test mode)
+        markPaywallCompleted();
+        
         // Sync subscription status to backend
         if (userId) {
           try {
@@ -294,7 +298,7 @@ export default function PaywallScreen() {
     } finally {
       setIsPurchasing(false);
     }
-  }, [selectedPlan, monthlyPackage, annualPackage, purchasePackage, navigateAfterSuccess, userId, updateSubscriptionStatus, subscriptionState]);
+  }, [selectedPlan, monthlyPackage, annualPackage, purchasePackage, navigateAfterSuccess, userId, updateSubscriptionStatus, subscriptionState, markPaywallCompleted]);
 
   const handleRestore = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -303,6 +307,9 @@ export default function PaywallScreen() {
     try {
       const success = await restorePurchases();
       if (success) {
+        // Mark paywall as completed for this session (for test mode)
+        markPaywallCompleted();
+        
         // Sync subscription status to backend
         if (userId) {
           try {
@@ -326,7 +333,7 @@ export default function PaywallScreen() {
     } finally {
       setIsRestoring(false);
     }
-  }, [restorePurchases, navigateAfterSuccess, userId, updateSubscriptionStatus, subscriptionState]);
+  }, [restorePurchases, navigateAfterSuccess, userId, updateSubscriptionStatus, subscriptionState, markPaywallCompleted]);
 
   const handleApplyPromoCode = useCallback(async () => {
     if (!promoCode.trim()) {
@@ -352,6 +359,9 @@ export default function PaywallScreen() {
       });
       
       if (result.success) {
+        // Mark paywall as completed for this session (for test mode)
+        markPaywallCompleted();
+        
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setPromoSuccess(`🎉 Premium activated for ${result.durationDays} days!`);
         setShowConfetti(true);
@@ -368,7 +378,7 @@ export default function PaywallScreen() {
     } finally {
       setIsApplyingPromo(false);
     }
-  }, [promoCode, userId, redeemPromoCode, navigateAfterSuccess]);
+  }, [promoCode, userId, redeemPromoCode, navigateAfterSuccess, markPaywallCompleted]);
 
   const monthlyPrice = monthlyPackage?.product?.priceString || '$9.99';
   const annualPrice = annualPackage?.product?.priceString || '$39.99';
@@ -377,7 +387,7 @@ export default function PaywallScreen() {
     : '$3.33';
 
   const features = [
-    { icon: Zap, text: 'Unlimited video generations' },
+    { icon: Zap, text: '10 videos per month or 30 videos per year' },
     { icon: Sparkles, text: 'Premium AI voice cloning' },
     { icon: Crown, text: 'Priority rendering queue' },
   ];
@@ -452,7 +462,7 @@ export default function PaywallScreen() {
           <Text style={styles.subtitle}>
             {hasReachedLimit 
               ? "You've used all 3 free videos. Subscribe to continue creating unlimited stunning videos!"
-              : "Create unlimited stunning videos with premium AI features"
+              : "Create stunning videos with AI"
             }
           </Text>
         </View>

@@ -359,8 +359,9 @@ export default function FeedScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { videos, deleteVideo, userId, syncedFromBackend, syncVideosFromBackend, syncUserFromBackend } = useApp();
-  const { subscriptionState } = usePaywall();
+  const { subscriptionState, hasCompletedPaywallThisSession } = usePaywall();
   const [selectedVideo, setSelectedVideo] = useState<VideoType | null>(null);
+  const [hasShownInitialPaywall, setHasShownInitialPaywall] = useState(false);
   const [isPromptExpanded, setIsPromptExpanded] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
@@ -450,26 +451,46 @@ export default function FeedScreen() {
     registerForPushNotificationsAsync();
   }, []);
 
+  // In test mode, show paywall on first access if not completed this session
+  useEffect(() => {
+    if (ENABLE_TEST_RUN_MODE && !hasCompletedPaywallThisSession && !hasShownInitialPaywall) {
+      console.log('[feed] Test mode: showing initial paywall');
+      setHasShownInitialPaywall(true);
+      // Small delay to ensure the feed is rendered first
+      setTimeout(() => {
+        router.push('/paywall');
+      }, 100);
+    }
+  }, [hasCompletedPaywallThisSession, hasShownInitialPaywall, router]);
+
   // Handle create new video - check limit before allowing
   const handleCreateNew = useCallback(() => {
     const generatedCount = videoGenerationStatus?.generatedCount ?? 0;
     const limit = videoGenerationStatus?.limit ?? 3;
     
-    // In test mode, override hasReachedLimit to ignore backend isPremium
+    // In test mode, check if user has completed paywall this session
+    // Otherwise, check the actual limit
     const hasReachedLimit = ENABLE_TEST_RUN_MODE 
       ? generatedCount >= limit 
       : (videoGenerationStatus?.hasReachedLimit ?? false);
+    
+    // In test mode, use session completion flag instead of isPro
+    const hasAccess = ENABLE_TEST_RUN_MODE 
+      ? hasCompletedPaywallThisSession 
+      : subscriptionState.isPro;
     
     console.log('[feed] Create new pressed:', {
       generatedCount,
       limit,
       hasReachedLimit,
       isSubscribed: subscriptionState.isPro,
+      hasCompletedPaywallThisSession,
+      hasAccess,
       testMode: ENABLE_TEST_RUN_MODE,
     });
     
-    // If user has reached limit and is not subscribed, show paywall
-    if (hasReachedLimit && !subscriptionState.isPro) {
+    // If user has reached limit and doesn't have access, show paywall
+    if (hasReachedLimit && !hasAccess) {
       console.log(`[feed] Showing paywall - user has generated ${generatedCount}/${limit} videos (limit reached)`);
       router.push('/paywall');
       return;
@@ -477,7 +498,7 @@ export default function FeedScreen() {
     
     // Otherwise, proceed to composer
     router.push('/composer');
-  }, [videoGenerationStatus, subscriptionState.isPro, router]);
+  }, [videoGenerationStatus, subscriptionState.isPro, hasCompletedPaywallThisSession, router]);
   
   const modalPlayer = useVideoPlayer(
     selectedVideo?.uri && selectedVideo?.status === 'ready' ? selectedVideo.uri : null,
