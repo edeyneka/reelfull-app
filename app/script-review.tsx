@@ -38,6 +38,7 @@ export default function ScriptReviewScreen() {
   const markProjectSubmittedTestMode = useMutation(api.tasks.markProjectSubmittedTestMode);
   const generateUploadUrl = useMutation(api.tasks.generateUploadUrl);
   const updateProjectRenderMode = useMutation(api.tasks.updateProjectRenderMode);
+  const updateProjectVoiceSpeed = useMutation(api.tasks.updateProjectVoiceSpeed);
 
   // Local state
   const [isEditing, setIsEditing] = useState(false);
@@ -46,6 +47,7 @@ export default function ScriptReviewScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [renderMode, setRenderMode] = useState<'remotion' | 'ffmpeg'>('ffmpeg');
   const [lastProjectScript, setLastProjectScript] = useState<string>('');
+  const [voiceSpeed, setVoiceSpeed] = useState<number>(1.15); // Default to "Fast" (1.15)
 
   // Initialize script and render mode from project
   useEffect(() => {
@@ -65,7 +67,10 @@ export default function ScriptReviewScreen() {
     if (project?.renderMode) {
       setRenderMode(project.renderMode);
     }
-  }, [project?.script, project?.renderMode, isEditing]);
+    if (project?.voiceSpeed) {
+      setVoiceSpeed(project.voiceSpeed);
+    }
+  }, [project?.script, project?.renderMode, project?.voiceSpeed, isEditing]);
 
   const handleSaveEdit = async () => {
     if (!projectId || !editedScript.trim()) {
@@ -138,6 +143,13 @@ export default function ScriptReviewScreen() {
       await updateProjectRenderMode({
         id: projectId,
         renderMode,
+      });
+
+      // Save voice speed
+      console.log('[script-review] Saving voice speed:', voiceSpeed);
+      await updateProjectVoiceSpeed({
+        id: projectId,
+        voiceSpeed,
       });
 
       // Optimistically update video status to "processing" for instant UI feedback
@@ -335,6 +347,36 @@ export default function ScriptReviewScreen() {
                   <Text style={styles.scriptText}>{editedScript || (project.script ? project.script.replace(/\?\?\?/g, "?") : '')}</Text>
                 </View>
               )}
+            </View>
+
+            {/* Voice Speed Selector */}
+            <View style={styles.voiceSpeedContainer}>
+              <Text style={styles.voiceSpeedLabel}>Voice Speed</Text>
+              <View style={styles.voiceSpeedToggle}>
+                {[
+                  { label: 'Slow', value: 1.0 },
+                  { label: 'Normal', value: 1.08 },
+                  { label: 'Fast', value: 1.15 },
+                  { label: 'Very Fast', value: 1.25 },
+                ].map((option) => (
+                  <TouchableOpacity
+                    key={option.value}
+                    style={[
+                      styles.voiceSpeedOption,
+                      voiceSpeed === option.value && styles.voiceSpeedOptionActive
+                    ]}
+                    onPress={() => setVoiceSpeed(option.value)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[
+                      styles.voiceSpeedText,
+                      voiceSpeed === option.value && styles.voiceSpeedTextActive
+                    ]}>
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
 
             {/* Render Mode Toggle - Commented out for production (defaults to ffmpeg) */}
@@ -550,6 +592,45 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: Fonts.title,
     color: Colors.grayLight,
+  },
+  voiceSpeedContainer: {
+    marginTop: 24,
+    gap: 12,
+  },
+  voiceSpeedLabel: {
+    fontSize: 14,
+    fontFamily: Fonts.regular,
+    color: Colors.grayLight,
+    marginBottom: 4,
+  },
+  voiceSpeedToggle: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  voiceSpeedOption: {
+    flex: 1,
+    backgroundColor: Colors.grayDark,
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  voiceSpeedOptionActive: {
+    borderColor: Colors.orange,
+    backgroundColor: 'rgba(255, 107, 53, 0.1)',
+  },
+  voiceSpeedText: {
+    fontSize: 13,
+    fontFamily: Fonts.regular,
+    color: Colors.white,
+    textAlign: 'center',
+  },
+  voiceSpeedTextActive: {
+    color: Colors.orange,
+    fontWeight: '600',
   },
   renderModeContainer: {
     marginTop: 24,
