@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { User, Palette, X, Mic, Volume2, Headphones, Info, ChevronRight, Crown } from 'lucide-react-native';
+import { User, Palette, X, Mic, Volume2, Headphones, Info, ChevronRight, Crown, Gift, Check } from 'lucide-react-native';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   ScrollView,
@@ -38,6 +38,10 @@ export default function SettingsScreen() {
   // Convex queries
   const user = useQuery(api.users.getCurrentUser, userId ? { userId } : "skip");
   const defaultVoices = useQuery(api.users.getDefaultVoices);
+  const videoGenerationStatus = useQuery(
+    api.users.getVideoGenerationStatus,
+    userId ? { userId } : "skip"
+  );
   
   // Convex mutations and actions
   const generateUploadUrl = useMutation(api.users.generateUploadUrl);
@@ -380,6 +384,19 @@ export default function SettingsScreen() {
     );
   };
 
+  // Get credit status text
+  const getCreditStatusText = () => {
+    if (!videoGenerationStatus) return '';
+    
+    const { isPremium, subscriptionCreditsRemaining, purchasedCredits, totalCreditsRemaining } = videoGenerationStatus;
+    
+    if (isPremium) {
+      return `${subscriptionCreditsRemaining} subscription + ${purchasedCredits || 0} bonus credits`;
+    } else {
+      return `${totalCreditsRemaining} credits remaining`;
+    }
+  };
+
   if (!userId) {
     return (
       <Animated.View 
@@ -499,13 +516,22 @@ export default function SettingsScreen() {
                 activeOpacity={0.7}
               >
                 <View style={styles.menuItemLeft}>
-                  <View style={[styles.menuIconContainer, styles.proIconContainer]}>
-                    <Crown size={22} color={Colors.orange} strokeWidth={2} />
+                  <View style={[styles.menuIconContainer, subscriptionState.isPro ? styles.creditsIconContainer : styles.proIconContainer]}>
+                    {subscriptionState.isPro ? (
+                      <Gift size={22} color="#4CAF50" strokeWidth={2} />
+                    ) : (
+                      <Crown size={22} color={Colors.orange} strokeWidth={2} />
+                    )}
                   </View>
                   <View>
-                    <Text style={styles.menuItemText}>Reelful Pro</Text>
+                    <Text style={styles.menuItemText}>
+                      {subscriptionState.isPro ? 'Buy More Credits' : 'Reelful Pro'}
+                    </Text>
                     <Text style={styles.menuItemSubtext}>
-                      {subscriptionState.isPro ? 'Active' : 'Unlock premium features'}
+                      {subscriptionState.isPro 
+                        ? getCreditStatusText() || 'Get extra video credits'
+                        : 'Unlock premium features'
+                      }
                     </Text>
                   </View>
                 </View>
@@ -1173,5 +1199,10 @@ const styles = StyleSheet.create({
   },
   orangeHeart: {
     fontSize: 18,
+  },
+  // Credits Icon Container
+  creditsIconContainer: {
+    backgroundColor: 'rgba(76, 175, 80, 0.15)',
+    borderRadius: 8,
   },
 });

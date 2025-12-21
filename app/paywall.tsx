@@ -16,12 +16,12 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { X, Sparkles, Zap, Crown, Ticket, Check } from 'lucide-react-native';
+import { X, Sparkles, Zap, Crown, Ticket, Check, Gift } from 'lucide-react-native';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import Colors from '@/constants/colors';
 import { Fonts } from '@/constants/typography';
-import { usePaywall } from '@/contexts/PaywallContext';
+import { usePaywall, CREDIT_PACKS, CreditPackType } from '@/contexts/PaywallContext';
 import { useApp } from '@/contexts/AppContext';
 import * as Haptics from 'expo-haptics';
 
@@ -127,6 +127,7 @@ export default function PaywallScreen() {
     isLoading,
     subscriptionState,
     markPaywallCompleted,
+    purchaseCredits,
   } = usePaywall();
   
   // Mutation to sync subscription status to backend
@@ -145,6 +146,11 @@ export default function PaywallScreen() {
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [selectedCreditPack, setSelectedCreditPack] = useState<CreditPackType>('PACK_10');
+  const [isPurchasingCredits, setIsPurchasingCredits] = useState(false);
+  
+  // Pro users see credits view, non-Pro users see subscription view
+  const showCreditsView = subscriptionState.isPro;
   
   // Promo code state
   const [promoCode, setPromoCode] = useState('');
@@ -275,13 +281,14 @@ export default function PaywallScreen() {
         // Mark paywall as completed for this session (for test mode)
         markPaywallCompleted();
         
-        // Sync subscription status to backend
+        // Sync subscription status to backend with subscription type
         if (userId) {
           try {
             await updateSubscriptionStatus({
               userId,
               isPremium: true,
               subscriptionExpiresAt: subscriptionState.expirationDate || undefined,
+              subscriptionType: selectedPlan === 'monthly' ? 'monthly' : 'annual',
             });
             console.log('[Paywall] Subscription status synced to backend');
           } catch (syncError) {
@@ -380,6 +387,25 @@ export default function PaywallScreen() {
     }
   }, [promoCode, userId, redeemPromoCode, navigateAfterSuccess, markPaywallCompleted]);
 
+  const handlePurchaseCredits = useCallback(async () => {
+    Keyboard.dismiss();
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+    
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setIsPurchasingCredits(true);
+    
+    try {
+      const success = await purchaseCredits(selectedCreditPack);
+      if (success) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        setShowConfetti(true);
+        navigateAfterSuccess(2500);
+      }
+    } finally {
+      setIsPurchasingCredits(false);
+    }
+  }, [selectedCreditPack, purchaseCredits, navigateAfterSuccess]);
+
   const monthlyPrice = monthlyPackage?.product?.priceString || '$9.99';
   const annualPrice = annualPackage?.product?.priceString || '$39.99';
   const annualMonthlyPrice = annualPackage?.product?.price 
@@ -387,7 +413,7 @@ export default function PaywallScreen() {
     : '$3.33';
 
   const features = [
-    { icon: Zap, text: '10 videos per month or 30 videos per year' },
+    { icon: Zap, text: '10 videos per month or 150 videos per year' },
     { icon: Sparkles, text: 'Premium AI voice cloning' },
     { icon: Crown, text: 'Priority rendering queue' },
   ];
@@ -456,189 +482,337 @@ export default function PaywallScreen() {
             colors={['#FF6B35', '#FF8C42', '#FFB347']}
             style={styles.iconContainer}
           >
-            <Crown size={30} color={Colors.white} />
+            {showCreditsView ? <Gift size={30} color={Colors.white} /> : <Crown size={30} color={Colors.white} />}
           </LinearGradient>
-          <Text style={styles.title}>Unlock Reelful Pro</Text>
+          <Text style={styles.title}>
+            {showCreditsView ? 'Buy More Credits' : 'Unlock Reelful Pro'}
+          </Text>
           <Text style={styles.subtitle}>
-            {hasReachedLimit 
-              ? "You've used all 3 free videos. Subscribe to continue creating unlimited stunning videos!"
-              : "Create stunning videos with AI"
+            {showCreditsView 
+              ? "Add extra video credits to your account. These credits never expire!"
+              : hasReachedLimit 
+                ? "You've used all 3 free videos. Subscribe to continue creating unlimited stunning videos!"
+                : "Create stunning videos with AI"
             }
           </Text>
+          
+          {/* Show current credits for Pro users */}
+          {showCreditsView && videoGenerationStatus && (
+            <View style={styles.currentCreditsDisplay}>
+              <Text style={styles.currentCreditsLabel}>Your Credits</Text>
+              <Text style={styles.currentCreditsValue}>
+                {videoGenerationStatus.totalCreditsRemaining}
+              </Text>
+            </View>
+          )}
         </View>
 
-      {/* Features */}
-      <View style={styles.featuresSection}>
-        {features.map((feature, index) => (
-          <View key={index} style={styles.featureRow}>
-            <View style={styles.featureIcon}>
-              <feature.icon size={18} color={Colors.orange} />
-            </View>
-            <Text style={styles.featureText}>{feature.text}</Text>
-          </View>
-        ))}
-      </View>
+      {showCreditsView ? (
+        <>
+          {/* Credit Packs for Pro users */}
+          <View style={styles.creditPacksSection}>
+            <Text style={styles.creditPacksTitle}>Choose a Credit Pack</Text>
+            
+            <TouchableOpacity
+              style={[
+                styles.creditPackCard,
+                selectedCreditPack === 'PACK_10' && styles.creditPackCardSelected,
+              ]}
+              onPress={() => setSelectedCreditPack('PACK_10')}
+              activeOpacity={0.8}
+            >
+              <View style={styles.creditPackHeader}>
+                <View style={[
+                  styles.radioButton,
+                  selectedCreditPack === 'PACK_10' && styles.radioButtonSelected,
+                ]}>
+                  {selectedCreditPack === 'PACK_10' && (
+                    <View style={styles.radioButtonInner} />
+                  )}
+                </View>
+                <View style={styles.creditPackInfo}>
+                  <Text style={styles.creditPackCredits}>10 Credits</Text>
+                  <Text style={styles.creditPackPrice}>{CREDIT_PACKS.PACK_10.priceString}</Text>
+                </View>
+              </View>
+              <Text style={styles.creditPackSubtext}>$1.00 per video</Text>
+            </TouchableOpacity>
 
-      {/* Plans */}
-      <View style={styles.plansSection}>
-        <TouchableOpacity
-          style={[
-            styles.planCard,
-            selectedPlan === 'annual' && styles.planCardSelected,
-          ]}
-          onPress={() => handleSelectPlan('annual')}
-          activeOpacity={0.8}
-        >
-          <View style={styles.saveBadge}>
-            <Text style={styles.saveBadgeText}>SAVE 33%</Text>
-          </View>
-          <View style={styles.planHeader}>
-            <View style={[
-              styles.radioButton,
-              selectedPlan === 'annual' && styles.radioButtonSelected,
-            ]}>
-              {selectedPlan === 'annual' && (
-                <View style={styles.radioButtonInner} />
-              )}
-            </View>
-            <View style={styles.planInfo}>
-              <Text style={styles.planName}>Annual</Text>
-              <Text style={styles.planPrice}>
-                {annualPrice}
-                <Text style={styles.planPeriod}>/year</Text>
-              </Text>
-            </View>
-          </View>
-          <Text style={styles.planSubtext}>
-            Just {annualMonthlyPrice}/month, billed annually
-          </Text>
-        </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.creditPackCard,
+                selectedCreditPack === 'PACK_20' && styles.creditPackCardSelected,
+              ]}
+              onPress={() => setSelectedCreditPack('PACK_20')}
+              activeOpacity={0.8}
+            >
+              <View style={styles.creditPackHeader}>
+                <View style={[
+                  styles.radioButton,
+                  selectedCreditPack === 'PACK_20' && styles.radioButtonSelected,
+                ]}>
+                  {selectedCreditPack === 'PACK_20' && (
+                    <View style={styles.radioButtonInner} />
+                  )}
+                </View>
+                <View style={styles.creditPackInfo}>
+                  <Text style={styles.creditPackCredits}>20 Credits</Text>
+                  <Text style={styles.creditPackPrice}>{CREDIT_PACKS.PACK_20.priceString}</Text>
+                </View>
+              </View>
+              <Text style={styles.creditPackSubtext}>$1.00 per video</Text>
+            </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[
-            styles.planCard,
-            selectedPlan === 'monthly' && styles.planCardSelected,
-          ]}
-          onPress={() => handleSelectPlan('monthly')}
-          activeOpacity={0.8}
-        >
-          <View style={styles.planHeader}>
-            <View style={[
-              styles.radioButton,
-              selectedPlan === 'monthly' && styles.radioButtonSelected,
-            ]}>
-              {selectedPlan === 'monthly' && (
-                <View style={styles.radioButtonInner} />
-              )}
+            <TouchableOpacity
+              style={[
+                styles.creditPackCard,
+                selectedCreditPack === 'PACK_50' && styles.creditPackCardSelected,
+              ]}
+              onPress={() => setSelectedCreditPack('PACK_50')}
+              activeOpacity={0.8}
+            >
+              <View style={styles.saveBadge}>
+                <Text style={styles.saveBadgeText}>BEST VALUE</Text>
+              </View>
+              <View style={styles.creditPackHeader}>
+                <View style={[
+                  styles.radioButton,
+                  selectedCreditPack === 'PACK_50' && styles.radioButtonSelected,
+                ]}>
+                  {selectedCreditPack === 'PACK_50' && (
+                    <View style={styles.radioButtonInner} />
+                  )}
+                </View>
+                <View style={styles.creditPackInfo}>
+                  <Text style={styles.creditPackCredits}>50 Credits</Text>
+                  <Text style={styles.creditPackPrice}>{CREDIT_PACKS.PACK_50.priceString}</Text>
+                </View>
+              </View>
+              <Text style={styles.creditPackSubtext}>$1.00 per video</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Credit Pack Features */}
+          <View style={styles.creditFeaturesSection}>
+            <View style={styles.featureRow}>
+              <View style={styles.featureIcon}>
+                <Check size={18} color={Colors.orange} />
+              </View>
+              <Text style={styles.featureText}>Credits never expire</Text>
             </View>
-            <View style={styles.planInfo}>
-              <Text style={styles.planName}>Monthly</Text>
-              <Text style={styles.planPrice}>
-                {monthlyPrice}
-                <Text style={styles.planPeriod}>/month</Text>
-              </Text>
+            <View style={styles.featureRow}>
+              <View style={styles.featureIcon}>
+                <Check size={18} color={Colors.orange} />
+              </View>
+              <Text style={styles.featureText}>Stack with subscription credits</Text>
             </View>
           </View>
-        </TouchableOpacity>
-      </View>
 
-      {/* Promo Code Section */}
-      <View style={styles.promoSection}>
-        <View style={styles.promoHeader}>
-          <Ticket size={16} color={Colors.grayLight} />
-          <View style={styles.promoLabelContainer}>
-            <Text style={styles.promoLabel}>Have a promo code?</Text>
-            <Text style={styles.promoDescription}>
-              Valid for 1 month from activation, then charged monthly
+          {/* Footer for Credits */}
+          <View style={styles.footer}>
+            <TouchableOpacity
+              style={styles.subscribeButton}
+              onPress={handlePurchaseCredits}
+              disabled={isPurchasingCredits}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={['#FF6B35', '#FF8C42']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.subscribeGradient}
+              >
+                {isPurchasingCredits ? (
+                  <ActivityIndicator size="small" color={Colors.white} />
+                ) : (
+                  <Text style={styles.subscribeText}>
+                    Buy {CREDIT_PACKS[selectedCreditPack].credits} Credits
+                  </Text>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <Text style={styles.legalText}>
+              One-time purchase. Credits will be added to your account immediately.
             </Text>
           </View>
-        </View>
-        <View style={styles.promoInputRow}>
-          <TextInput
-            style={styles.promoInput}
-            placeholder="Enter code"
-            placeholderTextColor="rgba(255,255,255,0.3)"
-            value={promoCode}
-            onChangeText={(text) => {
-              setPromoCode(text);
-              setPromoError(null);
-              setPromoSuccess(null);
-            }}
-            onFocus={() => {
-              // Auto-scroll to show Subscribe button when promo input is focused
-              setTimeout(() => {
-                scrollViewRef.current?.scrollToEnd({ animated: true });
-              }, 300);
-            }}
-            autoCapitalize="characters"
-            autoCorrect={false}
-            editable={!isApplyingPromo}
-          />
-          <TouchableOpacity
-            style={[
-              styles.promoApplyButton,
-              (!promoCode.trim() || isApplyingPromo) && styles.promoApplyButtonDisabled,
-            ]}
-            onPress={handleApplyPromoCode}
-            disabled={!promoCode.trim() || isApplyingPromo}
-            activeOpacity={0.7}
-          >
-            {isApplyingPromo ? (
-              <ActivityIndicator size="small" color={Colors.white} />
-            ) : (
-              <Text style={styles.promoApplyText}>Apply</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-        {promoError && (
-          <Text style={styles.promoErrorText}>{promoError}</Text>
-        )}
-        {promoSuccess && (
-          <View style={styles.promoSuccessRow}>
-            <Check size={14} color="#4CAF50" />
-            <Text style={styles.promoSuccessText}>{promoSuccess}</Text>
+        </>
+      ) : (
+        <>
+          {/* Features */}
+          <View style={styles.featuresSection}>
+            {features.map((feature, index) => (
+              <View key={index} style={styles.featureRow}>
+                <View style={styles.featureIcon}>
+                  <feature.icon size={18} color={Colors.orange} />
+                </View>
+                <Text style={styles.featureText}>{feature.text}</Text>
+              </View>
+            ))}
           </View>
-        )}
-      </View>
 
-            {/* Footer */}
-            <View style={styles.footer}>
-              <TouchableOpacity
-                style={styles.subscribeButton}
-                onPress={handleSubscribe}
-                disabled={isPurchasing}
-                activeOpacity={0.8}
-              >
-                <LinearGradient
-                  colors={['#FF6B35', '#FF8C42']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.subscribeGradient}
-                >
-                  {isPurchasing ? (
-                    <ActivityIndicator size="small" color={Colors.white} />
-                  ) : (
-                    <Text style={styles.subscribeText}>Subscribe Now</Text>
+          {/* Plans */}
+          <View style={styles.plansSection}>
+            <TouchableOpacity
+              style={[
+                styles.planCard,
+                selectedPlan === 'annual' && styles.planCardSelected,
+              ]}
+              onPress={() => handleSelectPlan('annual')}
+              activeOpacity={0.8}
+            >
+              <View style={styles.saveBadge}>
+                <Text style={styles.saveBadgeText}>SAVE 33%</Text>
+              </View>
+              <View style={styles.planHeader}>
+                <View style={[
+                  styles.radioButton,
+                  selectedPlan === 'annual' && styles.radioButtonSelected,
+                ]}>
+                  {selectedPlan === 'annual' && (
+                    <View style={styles.radioButtonInner} />
                   )}
-                </LinearGradient>
-              </TouchableOpacity>
+                </View>
+                <View style={styles.planInfo}>
+                  <Text style={styles.planName}>Annual</Text>
+                  <Text style={styles.planPrice}>
+                    {annualPrice}
+                    <Text style={styles.planPeriod}>/year</Text>
+                  </Text>
+                </View>
+              </View>
+              <Text style={styles.planSubtext}>
+                Just {annualMonthlyPrice}/month, billed annually
+              </Text>
+            </TouchableOpacity>
 
+            <TouchableOpacity
+              style={[
+                styles.planCard,
+                selectedPlan === 'monthly' && styles.planCardSelected,
+              ]}
+              onPress={() => handleSelectPlan('monthly')}
+              activeOpacity={0.8}
+            >
+              <View style={styles.planHeader}>
+                <View style={[
+                  styles.radioButton,
+                  selectedPlan === 'monthly' && styles.radioButtonSelected,
+                ]}>
+                  {selectedPlan === 'monthly' && (
+                    <View style={styles.radioButtonInner} />
+                  )}
+                </View>
+                <View style={styles.planInfo}>
+                  <Text style={styles.planName}>Monthly</Text>
+                  <Text style={styles.planPrice}>
+                    {monthlyPrice}
+                    <Text style={styles.planPeriod}>/month</Text>
+                  </Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          {/* Promo Code Section */}
+          <View style={styles.promoSection}>
+            <View style={styles.promoHeader}>
+              <Ticket size={16} color={Colors.grayLight} />
+              <View style={styles.promoLabelContainer}>
+                <Text style={styles.promoLabel}>Have a promo code?</Text>
+                <Text style={styles.promoDescription}>
+                  Valid for 1 month from activation, then charged monthly
+                </Text>
+              </View>
+            </View>
+            <View style={styles.promoInputRow}>
+              <TextInput
+                style={styles.promoInput}
+                placeholder="Enter code"
+                placeholderTextColor="rgba(255,255,255,0.3)"
+                value={promoCode}
+                onChangeText={(text) => {
+                  setPromoCode(text);
+                  setPromoError(null);
+                  setPromoSuccess(null);
+                }}
+                onFocus={() => {
+                  // Auto-scroll to show Subscribe button when promo input is focused
+                  setTimeout(() => {
+                    scrollViewRef.current?.scrollToEnd({ animated: true });
+                  }, 300);
+                }}
+                autoCapitalize="characters"
+                autoCorrect={false}
+                editable={!isApplyingPromo}
+              />
               <TouchableOpacity
-                style={styles.restoreButton}
-                onPress={handleRestore}
-                disabled={isRestoring}
+                style={[
+                  styles.promoApplyButton,
+                  (!promoCode.trim() || isApplyingPromo) && styles.promoApplyButtonDisabled,
+                ]}
+                onPress={handleApplyPromoCode}
+                disabled={!promoCode.trim() || isApplyingPromo}
+                activeOpacity={0.7}
               >
-                {isRestoring ? (
-                  <ActivityIndicator size="small" color={Colors.grayLight} />
+                {isApplyingPromo ? (
+                  <ActivityIndicator size="small" color={Colors.white} />
                 ) : (
-                  <Text style={styles.restoreText}>Restore Purchases</Text>
+                  <Text style={styles.promoApplyText}>Apply</Text>
                 )}
               </TouchableOpacity>
-
-              <Text style={styles.legalText}>
-                Cancel anytime. Subscription auto-renews unless canceled at least 24 hours before the end of the current period.
-              </Text>
             </View>
+            {promoError && (
+              <Text style={styles.promoErrorText}>{promoError}</Text>
+            )}
+            {promoSuccess && (
+              <View style={styles.promoSuccessRow}>
+                <Check size={14} color="#4CAF50" />
+                <Text style={styles.promoSuccessText}>{promoSuccess}</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Footer */}
+          <View style={styles.footer}>
+            <TouchableOpacity
+              style={styles.subscribeButton}
+              onPress={handleSubscribe}
+              disabled={isPurchasing}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={['#FF6B35', '#FF8C42']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.subscribeGradient}
+              >
+                {isPurchasing ? (
+                  <ActivityIndicator size="small" color={Colors.white} />
+                ) : (
+                  <Text style={styles.subscribeText}>Subscribe Now</Text>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.restoreButton}
+              onPress={handleRestore}
+              disabled={isRestoring}
+            >
+              {isRestoring ? (
+                <ActivityIndicator size="small" color={Colors.grayLight} />
+              ) : (
+                <Text style={styles.restoreText}>Restore Purchases</Text>
+              )}
+            </TouchableOpacity>
+
+            <Text style={styles.legalText}>
+              Cancel anytime. Subscription auto-renews unless canceled at least 24 hours before the end of the current period.
+            </Text>
+          </View>
+        </>
+      )}
           </ScrollView>
         </Animated.View>
       </KeyboardAvoidingView>
@@ -943,5 +1117,87 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: Fonts.regular,
     color: '#4CAF50',
+  },
+  // Current Credits Display
+  currentCreditsDisplay: {
+    alignItems: 'center',
+    marginTop: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    backgroundColor: 'rgba(255, 107, 53, 0.15)',
+    borderRadius: 12,
+  },
+  currentCreditsLabel: {
+    fontSize: 12,
+    fontFamily: Fonts.regular,
+    color: Colors.grayLight,
+    marginBottom: 4,
+  },
+  currentCreditsValue: {
+    fontSize: 32,
+    fontFamily: Fonts.title,
+    fontWeight: '700' as const,
+    color: Colors.orange,
+  },
+  // Credit Packs
+  creditPacksSection: {
+    marginBottom: 14,
+  },
+  creditPacksTitle: {
+    fontSize: 16,
+    fontFamily: Fonts.title,
+    fontWeight: '600' as const,
+    color: Colors.white,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  creditPackCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    position: 'relative',
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  creditPackCardSelected: {
+    borderColor: Colors.orange,
+    backgroundColor: 'rgba(255, 107, 53, 0.1)',
+  },
+  creditPackHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  creditPackInfo: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  creditPackCredits: {
+    fontSize: 16,
+    fontFamily: Fonts.title,
+    fontWeight: '600' as const,
+    color: Colors.white,
+  },
+  creditPackPrice: {
+    fontSize: 18,
+    fontFamily: Fonts.title,
+    fontWeight: '700' as const,
+    color: Colors.white,
+  },
+  creditPackSubtext: {
+    fontSize: 12,
+    fontFamily: Fonts.regular,
+    color: Colors.grayLight,
+    marginTop: 6,
+    marginLeft: 34,
+  },
+  creditFeaturesSection: {
+    marginBottom: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
   },
 });

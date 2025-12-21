@@ -1,11 +1,12 @@
 import createContextHook from '@nkzw/create-context-hook';
 import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
-import { Platform } from 'react-native';
+import { Platform, Alert } from 'react-native';
 import Purchases, { 
   PurchasesPackage, 
   CustomerInfo, 
   PurchasesOffering,
-  LOG_LEVEL
+  LOG_LEVEL,
+  PurchasesStoreProduct,
 } from 'react-native-purchases';
 import { useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
@@ -14,11 +15,21 @@ import { ENABLE_TEST_RUN_MODE } from '@/constants/config';
 
 const RC_API_KEY = process.env.EXPO_PUBLIC_RC_KEY || '';
 
+// Credit pack definitions - matching backend
+export const CREDIT_PACKS = {
+  PACK_10: { credits: 10, priceInCents: 999, productId: 'credits_10', priceString: '$9.99' },
+  PACK_20: { credits: 20, priceInCents: 1998, productId: 'credits_20', priceString: '$19.98' },
+  PACK_50: { credits: 50, priceInCents: 4995, productId: 'credits_50', priceString: '$49.95' },
+} as const;
+
+export type CreditPackType = keyof typeof CREDIT_PACKS;
+
 export interface SubscriptionState {
   isSubscribed: boolean;
   isPro: boolean;
   activeSubscription: string | null;
   expirationDate: string | null;
+  subscriptionType: 'monthly' | 'annual' | null;
 }
 
 export const [PaywallProvider, usePaywall] = createContextHook(() => {
@@ -28,6 +39,7 @@ export const [PaywallProvider, usePaywall] = createContextHook(() => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const syncedRef = useRef(false);
+  const [creditProducts, setCreditProducts] = useState<PurchasesStoreProduct[]>([]);
   
   // Session-level flag for test mode: tracks if user completed paywall this session
   // Resets on app reload, allowing paywall to show again
@@ -38,14 +50,20 @@ export const [PaywallProvider, usePaywall] = createContextHook(() => {
   
   // Mutation to sync subscription status to backend
   const updateSubscriptionStatus = useMutation(api.users.updateSubscriptionStatus);
+  
+  // Mutation to purchase credits
+  const purchaseCreditsMutation = useMutation(api.users.purchaseCredits);
 
   useEffect(() => {
     initializePurchases();
   }, []);
 
+  // Check if running in web/browser context
+  const isWebPlatform = Platform.OS === 'web' || typeof document !== 'undefined';
+
   const initializePurchases = async () => {
     try {
-      if (Platform.OS === 'web') {
+      if (isWebPlatform) {
         console.log('[Paywall] Web platform detected, skipping RevenueCat initialization');
         setIsLoading(false);
         setIsInitialized(true);
@@ -69,12 +87,37 @@ export const [PaywallProvider, usePaywall] = createContextHook(() => {
       
       await fetchOfferings();
       await fetchCustomerInfo();
+      await fetchCreditProducts();
       
     } catch (err) {
       console.error('[Paywall] Error initializing RevenueCat:', err);
       setError(err instanceof Error ? err.message : 'Failed to initialize purchases');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchCreditProducts = async () => {
+    try {
+      // Skip on web - use consistent web platform check
+      if (isWebPlatform) {
+        console.log('[Paywall] Skipping credit products fetch on web');
+        return;
+      }
+      
+      console.log('[Paywall] Fetching credit products...');
+      const productIds = Object.values(CREDIT_PACKS).map(pack => pack.productId);
+      const products = await Purchases.getProducts(productIds);
+      setCreditProducts(products);
+      console.log('[Paywall] Credit products fetched:', products.map(p => p.identifier));
+    } catch (err: any) {
+      // Silently handle web platform errors - this is expected
+      if (err?.message?.includes('not supported on web')) {
+        console.log('[Paywall] Credit products not available on web platform');
+        return;
+      }
+      console.error('[Paywall] Error fetching credit products:', err);
+      // Non-critical error, don't set error state
     }
   };
 
@@ -99,7 +142,7 @@ export const [PaywallProvider, usePaywall] = createContextHook(() => {
 
   const fetchCustomerInfo = async () => {
     try {
-      if (Platform.OS === 'web') return;
+      if (isWebPlatform) return;
       
       console.log('[Paywall] Fetching customer info...');
       const info = await Purchases.getCustomerInfo();
@@ -115,7 +158,7 @@ export const [PaywallProvider, usePaywall] = createContextHook(() => {
 
   const purchasePackage = useCallback(async (pkg: PurchasesPackage): Promise<boolean> => {
     try {
-      if (Platform.OS === 'web') {
+      if (isWebPlatform) {
         console.log('[Paywall] Purchases not available on web');
         return false;
       }
@@ -150,7 +193,7 @@ export const [PaywallProvider, usePaywall] = createContextHook(() => {
 
   const restorePurchases = useCallback(async (): Promise<boolean> => {
     try {
-      if (Platform.OS === 'web') {
+      if (isWebPlatform) {
         console.log('[Paywall] Restore not available on web');
         return false;
       }
@@ -179,7 +222,7 @@ export const [PaywallProvider, usePaywall] = createContextHook(() => {
 
   const identifyUser = useCallback(async (userId: string) => {
     try {
-      if (Platform.OS === 'web') return;
+      if (isWebPlatform) return;
       
       console.log('[Paywall] Identifying user:', userId);
       await Purchases.logIn(userId);
@@ -187,13 +230,74 @@ export const [PaywallProvider, usePaywall] = createContextHook(() => {
     } catch (err) {
       console.error('[Paywall] Error identifying user:', err);
     }
-  }, []);
+  }, [isWebPlatform]);
 
   // Mark paywall as completed for this session (used in test mode)
   const markPaywallCompleted = useCallback(() => {
     console.log('[Paywall] Marking paywall as completed for this session');
     setHasCompletedPaywallThisSession(true);
   }, []);
+
+  // Purchase credit pack
+  const purchaseCredits = useCallback(async (packType: CreditPackType): Promise<boolean> => {
+    if (!userId) {
+      Alert.alert('Error', 'Please sign in first');
+      return false;
+    }
+
+    const pack = CREDIT_PACKS[packType];
+    
+    try {
+      if (isWebPlatform) {
+        // For web, directly record the purchase (would need a web payment solution)
+        console.log('[Paywall] Web credit purchase not supported yet');
+        Alert.alert('Not Available', 'Credit purchases are not available on web');
+        return false;
+      }
+
+      // Find the product
+      const product = creditProducts.find(p => p.identifier === pack.productId);
+      
+      if (product) {
+        // Purchase through RevenueCat
+        console.log('[Paywall] Purchasing credit pack via RevenueCat:', pack.productId);
+        const { customerInfo: newCustomerInfo } = await Purchases.purchaseStoreProduct(product);
+        setCustomerInfo(newCustomerInfo);
+        
+        // Record the credit purchase in backend
+        await purchaseCreditsMutation({
+          userId,
+          credits: pack.credits,
+          priceInCents: pack.priceInCents,
+          productId: pack.productId,
+        });
+        
+        console.log('[Paywall] Credit purchase successful:', pack.credits, 'credits');
+        return true;
+      } else {
+        // Product not found in RevenueCat - use direct backend purchase (for testing)
+        console.log('[Paywall] Product not in RevenueCat, recording directly in backend');
+        
+        await purchaseCreditsMutation({
+          userId,
+          credits: pack.credits,
+          priceInCents: pack.priceInCents,
+          productId: pack.productId,
+        });
+        
+        console.log('[Paywall] Credit purchase recorded:', pack.credits, 'credits');
+        return true;
+      }
+    } catch (err: any) {
+      if (err.userCancelled) {
+        console.log('[Paywall] User cancelled credit purchase');
+        return false;
+      }
+      console.error('[Paywall] Error purchasing credits:', err);
+      Alert.alert('Purchase Failed', 'Unable to complete purchase. Please try again.');
+      return false;
+    }
+  }, [userId, creditProducts, purchaseCreditsMutation, isWebPlatform]);
 
   const subscriptionState: SubscriptionState = useMemo(() => {
     // In test mode, always return not premium to test the paywall flow
@@ -204,15 +308,17 @@ export const [PaywallProvider, usePaywall] = createContextHook(() => {
         isPro: false,
         activeSubscription: null,
         expirationDate: null,
+        subscriptionType: null,
       };
     }
 
-    if (Platform.OS === 'web' || !customerInfo) {
+    if (isWebPlatform || !customerInfo) {
       return {
         isSubscribed: false,
         isPro: false,
         activeSubscription: null,
         expirationDate: null,
+        subscriptionType: null,
       };
     }
 
@@ -226,13 +332,25 @@ export const [PaywallProvider, usePaywall] = createContextHook(() => {
     const hasActiveSubscription = customerInfo.activeSubscriptions.length > 0;
     const isSubscribed = hasActiveEntitlement || hasActiveSubscription;
     
+    // Determine subscription type based on active subscription identifier
+    let subscriptionType: 'monthly' | 'annual' | null = null;
+    const activeSubscription = customerInfo.activeSubscriptions[0];
+    if (activeSubscription) {
+      if (activeSubscription.includes('annual') || activeSubscription.includes('yearly')) {
+        subscriptionType = 'annual';
+      } else if (activeSubscription.includes('monthly')) {
+        subscriptionType = 'monthly';
+      }
+    }
+    
     return {
       isSubscribed,
       isPro: isSubscribed,
-      activeSubscription: customerInfo.activeSubscriptions[0] || null,
+      activeSubscription: activeSubscription || null,
       expirationDate: proEntitlement?.expirationDate || firstActiveEntitlement?.expirationDate || null,
+      subscriptionType,
     };
-  }, [customerInfo]);
+  }, [customerInfo, isWebPlatform]);
 
   // Sync subscription status to backend on app load when user is subscribed
   useEffect(() => {
@@ -247,6 +365,7 @@ export const [PaywallProvider, usePaywall] = createContextHook(() => {
             userId,
             isPremium: true,
             subscriptionExpiresAt: subscriptionState.expirationDate || undefined,
+            subscriptionType: subscriptionState.subscriptionType || undefined,
           });
           syncedRef.current = true;
           console.log('[Paywall] Subscription status synced to backend');
@@ -257,7 +376,7 @@ export const [PaywallProvider, usePaywall] = createContextHook(() => {
     };
     
     syncSubscriptionToBackend();
-  }, [userId, isInitialized, subscriptionState.isSubscribed, subscriptionState.expirationDate, updateSubscriptionStatus]);
+  }, [userId, isInitialized, subscriptionState.isSubscribed, subscriptionState.expirationDate, subscriptionState.subscriptionType, updateSubscriptionStatus]);
 
   const monthlyPackage = useMemo(() => {
     return offerings?.availablePackages.find(
@@ -287,6 +406,9 @@ export const [PaywallProvider, usePaywall] = createContextHook(() => {
     // Test mode session tracking
     hasCompletedPaywallThisSession,
     markPaywallCompleted,
+    // Credit purchases
+    creditProducts,
+    purchaseCredits,
   }), [
     isInitialized,
     isLoading,
@@ -301,5 +423,7 @@ export const [PaywallProvider, usePaywall] = createContextHook(() => {
     identifyUser,
     hasCompletedPaywallThisSession,
     markPaywallCompleted,
+    creditProducts,
+    purchaseCredits,
   ]);
 });

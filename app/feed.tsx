@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Plus, Download, Settings, Loader2, AlertCircle, X, Trash2, FileText, Copy, Check } from 'lucide-react-native';
+import { Plus, Download, Settings, Loader2, AlertCircle, X, Trash2, FileText, Copy, Check, Zap } from 'lucide-react-native';
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
   Dimensions,
@@ -861,6 +861,24 @@ export default function FeedScreen() {
     }
   };
 
+  // Get remaining credits display text
+  const getCreditsDisplay = () => {
+    if (!videoGenerationStatus) return null;
+    
+    const { isPremium, totalCreditsRemaining, subscriptionCreditsRemaining, purchasedCredits } = videoGenerationStatus;
+    
+    // For premium users, show subscription + bonus breakdown
+    if (isPremium) {
+      const total = totalCreditsRemaining;
+      return { count: total, label: 'credits' };
+    }
+    
+    // For free users
+    return { count: totalCreditsRemaining, label: 'videos left' };
+  };
+
+  const creditsDisplay = getCreditsDisplay();
+
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
@@ -872,13 +890,28 @@ export default function FeedScreen() {
               style={styles.headerIcon}
             />
           </View>
-          <TouchableOpacity
-            style={styles.settingsButton}
-            onPress={() => router.push('/settings')}
-            activeOpacity={0.7}
-          >
-            <Settings size={24} color={Colors.white} strokeWidth={2} />
-          </TouchableOpacity>
+          <View style={styles.headerRight}>
+            {/* Credits Counter */}
+            {creditsDisplay && (
+              <TouchableOpacity
+                style={styles.creditsCounter}
+                onPress={() => router.push('/paywall')}
+                activeOpacity={0.8}
+              >
+                <Zap size={14} color={Colors.orange} strokeWidth={2.5} />
+                <Text style={styles.creditsCounterText}>
+                  {creditsDisplay.count}
+                </Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={styles.settingsButton}
+              onPress={() => router.push('/settings')}
+              activeOpacity={0.7}
+            >
+              <Settings size={24} color={Colors.white} strokeWidth={2} />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
@@ -1109,6 +1142,26 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontFamily: Fonts.regular,
     color: Colors.white,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  creditsCounter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 107, 53, 0.15)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 4,
+  },
+  creditsCounterText: {
+    fontSize: 14,
+    fontFamily: Fonts.title,
+    fontWeight: '600',
+    color: Colors.orange,
   },
   settingsButton: {
     width: 44,
