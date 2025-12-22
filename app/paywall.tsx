@@ -415,8 +415,7 @@ export default function PaywallScreen() {
 
   const features = [
     { icon: Zap, text: '10 videos per month or 150 videos per year' },
-    { icon: Sparkles, text: 'Premium AI voice cloning' },
-    { icon: Crown, text: 'Priority rendering queue' },
+    { icon: Sparkles, text: 'Buy more credits anytime' },
   ];
 
   if (isLoading) {
