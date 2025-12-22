@@ -46,6 +46,7 @@ export const COUNTRIES: Country[] = [
   { name: 'Vietnam', code: 'VN', dialCode: '+84', flag: '🇻🇳', phoneLength: 9 },
   { name: 'Thailand', code: 'TH', dialCode: '+66', flag: '🇹🇭', phoneLength: 9 },
   { name: 'Malaysia', code: 'MY', dialCode: '+60', flag: '🇲🇾', phoneLength: 9 },
+  { name: 'Maldives', code: 'MV', dialCode: '+960', flag: '🇲🇻', phoneLength: 7 },
   { name: 'Singapore', code: 'SG', dialCode: '+65', flag: '🇸🇬', phoneLength: 8 },
   { name: 'Hong Kong', code: 'HK', dialCode: '+852', flag: '🇭🇰', phoneLength: 8 },
   { name: 'Taiwan', code: 'TW', dialCode: '+886', flag: '🇹🇼', phoneLength: 9 },
