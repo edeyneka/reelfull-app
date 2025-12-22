@@ -150,7 +150,8 @@ export default function PaywallScreen() {
   const [isPurchasingCredits, setIsPurchasingCredits] = useState(false);
   
   // Pro users see credits view, non-Pro users see subscription view
-  const showCreditsView = subscriptionState.isPro;
+  // Use backend status (more reliable) with fallback to RevenueCat status
+  const showCreditsView = videoGenerationStatus?.isPremium ?? subscriptionState.isPro;
   
   // Promo code state
   const [promoCode, setPromoCode] = useState('');
@@ -477,30 +478,30 @@ export default function PaywallScreen() {
             bounces={false}
           >
             {/* Hero Section */}
-            <View style={styles.heroSection}>
+            <View style={showCreditsView ? styles.heroSectionCompact : styles.heroSection}>
           <LinearGradient
             colors={['#FF6B35', '#FF8C42', '#FFB347']}
-            style={styles.iconContainer}
+            style={showCreditsView ? styles.iconContainerCompact : styles.iconContainer}
           >
             {showCreditsView ? <Gift size={30} color={Colors.white} /> : <Crown size={30} color={Colors.white} />}
           </LinearGradient>
-          <Text style={styles.title}>
+          <Text style={showCreditsView ? styles.titleCompact : styles.title}>
             {showCreditsView ? 'Buy More Credits' : 'Unlock Reelful Pro'}
           </Text>
-          <Text style={styles.subtitle}>
+          <Text style={showCreditsView ? styles.subtitleCompact : styles.subtitle}>
             {showCreditsView 
-              ? "Add extra video credits to your account. These credits never expire!"
+              ? "Add extra video credits to your account. Credits never expire!"
               : hasReachedLimit 
                 ? "You've used all 3 free videos. Subscribe to continue creating unlimited stunning videos!"
                 : "Create stunning videos with AI"
             }
           </Text>
           
-          {/* Show current credits for Pro users */}
+          {/* Show current credits for Pro users - inline version */}
           {showCreditsView && videoGenerationStatus && (
-            <View style={styles.currentCreditsDisplay}>
-              <Text style={styles.currentCreditsLabel}>Your Credits</Text>
-              <Text style={styles.currentCreditsValue}>
+            <View style={styles.currentCreditsDisplayInline}>
+              <Text style={styles.currentCreditsLabelInline}>Your Credits: </Text>
+              <Text style={styles.currentCreditsValueInline}>
                 {videoGenerationStatus.totalCreditsRemaining}
               </Text>
             </View>
@@ -523,11 +524,11 @@ export default function PaywallScreen() {
             >
               <View style={styles.creditPackHeader}>
                 <View style={[
-                  styles.radioButton,
+                  styles.radioButtonCompact,
                   selectedCreditPack === 'PACK_10' && styles.radioButtonSelected,
                 ]}>
                   {selectedCreditPack === 'PACK_10' && (
-                    <View style={styles.radioButtonInner} />
+                    <View style={styles.radioButtonInnerCompact} />
                   )}
                 </View>
                 <View style={styles.creditPackInfo}>
@@ -535,7 +536,6 @@ export default function PaywallScreen() {
                   <Text style={styles.creditPackPrice}>{CREDIT_PACKS.PACK_10.priceString}</Text>
                 </View>
               </View>
-              <Text style={styles.creditPackSubtext}>$1.00 per video</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -548,11 +548,11 @@ export default function PaywallScreen() {
             >
               <View style={styles.creditPackHeader}>
                 <View style={[
-                  styles.radioButton,
+                  styles.radioButtonCompact,
                   selectedCreditPack === 'PACK_20' && styles.radioButtonSelected,
                 ]}>
                   {selectedCreditPack === 'PACK_20' && (
-                    <View style={styles.radioButtonInner} />
+                    <View style={styles.radioButtonInnerCompact} />
                   )}
                 </View>
                 <View style={styles.creditPackInfo}>
@@ -560,7 +560,6 @@ export default function PaywallScreen() {
                   <Text style={styles.creditPackPrice}>{CREDIT_PACKS.PACK_20.priceString}</Text>
                 </View>
               </View>
-              <Text style={styles.creditPackSubtext}>$1.00 per video</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -571,16 +570,13 @@ export default function PaywallScreen() {
               onPress={() => setSelectedCreditPack('PACK_50')}
               activeOpacity={0.8}
             >
-              <View style={styles.saveBadge}>
-                <Text style={styles.saveBadgeText}>BEST VALUE</Text>
-              </View>
               <View style={styles.creditPackHeader}>
                 <View style={[
-                  styles.radioButton,
+                  styles.radioButtonCompact,
                   selectedCreditPack === 'PACK_50' && styles.radioButtonSelected,
                 ]}>
                   {selectedCreditPack === 'PACK_50' && (
-                    <View style={styles.radioButtonInner} />
+                    <View style={styles.radioButtonInnerCompact} />
                   )}
                 </View>
                 <View style={styles.creditPackInfo}>
@@ -588,28 +584,27 @@ export default function PaywallScreen() {
                   <Text style={styles.creditPackPrice}>{CREDIT_PACKS.PACK_50.priceString}</Text>
                 </View>
               </View>
-              <Text style={styles.creditPackSubtext}>$1.00 per video</Text>
             </TouchableOpacity>
           </View>
 
           {/* Credit Pack Features */}
           <View style={styles.creditFeaturesSection}>
-            <View style={styles.featureRow}>
-              <View style={styles.featureIcon}>
-                <Check size={18} color={Colors.orange} />
+            <View style={styles.featureRowCompact}>
+              <View style={styles.featureIconCompact}>
+                <Check size={16} color={Colors.orange} />
               </View>
-              <Text style={styles.featureText}>Credits never expire</Text>
+              <Text style={styles.featureTextCompact}>Credits never expire</Text>
             </View>
-            <View style={styles.featureRow}>
-              <View style={styles.featureIcon}>
-                <Check size={18} color={Colors.orange} />
+            <View style={styles.featureRowCompact}>
+              <View style={styles.featureIconCompact}>
+                <Check size={16} color={Colors.orange} />
               </View>
-              <Text style={styles.featureText}>Stack with subscription credits</Text>
+              <Text style={styles.featureTextCompact}>Stack with subscription credits</Text>
             </View>
           </View>
 
-          {/* Footer for Credits */}
-          <View style={styles.footer}>
+          {/* Footer for Credits - Compact */}
+          <View style={styles.footerCompact}>
             <TouchableOpacity
               style={styles.subscribeButton}
               onPress={handlePurchaseCredits}
@@ -620,20 +615,20 @@ export default function PaywallScreen() {
                 colors={['#FF6B35', '#FF8C42']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
-                style={styles.subscribeGradient}
+                style={styles.subscribeGradientCompact}
               >
                 {isPurchasingCredits ? (
                   <ActivityIndicator size="small" color={Colors.white} />
                 ) : (
-                  <Text style={styles.subscribeText}>
+                  <Text style={styles.subscribeTextCompact}>
                     Buy {CREDIT_PACKS[selectedCreditPack].credits} Credits
                   </Text>
                 )}
               </LinearGradient>
             </TouchableOpacity>
 
-            <Text style={styles.legalText}>
-              One-time purchase. Credits will be added to your account immediately.
+            <Text style={styles.legalTextCompact}>
+              One-time purchase. Credits added immediately.
             </Text>
           </View>
         </>
@@ -868,6 +863,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 10,
   },
+  // Compact hero for credits view
+  heroSectionCompact: {
+    alignItems: 'center',
+    marginTop: 24,
+    marginBottom: 10,
+  },
+  iconContainerCompact: {
+    width: 60,
+    height: 60,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
   title: {
     fontSize: 26,
     fontFamily: Fonts.title,
@@ -876,7 +885,23 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     textAlign: 'center',
   },
+  titleCompact: {
+    fontSize: 26,
+    fontFamily: Fonts.title,
+    fontWeight: '700' as const,
+    color: Colors.white,
+    marginBottom: 6,
+    textAlign: 'center',
+  },
   subtitle: {
+    fontSize: 15,
+    fontFamily: Fonts.regular,
+    color: Colors.grayLight,
+    textAlign: 'center',
+    lineHeight: 20,
+    paddingHorizontal: 16,
+  },
+  subtitleCompact: {
     fontSize: 15,
     fontFamily: Fonts.regular,
     color: Colors.grayLight,
@@ -902,6 +927,27 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   featureText: {
+    fontSize: 15,
+    fontFamily: Fonts.regular,
+    color: Colors.white,
+    flex: 1,
+  },
+  // Compact feature row for credits view
+  featureRowCompact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  featureIconCompact: {
+    width: 32,
+    height: 32,
+    borderRadius: 9,
+    backgroundColor: 'rgba(255, 107, 53, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  featureTextCompact: {
     fontSize: 15,
     fontFamily: Fonts.regular,
     color: Colors.white,
@@ -939,6 +985,23 @@ const styles = StyleSheet.create({
     color: Colors.white,
     letterSpacing: 0.5,
   },
+  // Compact save badge for credits view
+  saveBadgeCompact: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: Colors.orange,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  saveBadgeTextCompact: {
+    fontSize: 10,
+    fontFamily: Fonts.title,
+    fontWeight: '700' as const,
+    color: Colors.white,
+    letterSpacing: 0.5,
+  },
   planHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -957,6 +1020,23 @@ const styles = StyleSheet.create({
     borderColor: Colors.orange,
   },
   radioButtonInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: Colors.orange,
+  },
+  // Compact radio button for credits view
+  radioButtonCompact: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: Colors.grayLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  radioButtonInnerCompact: {
     width: 10,
     height: 10,
     borderRadius: 5,
@@ -995,6 +1075,11 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 28,
   },
+  footerCompact: {
+    marginTop: 'auto',
+    paddingTop: 10,
+    paddingBottom: 20,
+  },
   subscribeButton: {
     marginBottom: 12,
   },
@@ -1004,7 +1089,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  subscribeGradientCompact: {
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   subscribeText: {
+    fontSize: 16,
+    fontFamily: Fonts.title,
+    fontWeight: '600' as const,
+    color: Colors.white,
+    letterSpacing: 0.3,
+  },
+  subscribeTextCompact: {
     fontSize: 16,
     fontFamily: Fonts.title,
     fontWeight: '600' as const,
@@ -1027,6 +1125,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 14,
     marginTop: 4,
+  },
+  legalTextCompact: {
+    fontSize: 10,
+    fontFamily: Fonts.regular,
+    color: 'rgba(255, 255, 255, 0.4)',
+    textAlign: 'center',
+    lineHeight: 13,
+    marginTop: 2,
   },
   confettiContainer: {
     position: 'absolute',
@@ -1118,37 +1224,37 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.regular,
     color: '#4CAF50',
   },
-  // Current Credits Display
-  currentCreditsDisplay: {
+  // Current Credits Display - Inline version
+  currentCreditsDisplayInline: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
+    marginTop: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
     backgroundColor: 'rgba(255, 107, 53, 0.15)',
-    borderRadius: 12,
+    borderRadius: 10,
   },
-  currentCreditsLabel: {
-    fontSize: 12,
+  currentCreditsLabelInline: {
+    fontSize: 15,
     fontFamily: Fonts.regular,
     color: Colors.grayLight,
-    marginBottom: 4,
   },
-  currentCreditsValue: {
-    fontSize: 32,
+  currentCreditsValueInline: {
+    fontSize: 20,
     fontFamily: Fonts.title,
     fontWeight: '700' as const,
     color: Colors.orange,
   },
   // Credit Packs
   creditPacksSection: {
-    marginBottom: 14,
+    marginBottom: 10,
   },
   creditPacksTitle: {
     fontSize: 16,
     fontFamily: Fonts.title,
     fontWeight: '600' as const,
     color: Colors.white,
-    marginBottom: 12,
+    marginBottom: 10,
     textAlign: 'center',
   },
   creditPackCard: {
@@ -1191,12 +1297,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: Fonts.regular,
     color: Colors.grayLight,
-    marginTop: 6,
-    marginLeft: 34,
+    marginTop: 4,
+    marginLeft: 30,
   },
   creditFeaturesSection: {
-    marginBottom: 14,
-    paddingTop: 12,
+    marginBottom: 10,
+    paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255, 255, 255, 0.1)',
   },

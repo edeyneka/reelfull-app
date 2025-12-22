@@ -20,7 +20,8 @@ import { api } from "@/convex/_generated/api";
 import { Audio } from 'expo-av';
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
-import { usePaywall } from '@/contexts/PaywallContext';
+// Note: We use videoGenerationStatus.isPremium from backend instead of subscriptionState.isPro
+// because backend status is more reliable (RevenueCat may not have loaded yet)
 import { StylePreference, BackendStyle } from '@/types';
 import VoiceRecorder from '@/components/VoiceRecorder';
 import { uploadFileToConvex, mapStyleToBackend, mapStyleToApp } from '@/lib/api-helpers';
@@ -33,7 +34,6 @@ export default function SettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { userId, saveUser, clearData } = useApp();
-  const { subscriptionState } = usePaywall();
   
   // Convex queries
   const user = useQuery(api.users.getCurrentUser, userId ? { userId } : "skip");
@@ -516,8 +516,8 @@ export default function SettingsScreen() {
                 activeOpacity={0.7}
               >
                 <View style={styles.menuItemLeft}>
-                  <View style={[styles.menuIconContainer, subscriptionState.isPro ? styles.creditsIconContainer : styles.proIconContainer]}>
-                    {subscriptionState.isPro ? (
+                  <View style={[styles.menuIconContainer, videoGenerationStatus?.isPremium ? styles.creditsIconContainer : styles.proIconContainer]}>
+                    {videoGenerationStatus?.isPremium ? (
                       <Gift size={22} color="#4CAF50" strokeWidth={2} />
                     ) : (
                       <Crown size={22} color={Colors.orange} strokeWidth={2} />
@@ -525,10 +525,10 @@ export default function SettingsScreen() {
                   </View>
                   <View>
                     <Text style={styles.menuItemText}>
-                      {subscriptionState.isPro ? 'Buy More Credits' : 'Reelful Pro'}
+                      {videoGenerationStatus?.isPremium ? 'Buy More Credits' : 'Reelful Pro'}
                     </Text>
                     <Text style={styles.menuItemSubtext}>
-                      {subscriptionState.isPro 
+                      {videoGenerationStatus?.isPremium 
                         ? getCreditStatusText() || 'Get extra video credits'
                         : 'Unlock premium features'
                       }
