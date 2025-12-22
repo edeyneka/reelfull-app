@@ -61,6 +61,15 @@ module.exports = ({ config }) => {
     },
     plugins: [
       [
+        'expo-build-properties',
+        {
+          ios: {
+            // Exclude react-native-maps from iOS autolinking (transitive dependency not compatible with RN 0.81)
+            excludedAutolinkedLibraries: ['react-native-maps'],
+          },
+        },
+      ],
+      [
         'expo-router',
         {
           origin: 'https://rork.com/',
