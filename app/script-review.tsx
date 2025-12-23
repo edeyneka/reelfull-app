@@ -51,6 +51,7 @@ export default function ScriptReviewScreen() {
   const [voiceSpeed, setVoiceSpeed] = useState<number>(1.15); // Default to "Fast" (1.15)
   const [includeMusic, setIncludeMusic] = useState<boolean>(true); // Default to include music
   const [includeCaptions, setIncludeCaptions] = useState<boolean>(true); // Default to include captions
+  const [keepOrder, setKeepOrder] = useState<boolean>(false); // Default to not keeping original order
 
   // Initialize script and render mode from project
   useEffect(() => {
@@ -73,14 +74,17 @@ export default function ScriptReviewScreen() {
     if (project?.voiceSpeed) {
       setVoiceSpeed(project.voiceSpeed);
     }
-    // Load music/captions settings (default to true if not set)
+    // Load music/captions/keepOrder settings (default to true/true/false if not set)
     if (project?.includeMusic !== undefined) {
       setIncludeMusic(project.includeMusic);
     }
     if (project?.includeCaptions !== undefined) {
       setIncludeCaptions(project.includeCaptions);
     }
-  }, [project?.script, project?.renderMode, project?.voiceSpeed, project?.includeMusic, project?.includeCaptions, isEditing]);
+    if (project?.keepOrder !== undefined) {
+      setKeepOrder(project.keepOrder);
+    }
+  }, [project?.script, project?.renderMode, project?.voiceSpeed, project?.includeMusic, project?.includeCaptions, project?.keepOrder, isEditing]);
 
   const handleSaveEdit = async () => {
     if (!projectId || !editedScript.trim()) {
@@ -162,12 +166,13 @@ export default function ScriptReviewScreen() {
         voiceSpeed,
       });
 
-      // Save music and captions settings
-      console.log('[script-review] Saving audio settings - music:', includeMusic, 'captions:', includeCaptions);
+      // Save music, captions, and keepOrder settings
+      console.log('[script-review] Saving audio settings - music:', includeMusic, 'captions:', includeCaptions, 'keepOrder:', keepOrder);
       await updateProjectAudioSettings({
         id: projectId,
         includeMusic,
         includeCaptions,
+        keepOrder,
       });
 
       // Optimistically update video status to "processing" for instant UI feedback
@@ -419,6 +424,20 @@ export default function ScriptReviewScreen() {
                   {includeCaptions && <Check size={14} color={Colors.white} strokeWidth={3} />}
                 </View>
                 <Text style={styles.checkboxLabel}>Add Captions</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Keep Order checkbox - separate row */}
+            <View style={styles.keepOrderContainer}>
+              <TouchableOpacity
+                style={styles.checkboxRow}
+                onPress={() => setKeepOrder(!keepOrder)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.checkbox, keepOrder && styles.checkboxChecked]}>
+                  {keepOrder && <Check size={14} color={Colors.white} strokeWidth={3} />}
+                </View>
+                <Text style={styles.checkboxLabel}>Keep Order</Text>
               </TouchableOpacity>
             </View>
 
@@ -679,6 +698,9 @@ const styles = StyleSheet.create({
     marginTop: 20,
     flexDirection: 'row',
     gap: 24,
+  },
+  keepOrderContainer: {
+    marginTop: 16,
   },
   checkboxRow: {
     flexDirection: 'row',
