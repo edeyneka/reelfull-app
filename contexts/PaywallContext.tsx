@@ -390,6 +390,14 @@ export const [PaywallProvider, usePaywall] = createContextHook(() => {
     ) || null;
   }, [offerings]);
 
+  // Helper to get localized price for credit packs from App Store
+  const getCreditPackPrice = useCallback((packType: CreditPackType): string => {
+    const pack = CREDIT_PACKS[packType];
+    const product = creditProducts.find(p => p.identifier === pack.productId);
+    // Use localized price from App Store if available, otherwise fallback to hardcoded
+    return product?.priceString || pack.priceString;
+  }, [creditProducts]);
+
   return useMemo(() => ({
     isInitialized,
     isLoading,
@@ -409,6 +417,7 @@ export const [PaywallProvider, usePaywall] = createContextHook(() => {
     // Credit purchases
     creditProducts,
     purchaseCredits,
+    getCreditPackPrice,
   }), [
     isInitialized,
     isLoading,
@@ -425,5 +434,6 @@ export const [PaywallProvider, usePaywall] = createContextHook(() => {
     markPaywallCompleted,
     creditProducts,
     purchaseCredits,
+    getCreditPackPrice,
   ]);
 });

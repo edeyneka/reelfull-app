@@ -128,6 +128,7 @@ export default function PaywallScreen() {
     subscriptionState,
     markPaywallCompleted,
     purchaseCredits,
+    getCreditPackPrice,
   } = usePaywall();
   
   // Mutation to sync subscription status to backend
@@ -408,7 +409,7 @@ export default function PaywallScreen() {
   }, [selectedCreditPack, purchaseCredits, navigateAfterSuccess]);
 
   const monthlyPrice = monthlyPackage?.product?.priceString || '$9.99';
-  const annualPrice = annualPackage?.product?.priceString || '$39.99';
+  const annualPrice = annualPackage?.product?.priceString || '$79.99';
   const annualMonthlyPrice = annualPackage?.product?.price 
     ? `$${(annualPackage.product.price / 12).toFixed(2)}`
     : '$3.33';
@@ -532,7 +533,7 @@ export default function PaywallScreen() {
                 </View>
                 <View style={styles.creditPackInfo}>
                   <Text style={styles.creditPackCredits}>10 Credits</Text>
-                  <Text style={styles.creditPackPrice}>{CREDIT_PACKS.PACK_10.priceString}</Text>
+                  <Text style={styles.creditPackPrice}>{getCreditPackPrice('PACK_10')}</Text>
                 </View>
               </View>
             </TouchableOpacity>
@@ -556,7 +557,7 @@ export default function PaywallScreen() {
                 </View>
                 <View style={styles.creditPackInfo}>
                   <Text style={styles.creditPackCredits}>20 Credits</Text>
-                  <Text style={styles.creditPackPrice}>{CREDIT_PACKS.PACK_20.priceString}</Text>
+                  <Text style={styles.creditPackPrice}>{getCreditPackPrice('PACK_20')}</Text>
                 </View>
               </View>
             </TouchableOpacity>
@@ -580,7 +581,7 @@ export default function PaywallScreen() {
                 </View>
                 <View style={styles.creditPackInfo}>
                   <Text style={styles.creditPackCredits}>50 Credits</Text>
-                  <Text style={styles.creditPackPrice}>{CREDIT_PACKS.PACK_50.priceString}</Text>
+                  <Text style={styles.creditPackPrice}>{getCreditPackPrice('PACK_50')}</Text>
                 </View>
               </View>
             </TouchableOpacity>
