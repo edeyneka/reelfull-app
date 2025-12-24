@@ -48,7 +48,7 @@ export default function ScriptReviewScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [renderMode, setRenderMode] = useState<'remotion' | 'ffmpeg'>('ffmpeg');
   const [lastProjectScript, setLastProjectScript] = useState<string>('');
-  const [voiceSpeed, setVoiceSpeed] = useState<number>(1.15); // Default to "Fast" (1.15)
+  const [voiceSpeed, setVoiceSpeed] = useState<number>(1.08); // Default to "Normal" (1.08)
   const [includeMusic, setIncludeMusic] = useState<boolean>(true); // Default to include music
   const [includeCaptions, setIncludeCaptions] = useState<boolean>(true); // Default to include captions
   const [keepOrder, setKeepOrder] = useState<boolean>(false); // Default to not keeping original order
