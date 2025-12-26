@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Plus, Download, Settings, Loader2, AlertCircle, X, Trash2, FileText, Copy, Check, Zap } from 'lucide-react-native';
+import { Plus, Download, Settings, Loader2, AlertCircle, X, Trash2, FileText, Copy, Check, Zap, RefreshCw } from 'lucide-react-native';
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
   Dimensions,
@@ -358,7 +358,7 @@ return (
 export default function FeedScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { videos, deleteVideo, userId, syncedFromBackend, syncVideosFromBackend, syncUserFromBackend } = useApp();
+  const { videos, deleteVideo, addVideo, userId, syncedFromBackend, syncVideosFromBackend, syncUserFromBackend } = useApp();
   const { subscriptionState, hasCompletedPaywallThisSession } = usePaywall();
   const [selectedVideo, setSelectedVideo] = useState<VideoType | null>(null);
   const [hasShownInitialPaywall, setHasShownInitialPaywall] = useState(false);
@@ -366,6 +366,7 @@ export default function FeedScreen() {
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
   const [actionSheetVideo, setActionSheetVideo] = useState<VideoType | null>(null);
   const [showActionSheet, setShowActionSheet] = useState(false);
   const [actionSheetPosition, setActionSheetPosition] = useState({ pageX: 0, pageY: 0, width: 0, height: 0, columnIndex: 0 });
@@ -391,6 +392,9 @@ export default function FeedScreen() {
   
   // Convex mutation for deleting projects
   const deleteProjectMutation = useMutation(api.tasks.deleteProject);
+  
+  // Convex mutation for regenerating project editing
+  const regenerateProjectEditing = useMutation(api.tasks.regenerateProjectEditing);
   
   // Action to get fresh video URL on-demand (when user taps to view)
   const getFreshVideoUrl = useAction(api.tasks.getFreshProjectVideoUrl);
@@ -861,6 +865,59 @@ export default function FeedScreen() {
     }
   };
 
+  const handleRegenerate = async () => {
+    if (!selectedVideo?.projectId || isRegenerating) return;
+
+    setIsRegenerating(true);
+    try {
+      console.log('[feed] Regenerating project editing for:', selectedVideo.projectId);
+      
+      // Call the backend to create a new project with same assets but regenerated editing
+      const result = await regenerateProjectEditing({
+        sourceProjectId: selectedVideo.projectId as any,
+      });
+
+      if (result.success && result.newProjectId) {
+        console.log('[feed] New project created:', result.newProjectId);
+        
+        // Optimistically add the new video to the feed with processing status
+        const transformedScript = selectedVideo.script?.replace(/\?\?\?/g, '?');
+        addVideo({
+          id: result.newProjectId,
+          uri: '',
+          prompt: selectedVideo.prompt,
+          script: transformedScript,
+          createdAt: Date.now(),
+          status: 'processing',
+          projectId: result.newProjectId,
+          thumbnailUrl: selectedVideo.thumbnailUrl,
+        });
+
+        // Close the modal
+        closeModal();
+      } else {
+        throw new Error('Failed to create regenerated project');
+      }
+    } catch (error) {
+      console.error('[feed] Regenerate error:', error);
+      
+      // Check for specific error types
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      if (errorMessage.includes('FREE_TIER_LIMIT_REACHED') || errorMessage.includes('NO_CREDITS_AVAILABLE')) {
+        // Close modal first, then show paywall
+        closeModal();
+        setTimeout(() => {
+          router.push('/paywall');
+        }, 300);
+      } else {
+        Alert.alert('Error', 'Failed to regenerate video. Please try again.');
+      }
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
+
   // Get remaining credits display text
   const getCreditsDisplay = () => {
     if (!videoGenerationStatus) return null;
@@ -1029,6 +1086,29 @@ export default function FeedScreen() {
                           <>
                             <Download size={20} color={Colors.white} strokeWidth={2.5} />
                             <Text style={styles.downloadButtonText}>Download</Text>
+                          </>
+                        )}
+                      </LinearGradient>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.downloadGradientButton}
+                      onPress={handleRegenerate}
+                      activeOpacity={0.8}
+                      disabled={isRegenerating}
+                    >
+                      <LinearGradient
+                        colors={[Colors.orangeLight, Colors.orange]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={styles.downloadGradient}
+                      >
+                        {isRegenerating ? (
+                          <ActivityIndicator size="small" color={Colors.white} />
+                        ) : (
+                          <>
+                            <RefreshCw size={20} color={Colors.white} strokeWidth={2.5} />
+                            <Text style={styles.downloadButtonText}>Regenerate</Text>
                           </>
                         )}
                       </LinearGradient>
@@ -1365,12 +1445,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     justifyContent: 'flex-start',
     paddingBottom: 40,
-    paddingTop: 12,
+    paddingTop: 0,
   },
   modalTitleSection: {
     alignItems: 'center',
     marginBottom: 24,
-    marginTop: 8,
+    marginTop: 0,
   },
   modalTitle: {
     fontSize: 24,

@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Check, Download, Copy } from 'lucide-react-native';
+import { Check, Download, Copy, RefreshCw } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import {
   Alert,
@@ -17,7 +17,7 @@ import { VideoView, useVideoPlayer } from 'expo-video';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
@@ -32,9 +32,13 @@ export default function ResultScreen() {
   const [isSaved, setIsSaved] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
 
   // Get project data
   const project = useQuery(api.tasks.getProject, projectId ? { id: projectId } : "skip");
+  
+  // Mutation for regenerating project editing
+  const regenerateProjectEditing = useMutation(api.tasks.regenerateProjectEditing);
 
   console.log('Result screen project:', project);
   console.log('Result screen script available:', !!project?.script);
@@ -147,6 +151,56 @@ export default function ResultScreen() {
     }
   };
 
+  const handleRegenerate = async () => {
+    if (!projectId || !project || isRegenerating) return;
+
+    setIsRegenerating(true);
+    try {
+      console.log('[result] Regenerating project editing for:', projectId);
+      
+      // Call the backend to create a new project with same assets but regenerated editing
+      const result = await regenerateProjectEditing({
+        sourceProjectId: projectId,
+      });
+
+      if (result.success && result.newProjectId) {
+        console.log('[result] New project created:', result.newProjectId);
+        
+        // Optimistically add the new video to the feed with processing status
+        const transformedScript = project.script?.replace(/\?\?\?/g, '?');
+        addVideo({
+          id: result.newProjectId,
+          uri: '',
+          prompt: project.prompt,
+          script: transformedScript,
+          createdAt: Date.now(),
+          status: 'processing',
+          projectId: result.newProjectId,
+          thumbnailUrl: project.thumbnailUrl,
+        });
+
+        // Navigate to feed to see the new generating video
+        router.replace('/feed');
+      } else {
+        throw new Error('Failed to create regenerated project');
+      }
+    } catch (error) {
+      console.error('[result] Regenerate error:', error);
+      
+      // Check for specific error types
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      if (errorMessage.includes('FREE_TIER_LIMIT_REACHED') || errorMessage.includes('NO_CREDITS_AVAILABLE')) {
+        // Show paywall for users who have run out of credits
+        router.push('/paywall');
+      } else {
+        Alert.alert('Error', 'Failed to regenerate video. Please try again.');
+      }
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
+
   const handleGoHome = () => {
     router.replace('/feed');
   };
@@ -239,6 +293,22 @@ export default function ResultScreen() {
                   {isDownloading ? 'Downloading...' : 'Download'}
                 </Text>
               </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.regenerateButton}
+                onPress={handleRegenerate}
+                disabled={isRegenerating}
+                activeOpacity={0.8}
+              >
+                {isRegenerating ? (
+                  <ActivityIndicator size="small" color={Colors.orange} />
+                ) : (
+                  <RefreshCw size={24} color={Colors.orange} strokeWidth={2} />
+                )}
+                <Text style={styles.regenerateButtonText}>
+                  {isRegenerating ? 'Regenerating...' : 'Regenerate'}
+                </Text>
+              </TouchableOpacity>
             </View>
 
             {isSaved && (
@@ -303,6 +373,22 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: Fonts.regular,
     color: Colors.white,
+  },
+  regenerateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    backgroundColor: 'rgba(255, 107, 53, 0.15)',
+    borderRadius: 12,
+    padding: 18,
+    borderWidth: 2,
+    borderColor: Colors.orange,
+  },
+  regenerateButtonText: {
+    fontSize: 18,
+    fontFamily: Fonts.regular,
+    color: Colors.orange,
   },
   savedBadge: {
     flexDirection: 'row',
