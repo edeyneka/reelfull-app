@@ -28,7 +28,7 @@ export default function ScriptReviewScreen() {
   const params = useLocalSearchParams<{ projectId: string; testRun?: string }>();
   const projectId = params.projectId as any;
   const isTestRun = params.testRun === 'true';
-  const { addVideo } = useApp();
+  const { addVideo, videos } = useApp();
 
   // Convex hooks
   const project = useQuery(api.tasks.getProject, projectId ? { id: projectId } : "skip");
@@ -137,6 +137,9 @@ export default function ScriptReviewScreen() {
       return;
     }
 
+    // Check if this is the user's first project BEFORE adding the optimistic video
+    const isFirstProject = videos.filter(v => v.status !== 'draft').length === 0;
+
     setIsSubmitting(true);
     try {
       // Save any edits (replace ? with ??? before saving, matching studio behavior)
@@ -194,7 +197,17 @@ export default function ScriptReviewScreen() {
         try {
           await markProjectSubmitted({ id: projectId });
           console.log('[script-review] Media generation scheduled server-side, navigating to feed...');
-          router.replace('/feed');
+          
+          // Show first project welcome message
+          if (isFirstProject) {
+            Alert.alert(
+              '🎬 Generation Started!',
+              'Your video is being created! Feel free to close the app — we\'ll send you a notification when it\'s ready',
+              [{ text: 'Got it!', style: 'default', onPress: () => router.replace('/feed') }]
+            );
+          } else {
+            router.replace('/feed');
+          }
           return; // Exit early - generation continues in background
         } catch (submitError) {
           // Check if this is a free tier limit error
