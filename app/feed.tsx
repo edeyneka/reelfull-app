@@ -742,10 +742,17 @@ export default function FeedScreen() {
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
-      <Text style={styles.emptyTitle}>No reels yet</Text>
+      <Text style={styles.emptyTitle}>Start a project!</Text>
       <Text style={styles.emptySubtitle}>
-        Tap the + button to create your first video
+        Upload your photos and videos and let the magic begin!
       </Text>
+      <TouchableOpacity
+        style={styles.startCreatingButton}
+        onPress={handleCreateNew}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.startCreatingText}>Start Creating</Text>
+      </TouchableOpacity>
     </View>
   );
 
@@ -1380,6 +1387,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: Fonts.regular,
     color: Colors.grayLight,
+    textAlign: 'center',
+  },
+  startCreatingButton: {
+    marginTop: 32,
+    backgroundColor: Colors.orange,
+    paddingHorizontal: 48,
+    paddingVertical: 16,
+    borderRadius: 16,
+    shadowColor: Colors.orange,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  startCreatingText: {
+    fontSize: 18,
+    fontFamily: Fonts.title,
+    fontWeight: '600',
+    color: Colors.white,
     textAlign: 'center',
   },
   fab: {
