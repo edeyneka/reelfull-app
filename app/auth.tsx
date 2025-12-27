@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { ArrowRight } from 'lucide-react-native';
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -15,7 +15,6 @@ import {
   Animated,
   Image,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAction, useMutation, useQuery } from "convex/react";
@@ -290,6 +289,22 @@ export default function AuthScreen() {
   };
   
   const isCodeValid = /^\d{6}$/.test(code);
+  const hasAutoVerified = useRef(false);
+  
+  // Auto-verify when 6-digit code is entered
+  useEffect(() => {
+    if (step === 'code' && /^\d{6}$/.test(code) && !isLoading && !hasAutoVerified.current) {
+      hasAutoVerified.current = true;
+      handleVerifyCode();
+    }
+  }, [code, step, isLoading]);
+  
+  // Reset auto-verify flag when code changes (user corrects input)
+  useEffect(() => {
+    if (code.length < 6) {
+      hasAutoVerified.current = false;
+    }
+  }, [code]);
   
   const videoSource = require('../assets/third_intro_ultra.mp4');
   
@@ -440,29 +455,22 @@ export default function AuthScreen() {
                   </View>
 
                   <TouchableOpacity
-                    style={[styles.button, !isPhoneValid() && styles.buttonDisabled]}
+                    style={[
+                      styles.button,
+                      { backgroundColor: isPhoneValid() && !isLoading ? Colors.orange : Colors.gray },
+                      !isPhoneValid() && styles.buttonDisabled,
+                    ]}
                     onPress={handleSendCode}
                     disabled={!isPhoneValid() || isLoading}
                     activeOpacity={0.8}
                   >
-                    <LinearGradient
-                      colors={
-                        isPhoneValid() && !isLoading
-                          ? [Colors.orange, Colors.orangeLight]
-                          : [Colors.gray, Colors.grayLight]
-                      }
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={styles.buttonGradient}
-                    >
+                    <View style={styles.buttonInner}>
                       {isLoading ? (
                         <ActivityIndicator color={Colors.white} />
                       ) : (
-                        <>
-                          <Text style={styles.buttonText}>Continue</Text>
-                        </>
+                        <Text style={styles.buttonText}>Continue</Text>
                       )}
-                    </LinearGradient>
+                    </View>
                   </TouchableOpacity>
 
                   {/* Test Account Button - Commented out for production */}
@@ -491,30 +499,22 @@ export default function AuthScreen() {
                   </View>
 
                   <TouchableOpacity
-                    style={[styles.button, !isCodeValid && styles.buttonDisabled]}
+                    style={[
+                      styles.button,
+                      { backgroundColor: isCodeValid && !isLoading ? Colors.orange : Colors.gray },
+                      !isCodeValid && styles.buttonDisabled,
+                    ]}
                     onPress={handleVerifyCode}
                     disabled={!isCodeValid || isLoading}
                     activeOpacity={0.8}
                   >
-                    <LinearGradient
-                      colors={
-                        isCodeValid && !isLoading
-                          ? [Colors.orange, Colors.orangeLight]
-                          : [Colors.gray, Colors.grayLight]
-                      }
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={styles.buttonGradient}
-                    >
+                    <View style={styles.buttonInner}>
                       {isLoading ? (
                         <ActivityIndicator color={Colors.white} />
                       ) : (
-                        <>
-                          <Text style={styles.buttonText}>Verify</Text>
-                          <ArrowRight size={20} color={Colors.white} strokeWidth={2.5} />
-                        </>
+                        <Text style={styles.buttonText}>Verify</Text>
                       )}
-                    </LinearGradient>
+                    </View>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -638,11 +638,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(50, 50, 50, 0.8)',
     borderRadius: 12,
     padding: 16,
-    fontSize: 32,
+    fontSize: 18,
     fontFamily: Fonts.title,
     color: Colors.white,
     textAlign: 'center',
-    letterSpacing: 8,
+    letterSpacing: 12,
     borderWidth: 2,
     borderColor: 'rgba(255, 255, 255, 0.1)',
   },
@@ -654,7 +654,7 @@ const styles = StyleSheet.create({
   buttonDisabled: {
     opacity: 0.5,
   },
-  buttonGradient: {
+  buttonInner: {
     flexDirection: 'row',
     padding: 18,
     alignItems: 'center',
@@ -667,8 +667,8 @@ const styles = StyleSheet.create({
     color: Colors.white,
   },
   changePhoneButton: {
-    marginTop: 24,
-    padding: 16,
+    marginTop: 12,
+    padding: 8,
     alignItems: 'center',
   },
   changePhoneText: {
@@ -677,8 +677,8 @@ const styles = StyleSheet.create({
     color: Colors.orange,
   },
   resendButton: {
-    marginTop: 12,
-    padding: 16,
+    marginTop: 0,
+    padding: 0,
     alignItems: 'center',
   },
   resendText: {
