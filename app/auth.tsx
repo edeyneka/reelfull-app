@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Phone, ArrowRight } from 'lucide-react-native';
+import { ArrowRight } from 'lucide-react-native';
 import { useState, useRef, useCallback } from 'react';
 import {
   Alert,
@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
   ScrollView,
   Animated,
+  Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
@@ -397,10 +398,14 @@ export default function AuthScreen() {
           >
             <View style={styles.header}>
               <View style={styles.iconContainer}>
-                <Phone size={40} color={Colors.orange} strokeWidth={2} />
+                <Image 
+                  source={require('../assets/images/icon-no-bg.png')} 
+                  style={styles.logoImage}
+                  resizeMode="contain"
+                />
               </View>
               <Text style={styles.title}>
-                {step === 'phone' ? 'Welcome to Reelful' : 'Enter Verification Code'}
+                {step === 'phone' ? 'Welcome!' : 'Enter Verification Code'}
               </Text>
               <Text style={styles.subtitle}>
                 {step === 'phone'
@@ -454,8 +459,7 @@ export default function AuthScreen() {
                         <ActivityIndicator color={Colors.white} />
                       ) : (
                         <>
-                          <Text style={styles.buttonText}>Send Code</Text>
-                          <ArrowRight size={20} color={Colors.white} strokeWidth={2.5} />
+                          <Text style={styles.buttonText}>Continue</Text>
                         </>
                       )}
                     </LinearGradient>
@@ -579,9 +583,10 @@ const styles = StyleSheet.create({
   },
   iconContainer: {
     marginBottom: 20,
-    padding: 16,
-    borderRadius: 50,
-    backgroundColor: 'rgba(255, 107, 53, 0.2)',
+  },
+  logoImage: {
+    width: 56,
+    height: 56,
   },
   title: {
     fontSize: 24,
@@ -600,7 +605,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   inputGroup: {
-    marginBottom: 32,
+    marginBottom: 16,
   },
   label: {
     fontSize: 18,
@@ -642,7 +647,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   button: {
-    marginTop: 24,
+    marginTop: 8,
     borderRadius: 12,
     overflow: 'hidden',
   },
