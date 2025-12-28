@@ -799,6 +799,7 @@ export default function FeedScreen() {
 
     try {
       setIsDownloading(true);
+      setDownloadSuccess(false); // Reset success message when starting new download
       
       let downloadUrl = selectedVideo.uri;
       
@@ -866,6 +867,8 @@ export default function FeedScreen() {
         link.download = `reelfull_${Date.now()}.mp4`;
         link.click();
         setDownloadSuccess(true);
+        // Auto-hide success message after 5 seconds
+        setTimeout(() => setDownloadSuccess(false), 5000);
       } else {
         // Mobile: download to local file first, then save to media library
         const fileUri = `${FileSystem.documentDirectory}reelfull_${Date.now()}.mp4`;
@@ -881,6 +884,8 @@ export default function FeedScreen() {
           const asset = await MediaLibrary.createAssetAsync(downloadResult.uri);
           await MediaLibrary.createAlbumAsync('Reelful', asset, false);
           setDownloadSuccess(true);
+          // Auto-hide success message after 5 seconds
+          setTimeout(() => setDownloadSuccess(false), 5000);
         } else {
           throw new Error(`Download failed with status: ${downloadResult.status}`);
         }
