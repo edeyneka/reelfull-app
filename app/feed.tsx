@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Plus, Download, Settings, Loader2, AlertCircle, X, Trash2, FileText, Copy, Check, Zap, RefreshCw } from 'lucide-react-native';
+import { Plus, Download, Settings, Loader2, AlertCircle, X, Trash2, FileText, Copy, Check, Zap, RefreshCw, Mic, MicOff, Music, Music2, Subtitles } from 'lucide-react-native';
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
   Dimensions,
@@ -372,6 +372,11 @@ export default function FeedScreen() {
   const [actionSheetPosition, setActionSheetPosition] = useState({ pageX: 0, pageY: 0, width: 0, height: 0, columnIndex: 0 });
   const [isRefreshing, setIsRefreshing] = useState(false);
   
+  // Video option toggles
+  const [voiceoverEnabled, setVoiceoverEnabled] = useState(true);
+  const [musicEnabled, setMusicEnabled] = useState(true);
+  const [captionsEnabled, setCaptionsEnabled] = useState(true);
+  
   // Check if there are any pending/processing videos that need fresh data
   const hasPendingVideos = useMemo(() => 
     videos.some(v => v.status === 'pending' || v.status === 'processing'),
@@ -398,6 +403,9 @@ export default function FeedScreen() {
   
   // Action to get fresh video URL on-demand (when user taps to view)
   const getFreshVideoUrl = useAction(api.tasks.getFreshProjectVideoUrl);
+  
+  // Action to get video variant with specific options
+  const getVideoVariant = useAction(api.tasks.getVideoVariant);
   
   // Query video generation status (total count including deleted videos)
   const videoGenerationStatus = useQuery(
@@ -792,17 +800,52 @@ export default function FeedScreen() {
     try {
       setIsDownloading(true);
       
-      // Fetch fresh URL before downloading (in case the modal URL expired)
       let downloadUrl = selectedVideo.uri;
+      
+      // Check if user has customized the video options (not all enabled)
+      const isDefaultVariant = voiceoverEnabled && musicEnabled && captionsEnabled;
+      
       if (selectedVideo.projectId) {
-        try {
-          const freshUrl = await getFreshVideoUrl({ projectId: selectedVideo.projectId as any });
-          if (freshUrl) {
-            downloadUrl = freshUrl;
-            console.log('[download] Using fresh URL for download');
+        if (!isDefaultVariant) {
+          // User wants a custom variant - call getVideoVariant to compose it
+          console.log('[download] Getting custom variant:', { voice: voiceoverEnabled, music: musicEnabled, captions: captionsEnabled });
+          try {
+            const variantResult = await getVideoVariant({
+              projectId: selectedVideo.projectId as any,
+              includeVoice: voiceoverEnabled,
+              includeMusic: musicEnabled,
+              includeCaptions: captionsEnabled,
+            });
+            
+            if (variantResult.success && variantResult.url) {
+              downloadUrl = variantResult.url;
+              console.log('[download] Got variant URL:', variantResult.cached ? '(cached)' : '(newly composed)');
+            } else {
+              throw new Error('Failed to get video variant');
+            }
+          } catch (error) {
+            console.error('[download] Failed to get variant:', error);
+            Alert.alert(
+              'Variant Not Available', 
+              'Custom video options require the video to be re-processed. This feature may not be available for older videos. Downloading the default version instead.'
+            );
+            // Fall back to default URL
+            const freshUrl = await getFreshVideoUrl({ projectId: selectedVideo.projectId as any });
+            if (freshUrl) {
+              downloadUrl = freshUrl;
+            }
           }
-        } catch (error) {
-          console.error('[download] Failed to fetch fresh URL, using existing:', error);
+        } else {
+          // Default variant - just get fresh URL
+          try {
+            const freshUrl = await getFreshVideoUrl({ projectId: selectedVideo.projectId as any });
+            if (freshUrl) {
+              downloadUrl = freshUrl;
+              console.log('[download] Using fresh URL for download');
+            }
+          } catch (error) {
+            console.error('[download] Failed to fetch fresh URL, using existing:', error);
+          }
         }
       }
 
@@ -1034,7 +1077,7 @@ export default function FeedScreen() {
                 {/* Drag Handle */}
                 <View style={styles.dragHandle} />
 
-                <View style={[styles.modalHeader, { paddingTop: 12 }]}>
+                <View style={[styles.modalHeader, { paddingTop: 4 }]}>
                   <TouchableOpacity
                     style={styles.closeButton}
                     onPress={closeModal}
@@ -1075,6 +1118,62 @@ export default function FeedScreen() {
                   </View>
 
                   <View style={styles.modalActions}>
+                    {/* Video Option Toggles */}
+                    <View style={styles.videoOptionsRow}>
+                      <TouchableOpacity
+                        style={[
+                          styles.videoOptionToggle,
+                          voiceoverEnabled && styles.videoOptionToggleActive
+                        ]}
+                        onPress={() => setVoiceoverEnabled(!voiceoverEnabled)}
+                        activeOpacity={0.7}
+                      >
+                        {voiceoverEnabled ? (
+                          <Mic size={18} color={Colors.white} strokeWidth={2} />
+                        ) : (
+                          <MicOff size={18} color={Colors.grayLight} strokeWidth={2} />
+                        )}
+                        <Text style={[
+                          styles.videoOptionLabel,
+                          !voiceoverEnabled && styles.videoOptionLabelInactive
+                        ]}>Voice</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[
+                          styles.videoOptionToggle,
+                          musicEnabled && styles.videoOptionToggleActive
+                        ]}
+                        onPress={() => setMusicEnabled(!musicEnabled)}
+                        activeOpacity={0.7}
+                      >
+                        {musicEnabled ? (
+                          <Music size={18} color={Colors.white} strokeWidth={2} />
+                        ) : (
+                          <Music2 size={18} color={Colors.grayLight} strokeWidth={2} />
+                        )}
+                        <Text style={[
+                          styles.videoOptionLabel,
+                          !musicEnabled && styles.videoOptionLabelInactive
+                        ]}>Music</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[
+                          styles.videoOptionToggle,
+                          captionsEnabled && styles.videoOptionToggleActive
+                        ]}
+                        onPress={() => setCaptionsEnabled(!captionsEnabled)}
+                        activeOpacity={0.7}
+                      >
+                        <Subtitles size={18} color={captionsEnabled ? Colors.white : Colors.grayLight} strokeWidth={2} />
+                        <Text style={[
+                          styles.videoOptionLabel,
+                          !captionsEnabled && styles.videoOptionLabelInactive
+                        ]}>Captions</Text>
+                      </TouchableOpacity>
+                    </View>
+
                     <TouchableOpacity
                       style={styles.downloadGradientButton}
                       onPress={handleDownload}
@@ -1088,7 +1187,12 @@ export default function FeedScreen() {
                         style={styles.downloadGradient}
                       >
                         {isDownloading ? (
-                          <ActivityIndicator size="small" color={Colors.white} />
+                          <>
+                            <ActivityIndicator size="small" color={Colors.white} />
+                            <Text style={styles.downloadButtonText}>
+                              {!(voiceoverEnabled && musicEnabled && captionsEnabled) ? 'Composing...' : 'Downloading...'}
+                            </Text>
+                          </>
                         ) : (
                           <>
                             <Download size={20} color={Colors.white} strokeWidth={2.5} />
@@ -1452,8 +1556,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.gray,
     borderRadius: 3,
     alignSelf: 'center',
-    marginTop: 12,
-    marginBottom: 8,
+    marginTop: 10,
+    marginBottom: 4,
   },
   modalHeader: {
     paddingHorizontal: 24,
@@ -1461,8 +1565,8 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   closeButton: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
     justifyContent: 'center',
     alignItems: 'flex-start',
   },
@@ -1475,7 +1579,7 @@ const styles = StyleSheet.create({
   },
   modalTitleSection: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 16,
     marginTop: 0,
   },
   modalTitle: {
@@ -1512,7 +1616,37 @@ const styles = StyleSheet.create({
   },
   modalActions: {
     alignItems: 'center',
-    gap: 16,
+    gap: 12,
+  },
+  videoOptionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 4,
+  },
+  videoOptionToggle: {
+    width: 60,
+    height: 60,
+    borderRadius: 10,
+    backgroundColor: Colors.grayDark,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
+    gap: 4,
+  },
+  videoOptionToggleActive: {
+    backgroundColor: 'rgba(255, 107, 53, 0.2)',
+    borderColor: Colors.orange,
+  },
+  videoOptionLabel: {
+    fontSize: 10,
+    fontFamily: Fonts.regular,
+    color: Colors.white,
+  },
+  videoOptionLabelInactive: {
+    color: Colors.grayLight,
   },
   copyIconButton: {
     position: 'absolute',
@@ -1533,7 +1667,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingVertical: 12,
     gap: 8,
   },
   downloadButtonText: {

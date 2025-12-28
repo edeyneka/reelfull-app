@@ -416,7 +416,8 @@ export default function ScriptReviewScreen() {
             </View>
 
             {/* Audio Options - Music and Captions checkboxes */}
-            <View style={styles.audioOptionsContainer}>
+            {/* Hidden for now - defaults to true for both. Uncomment to enable user control */}
+            {/* <View style={styles.audioOptionsContainer}>
               <TouchableOpacity
                 style={styles.checkboxRow}
                 onPress={() => setIncludeMusic(!includeMusic)}
@@ -438,7 +439,7 @@ export default function ScriptReviewScreen() {
                 </View>
                 <Text style={styles.checkboxLabel}>Add Captions</Text>
               </TouchableOpacity>
-            </View>
+            </View> */}
 
             {/* Keep Order checkbox - separate row */}
             <View style={styles.keepOrderContainer}>
@@ -713,7 +714,7 @@ const styles = StyleSheet.create({
     gap: 24,
   },
   keepOrderContainer: {
-    marginTop: 16,
+    marginTop: 20,
   },
   checkboxRow: {
     flexDirection: 'row',
