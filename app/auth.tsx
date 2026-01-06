@@ -63,15 +63,20 @@ export default function AuthScreen() {
   const verifyOTP = useMutation(api.users.verifyOTP);
   const verifyTwilioOTP = useAction(api.twilioVerify.verifyTwilioOTP);
   const testAccountLogin = useMutation(api.users.testAccountLogin);
+  const backdoorLogin = useMutation(api.users.backdoorLogin);
   
   // Track if we're using Twilio Verify or development mode
   const [useTwilioVerify, setUseTwilioVerify] = useState(false);
   
+  // Track if this is a backdoor login (special phone number)
+  const [isBackdoorMode, setIsBackdoorMode] = useState(false);
+  
   // State
-  const [step, setStep] = useState<'phone' | 'code'>('phone');
+  const [step, setStep] = useState<'phone' | 'code' | 'password'>('phone');
   const [selectedCountry, setSelectedCountry] = useState<Country>(DEFAULT_COUNTRY);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [code, setCode] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const formatPhoneNumber = (value: string, country: Country) => {
@@ -99,10 +104,23 @@ export default function AuthScreen() {
     }
   };
 
+  // Check if phone number is the backdoor number (0000000000)
+  const isBackdoorPhoneNumber = (digits: string) => {
+    return digits === '0000000000';
+  };
+
   const handleSendCode = async () => {
     // Validate phone number
     const digits = phoneNumber.replace(/\D/g, '');
     const expectedLength = selectedCountry.phoneLength || 10;
+    
+    // Check for backdoor phone number first (0000000000)
+    if (isBackdoorPhoneNumber(digits)) {
+      console.log('[Auth] Backdoor phone detected, switching to password mode');
+      setIsBackdoorMode(true);
+      setStep('password');
+      return;
+    }
     
     if (digits.length < expectedLength - 1 || digits.length > expectedLength + 1) {
       Alert.alert('Invalid Phone', `Please enter a valid phone number for ${selectedCountry.name}`);
@@ -238,10 +256,60 @@ export default function AuthScreen() {
     }
   };
 
+  const handleVerifyPassword = async () => {
+    if (!password.trim()) {
+      Alert.alert('Invalid Password', 'Please enter a password');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const digits = phoneNumber.replace(/\D/g, '');
+      const formattedPhone = `${selectedCountry.dialCode}${digits}`;
+      
+      console.log('[Auth] Verifying backdoor password...');
+      
+      const result = await retryWithBackoff(
+        async () => {
+          return await backdoorLogin({ phone: formattedPhone, password });
+        },
+        3,
+        1000
+      );
+      
+      console.log('[Auth] Backdoor login result:', result);
+      
+      if (result.success && result.userId) {
+        // Save userId to context
+        await saveUserId(result.userId);
+        
+        // Navigate based on onboarding status (or test mode)
+        if (ENABLE_TEST_RUN_MODE) {
+          router.replace('/onboarding');
+        } else if (result.onboardingCompleted) {
+          router.replace('/feed');
+        } else {
+          router.replace('/onboarding');
+        }
+      } else {
+        Alert.alert('Error', 'Login failed. Please try again.');
+      }
+    } catch (error: any) {
+      console.error('[Auth] Backdoor login error:', error);
+      Alert.alert('Error', 'Invalid password. Please try again.');
+      setPassword('');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleChangePhone = () => {
     setStep('phone');
     setCode('');
-    setUseTwilioVerify(false); // Reset when changing phone
+    setPassword('');
+    setUseTwilioVerify(false);
+    setIsBackdoorMode(false);
   };
 
   const handleTestAccount = async () => {
@@ -284,11 +352,16 @@ export default function AuthScreen() {
 
   const isPhoneValid = () => {
     const digits = phoneNumber.replace(/\D/g, '');
+    // Allow backdoor phone number (0000000000)
+    if (isBackdoorPhoneNumber(digits)) {
+      return true;
+    }
     const expectedLength = selectedCountry.phoneLength || 10;
     return digits.length >= expectedLength - 1 && digits.length <= expectedLength + 1;
   };
   
   const isCodeValid = /^\d{6}$/.test(code);
+  const isPasswordValid = password.trim().length > 0;
   const hasAutoVerified = useRef(false);
   
   // Auto-verify when 6-digit code is entered
@@ -420,11 +493,13 @@ export default function AuthScreen() {
                 />
               </View>
               <Text style={styles.title}>
-                {step === 'phone' ? 'Welcome!' : 'Enter Verification Code'}
+                {step === 'phone' ? 'Welcome!' : step === 'password' ? 'Enter Password' : 'Enter Verification Code'}
               </Text>
               <Text style={styles.subtitle}>
                 {step === 'phone'
                   ? 'Enter your phone number to continue'
+                  : step === 'password'
+                  ? 'Enter your password to continue'
                   : `We sent a code to ${selectedCountry.dialCode} ${formatPhoneNumber(phoneNumber, selectedCountry)}`}
               </Text>
             </View>
@@ -483,13 +558,56 @@ export default function AuthScreen() {
                     <Text style={styles.testAccountText}>Use Test Account</Text>
                   </TouchableOpacity> */}
                 </>
+              ) : step === 'password' ? (
+                <>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Password</Text>
+                    <TextInput
+                      style={styles.codeInput}
+                      placeholder="Enter password"
+                      placeholderTextColor={Colors.grayLight}
+                      value={password}
+                      onChangeText={setPassword}
+                      secureTextEntry
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                  </View>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.button,
+                      { backgroundColor: isPasswordValid && !isLoading ? Colors.orange : Colors.gray },
+                      !isPasswordValid && styles.buttonDisabled,
+                    ]}
+                    onPress={handleVerifyPassword}
+                    disabled={!isPasswordValid || isLoading}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.buttonInner}>
+                      {isLoading ? (
+                        <ActivityIndicator color={Colors.white} />
+                      ) : (
+                        <Text style={styles.buttonText}>Login</Text>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.changePhoneButton}
+                    onPress={handleChangePhone}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.changePhoneText}>Change phone number</Text>
+                  </TouchableOpacity>
+                </>
               ) : (
                 <>
                   <View style={styles.inputGroup}>
                     <Text style={styles.label}>Verification Code</Text>
                     <TextInput
                       style={styles.codeInput}
-                      placeholder="000000"
+                      placeholder="0000000000"
                       placeholderTextColor={Colors.grayLight}
                       value={code}
                       onChangeText={setCode}
