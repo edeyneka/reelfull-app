@@ -607,7 +607,7 @@ export default function AuthScreen() {
                     <Text style={styles.label}>Verification Code</Text>
                     <TextInput
                       style={styles.codeInput}
-                      placeholder="0000000000"
+                      placeholder="000000"
                       placeholderTextColor={Colors.grayLight}
                       value={code}
                       onChangeText={setCode}
