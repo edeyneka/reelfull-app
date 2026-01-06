@@ -18,8 +18,8 @@ const RC_API_KEY = process.env.EXPO_PUBLIC_RC_KEY || '';
 // Credit pack definitions - matching backend
 export const CREDIT_PACKS = {
   PACK_10: { credits: 10, priceInCents: 999, productId: 'credits_10', priceString: '$9.99' },
-  PACK_20: { credits: 20, priceInCents: 1998, productId: 'credits_20', priceString: '$19.98' },
-  PACK_50: { credits: 50, priceInCents: 4995, productId: 'credits_50', priceString: '$49.95' },
+  PACK_20: { credits: 20, priceInCents: 1999, productId: 'credits_20', priceString: '$19.99' },
+  PACK_50: { credits: 50, priceInCents: 4999, productId: 'credits_50', priceString: '$49.99' },
 } as const;
 
 export type CreditPackType = keyof typeof CREDIT_PACKS;
