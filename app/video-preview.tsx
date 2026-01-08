@@ -135,7 +135,7 @@ export default function VideoPreviewScreen() {
       }
 
       // Request permissions
-      const { status } = await MediaLibrary.requestPermissionsAsync();
+      const { status, accessPrivileges } = await MediaLibrary.requestPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert(
           'Permission Required',
@@ -158,13 +158,22 @@ export default function VideoPreviewScreen() {
         
         console.log('[Download] Downloading video from:', downloadUrl);
         console.log('[Download] To local path:', fileUri);
+        console.log('[Download] Access privileges:', accessPrivileges);
         
         const downloadResult = await FileSystem.downloadAsync(downloadUrl, fileUri);
         
         if (downloadResult.status === 200) {
           console.log('[Download] Download complete, saving to media library...');
           const asset = await MediaLibrary.createAssetAsync(downloadResult.uri);
-          await MediaLibrary.createAlbumAsync('Reelful', asset, false);
+          
+          // Try to create album, but don't fail if it doesn't work (e.g., limited access)
+          try {
+            await MediaLibrary.createAlbumAsync('Reelful', asset, false);
+          } catch (albumError) {
+            // Album creation can fail with limited access, but the asset is still saved
+            console.log('[Download] Album creation skipped (limited access):', albumError);
+          }
+          
           setDownloadSuccess(true);
           setTimeout(() => setDownloadSuccess(false), 5000);
         } else {

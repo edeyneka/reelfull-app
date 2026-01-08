@@ -95,7 +95,7 @@ export default function ResultScreen() {
     try {
       setIsDownloading(true);
 
-      const { status } = await MediaLibrary.requestPermissionsAsync();
+      const { status, accessPrivileges } = await MediaLibrary.requestPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert(
           'Permission Required',
@@ -117,7 +117,15 @@ export default function ResultScreen() {
         
         if (downloadResult.status === 200) {
           const asset = await MediaLibrary.createAssetAsync(downloadResult.uri);
-          await MediaLibrary.createAlbumAsync('Reelful', asset, false);
+          
+          // Try to create album, but don't fail if it doesn't work (e.g., limited access)
+          try {
+            await MediaLibrary.createAlbumAsync('Reelful', asset, false);
+          } catch (albumError) {
+            // Album creation can fail with limited access, but the asset is still saved
+            console.log('[Download] Album creation skipped (limited access):', albumError);
+          }
+          
           Alert.alert('Success', 'Video saved to your gallery!');
         } else {
           throw new Error('Download failed');
