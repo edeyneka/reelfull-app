@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { User, Palette, X, Mic, Volume2, Headphones, Info, ChevronRight, Crown, Gift, Check } from 'lucide-react-native';
+import { User, Palette, X, Mic, Volume2, Headphones, Info, ChevronRight, Crown, Gift, Check, Trash2 } from 'lucide-react-native';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   ScrollView,
@@ -47,6 +47,7 @@ export default function SettingsScreen() {
   const generateUploadUrl = useMutation(api.users.generateUploadUrl);
   const updateProfile = useAction(api.users.updateProfile);
   const updateSelectedVoice = useMutation(api.users.updateSelectedVoice);
+  const deleteAccountAction = useAction(api.users.deleteAccount);
   
   // Local state
   const [isEditingName, setIsEditingName] = useState(false);
@@ -384,6 +385,69 @@ export default function SettingsScreen() {
     );
   };
 
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to delete your account? This will permanently delete all your data including:\n\n• Your profile information\n• All your videos and projects\n• Your voice recordings\n• Your subscription and credits\n\nThis action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete Account',
+          style: 'destructive',
+          onPress: () => {
+            // Second confirmation for extra safety
+            Alert.alert(
+              'Final Confirmation',
+              'This is your last chance to cancel. Your account and all data will be permanently deleted.',
+              [
+                {
+                  text: 'Keep Account',
+                  style: 'cancel',
+                },
+                {
+                  text: 'Delete Forever',
+                  style: 'destructive',
+                  onPress: async () => {
+                    if (!userId) return;
+                    
+                    setIsLoading(true);
+                    try {
+                      const result = await deleteAccountAction({ userId });
+                      
+                      if (result.success) {
+                        await clearData();
+                        Alert.alert(
+                          'Account Deleted',
+                          'Your account has been permanently deleted.',
+                          [
+                            {
+                              text: 'OK',
+                              onPress: () => router.replace('/auth'),
+                            },
+                          ]
+                        );
+                      } else {
+                        Alert.alert('Error', result.error || 'Failed to delete account. Please try again.');
+                      }
+                    } catch (error) {
+                      console.error('Delete account error:', error);
+                      Alert.alert('Error', 'Failed to delete account. Please try again.');
+                    } finally {
+                      setIsLoading(false);
+                    }
+                  },
+                },
+              ]
+            );
+          },
+        },
+      ]
+    );
+  };
+
   // Get credit status text
   const getCreditStatusText = () => {
     if (!videoGenerationStatus) return '';
@@ -620,6 +684,19 @@ export default function SettingsScreen() {
               <Text style={styles.logoutText}>Log out</Text>
             </TouchableOpacity>
           </ScrollView>
+
+          {/* Delete Account Button - Fixed at bottom */}
+          <View style={styles.deleteAccountContainer}>
+            <TouchableOpacity
+              style={styles.deleteAccountButton}
+              onPress={handleDeleteAccount}
+              activeOpacity={0.7}
+              disabled={isLoading}
+            >
+              <Trash2 size={16} color="#ff3b30" strokeWidth={2} />
+              <Text style={styles.deleteAccountText}>Delete Account</Text>
+            </TouchableOpacity>
+          </View>
 
           {/* Edit Name Modal */}
           {isEditingName && (
@@ -1009,6 +1086,26 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     fontSize: 16,
+    color: '#ff3b30',
+    fontFamily: Fonts.regular,
+  },
+  // Delete Account
+  deleteAccountContainer: {
+    paddingHorizontal: 24,
+    paddingBottom: 32,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#1a1a1a',
+  },
+  deleteAccountButton: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+  },
+  deleteAccountText: {
+    fontSize: 13,
     color: '#ff3b30',
     fontFamily: Fonts.regular,
   },
