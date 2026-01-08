@@ -26,7 +26,7 @@ module.exports = ({ config }) => {
       backgroundColor: '#ffffff',
     },
     ios: {
-      supportsTablet: true,
+      supportsTablet: false,
       bundleIdentifier: 'app.rork.reelfull',
       infoPlist: {
         UIBackgroundModes: ['audio'],
