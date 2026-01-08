@@ -71,6 +71,7 @@ function AppContent() {
       <Stack.Screen name="feed" options={{ animation: 'fade' }} />
       <Stack.Screen name="composer" options={{ gestureEnabled: false }} />
       <Stack.Screen name="script-review" options={{ gestureEnabled: false }} />
+      <Stack.Screen name="video-preview" options={{ gestureEnabled: false }} />
       <Stack.Screen name="loader" options={{ gestureEnabled: false }} />
       <Stack.Screen name="result" options={{ gestureEnabled: false, animation: 'none' }} />
       <Stack.Screen 

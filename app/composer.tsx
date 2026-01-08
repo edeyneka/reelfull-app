@@ -119,8 +119,8 @@ export default function ComposerScreen() {
   const updateProjectScript = useMutation(api.tasks.updateProjectScript);
 
   const handleClose = () => {
-    // Navigate to gallery - project is already saved as draft if it exists
-    router.replace('/feed');
+    // Navigate back with slide transition - project is already saved as draft if it exists
+    router.back();
   };
 
   const pickMedia = async () => {
