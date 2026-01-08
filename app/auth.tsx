@@ -14,6 +14,7 @@ import {
   ScrollView,
   Animated,
   Image,
+  Linking,
 } from 'react-native';
 import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -548,6 +549,23 @@ export default function AuthScreen() {
                     </View>
                   </TouchableOpacity>
 
+                  <Text style={styles.termsText}>
+                    By continuing, you agree to our{' '}
+                    <Text
+                      style={styles.termsLink}
+                      onPress={() => Linking.openURL('https://www.reelful.app/terms.html')}
+                    >
+                      Terms of Service
+                    </Text>
+                    {' '}and{' '}
+                    <Text
+                      style={styles.termsLink}
+                      onPress={() => Linking.openURL('https://www.reelful.app/privacy.html')}
+                    >
+                      Privacy Policy
+                    </Text>
+                  </Text>
+
                   {/* Test Account Button - Commented out for production */}
                   {/* <TouchableOpacity
                     style={styles.testAccountButton}
@@ -818,6 +836,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: Fonts.regular,
     color: Colors.grayLight,
+  },
+  termsText: {
+    fontSize: 13,
+    fontFamily: Fonts.regular,
+    color: Colors.grayLight,
+    textAlign: 'center',
+    marginTop: 16,
+    lineHeight: 20,
+  },
+  termsLink: {
+    color: Colors.orange,
+    textDecorationLine: 'underline',
   },
 });
 
