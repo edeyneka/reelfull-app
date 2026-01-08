@@ -61,19 +61,15 @@ function AppContent() {
   }, [userId]);
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
+    <Stack screenOptions={{ 
+      headerShown: false,
+      contentStyle: { backgroundColor: '#000000' },
+    }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="auth" />
       <Stack.Screen name="onboarding" />
       <Stack.Screen name="feed" options={{ animation: 'fade' }} />
-      <Stack.Screen 
-        name="composer" 
-        options={{ 
-          presentation: "transparentModal",
-          animation: 'none',
-          contentStyle: { backgroundColor: 'transparent' }
-        }} 
-      />
+      <Stack.Screen name="composer" options={{ gestureEnabled: false }} />
       <Stack.Screen name="script-review" options={{ gestureEnabled: false }} />
       <Stack.Screen name="loader" options={{ gestureEnabled: false }} />
       <Stack.Screen name="result" options={{ gestureEnabled: false, animation: 'none' }} />
@@ -118,7 +114,7 @@ export default function RootLayout() {
   return (
     <ConvexProvider client={convex}>
       <QueryClientProvider client={queryClient}>
-        <GestureHandlerRootView style={{ flex: 1 }}>
+        <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#000000' }}>
           <AppProvider>
               <PaywallProvider>
                 <AppContent />

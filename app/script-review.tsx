@@ -253,8 +253,8 @@ export default function ScriptReviewScreen() {
           >
             <ArrowLeft size={24} color={Colors.white} strokeWidth={2} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Script Review</Text>
-          <View style={styles.placeholder} />
+          {/* <Text style={styles.headerTitle}>Script Review</Text> */}
+          {/* <View style={styles.placeholder} /> */}
         </View>
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>No project ID</Text>
@@ -287,12 +287,17 @@ export default function ScriptReviewScreen() {
   const hasScript = !!project.script;
   const isLoadingScript = project.status === 'processing' && !hasScript;
 
+  // Navigate back to composer (reverse slide animation)
+  const handleBackToComposer = () => {
+    router.back();
+  };
+
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => router.back()}
+          onPress={handleBackToComposer}
           activeOpacity={0.7}
         >
           <ArrowLeft size={24} color={Colors.white} strokeWidth={2} />

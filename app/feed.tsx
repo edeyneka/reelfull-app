@@ -389,10 +389,10 @@ export default function FeedScreen() {
     userId ? { userId } : "skip"
   );
   
-  // Query projects normally (no fresh URL generation upfront)
+  // Query projects - always keep active for Convex reactivity to work with new drafts
   const backendProjects = useQuery(
     api.tasks.getProjects,
-    ((!syncedFromBackend || isRefreshing || hasPendingVideos) && userId) ? { userId } : "skip"
+    userId ? { userId } : "skip"
   );
   
   // Convex mutation for deleting projects
@@ -421,22 +421,16 @@ export default function FeedScreen() {
     }
   }, [backendUser, userId, syncUserFromBackend]);
 
-  // Sync videos from backend when projects are loaded
+  // Sync videos from backend when projects are loaded or changed
   useEffect(() => {
     if (backendProjects && userId) {
-      if (!syncedFromBackend) {
-        console.log('[feed] Initial sync: Backend projects loaded, syncing...');
-        syncVideosFromBackend(backendProjects);
-      } else if (isRefreshing) {
-        console.log('[feed] Refresh: Backend projects loaded, syncing...');
-        syncVideosFromBackend(backendProjects);
+      console.log('[feed] Backend projects updated, syncing...', backendProjects.length, 'projects');
+      syncVideosFromBackend(backendProjects);
+      if (isRefreshing) {
         setIsRefreshing(false);
-      } else if (hasPendingVideos) {
-        console.log('[feed] Pending videos detected, syncing for fresh data...');
-        syncVideosFromBackend(backendProjects);
       }
     }
-  }, [backendProjects, syncedFromBackend, userId, syncVideosFromBackend, isRefreshing, hasPendingVideos]);
+  }, [backendProjects, userId, syncVideosFromBackend, isRefreshing]);
 
   // Organize videos into rows of 3 for proper snake fill
   // Sort videos by creation time (most recent first)
@@ -691,10 +685,10 @@ export default function FeedScreen() {
         item={item} 
         isSelected={actionSheetVideo?.id === item.id}
         onPress={async () => {
-          // Navigate to script-review for draft videos
+          // Navigate to composer for draft videos
           if (item.status === 'draft' && item.projectId) {
             router.push({
-              pathname: '/script-review',
+              pathname: '/composer',
               params: { projectId: item.projectId },
             });
           }

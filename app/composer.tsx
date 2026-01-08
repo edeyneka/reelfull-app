@@ -1,13 +1,11 @@
-import { useRouter } from 'expo-router';
-import { Image as LucideImage, Camera, X, TestTube } from 'lucide-react-native';
-import { useState, useRef, useEffect } from 'react';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Image as LucideImage, Camera, X, TestTube, ArrowRight } from 'lucide-react-native';
+import { useState, useEffect } from 'react';
 import {
   Alert,
-  Animated,
   Image,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -17,7 +15,6 @@ import {
   ActivityIndicator,
   Switch,
 } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import * as ImagePicker from 'expo-image-picker';
 import { VideoExportPreset } from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -28,7 +25,6 @@ import { api } from "@/convex/_generated/api";
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
 import { uploadMediaFiles } from '@/lib/api-helpers';
-import { Asset } from 'expo-asset';
 import { Fonts } from '@/constants/typography';
 import { ENABLE_TEST_RUN_MODE } from '@/constants/config';
 
@@ -50,6 +46,8 @@ function VideoThumbnail({ uri, style }: { uri: string; style: any }) {
 
 export default function ComposerScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ projectId?: string }>();
+  const projectId = params.projectId as any; // Cast to Convex ID type
   const insets = useSafeAreaInsets();
   const { user, userId, syncUserFromBackend } = useApp();
   const [prompt, setPrompt] = useState('');
@@ -57,11 +55,19 @@ export default function ComposerScreen() {
   const [isUploading, setIsUploading] = useState(false);
   const [isPickingMedia, setIsPickingMedia] = useState(false);
   const [isTestRun, setIsTestRun] = useState(false);
+  const [isLoadingDraft, setIsLoadingDraft] = useState(false);
+  const [draftLoaded, setDraftLoaded] = useState(false);
   
   // Fetch current user profile from backend
   const backendUser = useQuery(
     api.users.getCurrentUser,
     userId ? { userId } : "skip"
+  );
+  
+  // Fetch existing project if projectId is provided (for editing drafts)
+  const existingProject = useQuery(
+    api.tasks.getProject,
+    projectId ? { id: projectId } : "skip"
   );
   
   // Sync user profile from backend when loaded
@@ -72,84 +78,50 @@ export default function ComposerScreen() {
     }
   }, [backendUser, userId, syncUserFromBackend]);
   
+  // Pre-populate form data from existing project (for editing drafts)
+  useEffect(() => {
+    if (existingProject && !draftLoaded) {
+      console.log('[composer] Loading draft project data:', existingProject._id);
+      setIsLoadingDraft(true);
+      
+      // Set prompt from project
+      setPrompt(existingProject.prompt || '');
+      
+      // Convert project file URLs to media URIs format
+      if (existingProject.fileUrls && existingProject.fileMetadata) {
+        const mediaFromProject = existingProject.fileUrls
+          .map((url: string | null, index: number) => {
+            if (!url) return null;
+            const metadata = existingProject.fileMetadata?.[index];
+            const isVideo = metadata?.contentType?.startsWith('video/') ?? false;
+            return {
+              uri: url,
+              type: (isVideo ? 'video' : 'image') as 'video' | 'image',
+              id: `draft-${index}-${Date.now()}`,
+              // Note: assetId is not available for draft files, they're already uploaded
+            };
+          })
+          .filter((item: { uri: string; type: 'video' | 'image'; id: string } | null): item is { uri: string; type: 'video' | 'image'; id: string } => item !== null);
+        
+        setMediaUris(mediaFromProject);
+        console.log('[composer] Loaded', mediaFromProject.length, 'media files from draft');
+      }
+      
+      setDraftLoaded(true);
+      setIsLoadingDraft(false);
+    }
+  }, [existingProject, draftLoaded]);
+  
   // Convex hooks
   const generateUploadUrl = useMutation(api.tasks.generateUploadUrl);
   const createProject = useMutation(api.tasks.createProject);
   const generateScriptOnly = useAction(api.tasks.generateScriptOnly);
   const updateProjectScript = useMutation(api.tasks.updateProjectScript);
-  
-  // Animated values for slide gesture
-  const translateY = useRef(new Animated.Value(600)).current;
-  const backdropOpacity = useRef(new Animated.Value(0)).current;
 
-  // Animate modal in when mounted
-  useEffect(() => {
-    // Animate in
-    Animated.parallel([
-      Animated.spring(translateY, {
-        toValue: 0,
-        useNativeDriver: true,
-        tension: 65,
-        friction: 11,
-      }),
-      Animated.timing(backdropOpacity, {
-        toValue: 1,
-        duration: 250,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [translateY, backdropOpacity]);
-
-  const closeModal = () => {
-    // Animate out before closing
-    Animated.parallel([
-      Animated.timing(translateY, {
-        toValue: 600,
-        duration: 250,
-        useNativeDriver: true,
-      }),
-      Animated.timing(backdropOpacity, {
-        toValue: 0,
-        duration: 250,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      router.back();
-    });
+  const handleClose = () => {
+    // Navigate to gallery - project is already saved as draft if it exists
+    router.replace('/feed');
   };
-
-  // Slide down gesture to close modal
-  const panGesture = Gesture.Pan()
-    .onUpdate((event) => {
-      // Only allow downward drag
-      if (event.translationY > 0) {
-        translateY.setValue(event.translationY);
-        // Gradually fade out backdrop as user drags down
-        backdropOpacity.setValue(Math.max(0.3, 1 - event.translationY / 600));
-      }
-    })
-    .onEnd((event) => {
-      // If swiped down far enough or with velocity, close modal
-      if (event.translationY > 150 || event.velocityY > 500) {
-        closeModal();
-      } else {
-        // Quickly spring back to original position
-        Animated.parallel([
-          Animated.spring(translateY, {
-            toValue: 0,
-            useNativeDriver: true,
-            tension: 100,
-            friction: 8,
-          }),
-          Animated.spring(backdropOpacity, {
-            toValue: 1,
-            useNativeDriver: true,
-            tension: 100,
-            friction: 8,
-          }),
-        ]).start();
-      }
-    });
 
   const pickMedia = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -235,41 +207,62 @@ export default function ComposerScreen() {
       console.log('Test Run Mode:', isTestRun);
       console.log('Prompt:', prompt.trim());
       console.log('Media count:', mediaUris.length);
+      console.log('Existing project:', projectId || 'none');
 
-      // Upload all media files to Convex
-      const uploads = await uploadMediaFiles(
-        generateUploadUrl,
-        mediaUris.map(m => ({ uri: m.uri, type: m.type, assetId: m.assetId }))
-      );
+      let finalProjectId = projectId;
 
-      console.log('Uploads complete:', uploads.length);
+      // If we have an existing project, regenerate script; otherwise create new project
+      if (projectId && existingProject) {
+        console.log('[composer] Editing existing draft, regenerating script...');
+        
+        // Update prompt if changed
+        if (prompt.trim() !== existingProject.prompt) {
+          console.log('[composer] Prompt changed, updating...');
+          await updateProjectScript({
+            id: projectId,
+            script: '', // Clear old script since prompt changed
+          });
+        }
+        
+        // Regenerate script for existing project
+        await generateScriptOnly({ projectId });
+      } else {
+        // New project: upload files and create
+        // Upload all media files to Convex
+        const uploads = await uploadMediaFiles(
+          generateUploadUrl,
+          mediaUris.map(m => ({ uri: m.uri, type: m.type, assetId: m.assetId }))
+        );
 
-      // Create project
-      const projectId = await createProject({
-        userId,
-        prompt: prompt.trim(),
-        files: uploads.map(u => u.storageId),
-        fileMetadata: uploads,
-        thumbnail: uploads[0].storageId,
-      });
+        console.log('Uploads complete:', uploads.length);
 
-      console.log('Project created:', projectId);
+        // Create project
+        finalProjectId = await createProject({
+          userId,
+          prompt: prompt.trim(),
+          files: uploads.map(u => u.storageId),
+          fileMetadata: uploads,
+          thumbnail: uploads[0].storageId,
+        });
 
-      if (ENABLE_TEST_RUN_MODE && isTestRun) {
-        // Test run mode: Sample assets required but not available in this build
-        console.error('Test run mode requested but sample assets are not available');
-        alert('Test mode is enabled but sample assets are not configured. Please disable test mode or add sample assets.');
-        return;
+        console.log('Project created:', finalProjectId);
+
+        if (ENABLE_TEST_RUN_MODE && isTestRun) {
+          // Test run mode: Sample assets required but not available in this build
+          console.error('Test run mode requested but sample assets are not available');
+          alert('Test mode is enabled but sample assets are not configured. Please disable test mode or add sample assets.');
+          return;
+        }
+        
+        // Normal mode: Start script generation
+        console.log('Starting script generation...');
+        await generateScriptOnly({ projectId: finalProjectId });
       }
-      
-      // Normal mode: Start script generation
-      console.log('Starting script generation...');
-      await generateScriptOnly({ projectId });
 
       // Navigate to script review
       router.replace({
         pathname: '/script-review',
-        params: { projectId: projectId.toString() },
+        params: { projectId: finalProjectId.toString() },
       });
     } catch (error) {
       console.error('Error in composer:', error);
@@ -303,249 +296,231 @@ export default function ComposerScreen() {
   const isValid = prompt.trim().length > 0 && mediaUris.length > 0;
 
   return (
-    <Animated.View 
-      style={[
-        styles.modalBackdrop,
-        { opacity: backdropOpacity }
-      ]}
-    >
-      <TouchableOpacity 
-        style={styles.backdropTouchable} 
-        activeOpacity={1}
-        onPress={closeModal}
-      />
-      <GestureDetector gesture={panGesture}>
-        <Animated.View
-          style={[
-            styles.modalContainer,
-            {
-              transform: [{ translateY }],
-            },
-          ]}
+    <View style={styles.container}>
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+        <TouchableOpacity
+          style={styles.closeButton}
+          onPress={handleClose}
+          activeOpacity={0.7}
         >
-          {/* Drag Handle */}
-          <View style={styles.dragHandle} />
+          <X size={24} color={Colors.white} strokeWidth={2} />
+        </TouchableOpacity>
+        
+        <View style={styles.placeholder} />
+        
+        {/* Forward arrow - show when editing a draft that has a script */}
+        {projectId && existingProject?.script ? (
+          <TouchableOpacity
+            style={styles.navButton}
+            onPress={() => {
+              router.push({
+                pathname: '/script-review',
+                params: { projectId: projectId.toString() },
+              });
+            }}
+            activeOpacity={0.7}
+          >
+            <ArrowRight size={24} color={Colors.white} strokeWidth={2} />
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.placeholder} />
+        )}
+      </View>
 
-          <View style={[styles.modalHeader, { paddingTop: 12 }]}>
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={closeModal}
-              activeOpacity={0.7}
-            >
-              <X size={24} color={Colors.white} strokeWidth={2} />
-            </TouchableOpacity>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardView}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.titleSection}>
+            <Text style={styles.title}>
+              Hey, {user?.name || 'there'}, share your story!
+            </Text>
           </View>
 
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={styles.keyboardView}
-          >
-            <ScrollView
-              contentContainerStyle={styles.scrollContent}
-              showsVerticalScrollIndicator={false}
-            >
-              <View style={styles.header}>
-                <Text style={styles.title}>
-                  Hey, {user?.name || 'there'}, share your story!
-                </Text>
-              </View>
-
-            <View style={styles.form}>
-              {ENABLE_TEST_RUN_MODE && (
-                <>
-                  <View style={styles.testRunContainer}>
-                    <View style={styles.testRunHeader}>
-                      <TestTube size={16} color={Colors.orange} />
-                      <Text style={styles.testRunLabel}>Test Run Mode</Text>
-                    </View>
-                    <Switch
-                      value={isTestRun}
-                      onValueChange={(value) => {
-                        setIsTestRun(value);
-                        if (value) {
-                          loadSampleMedia();
-                        } else {
-                          setMediaUris([]);
-                        }
-                      }}
-                      trackColor={{ false: Colors.gray, true: Colors.orangeLight }}
-                      thumbColor={isTestRun ? Colors.orange : Colors.grayLight}
-                      ios_backgroundColor={Colors.gray}
-                    />
+          <View style={styles.form}>
+            {ENABLE_TEST_RUN_MODE && (
+              <>
+                <View style={styles.testRunContainer}>
+                  <View style={styles.testRunHeader}>
+                    <TestTube size={16} color={Colors.orange} />
+                    <Text style={styles.testRunLabel}>Test Run Mode</Text>
                   </View>
-                  {isTestRun && (
-                    <View style={styles.testRunInfo}>
-                      <Text style={styles.testRunInfoText}>
-                        ℹ️ Sample media, script, voice, and SRT will be used. Script generation and voice synthesis will be skipped.
-                      </Text>
+                  <Switch
+                    value={isTestRun}
+                    onValueChange={(value) => {
+                      setIsTestRun(value);
+                      if (value) {
+                        loadSampleMedia();
+                      } else {
+                        setMediaUris([]);
+                      }
+                    }}
+                    trackColor={{ false: Colors.gray, true: Colors.orangeLight }}
+                    thumbColor={isTestRun ? Colors.orange : Colors.grayLight}
+                    ios_backgroundColor={Colors.gray}
+                  />
+                </View>
+                {isTestRun && (
+                  <View style={styles.testRunInfo}>
+                    <Text style={styles.testRunInfoText}>
+                      ℹ️ Sample media, script, voice, and SRT will be used. Script generation and voice synthesis will be skipped.
+                    </Text>
+                  </View>
+                )}
+              </>
+            )}
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Upload Media <Text style={styles.labelHint}>(optimal: 5-6 files)</Text></Text>
+              {mediaUris.length > 0 && (
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.mediaScroll}
+                  contentContainerStyle={styles.mediaScrollContent}
+                >
+                  {mediaUris.map((media, index) => (
+                    <View key={media.id} style={styles.mediaPreview}>
+                      {media.type === 'video' ? (
+                        <VideoThumbnail
+                          uri={media.uri}
+                          style={styles.mediaThumbnail}
+                        />
+                      ) : (
+                        <Image
+                          source={{ uri: media.uri }}
+                          style={styles.mediaThumbnail}
+                        />
+                      )}
+                      <TouchableOpacity
+                        style={styles.removeButton}
+                        onPress={() => removeMedia(index)}
+                        activeOpacity={0.7}
+                      >
+                        <X size={16} color={Colors.white} />
+                      </TouchableOpacity>
                     </View>
-                  )}
+                  ))}
+                </ScrollView>
+              )}
+              {!isTestRun && (
+                <>
+                  <TouchableOpacity
+                    style={[styles.pickerButton, isPickingMedia && styles.pickerButtonLoading]}
+                    onPress={pickMedia}
+                    activeOpacity={0.7}
+                    disabled={isPickingMedia}
+                  >
+                    {isPickingMedia ? (
+                      <>
+                        <ActivityIndicator size="small" color={Colors.white} />
+                        <Text style={styles.pickerButtonText}>Loading media...</Text>
+                      </>
+                    ) : (
+                      <>
+                        <Camera size={20} color={Colors.white} strokeWidth={2} />
+                        <Text style={styles.pickerButtonText}>
+                          {mediaUris.length > 0 ? 'Add More Media' : 'Select Photos/Videos'}
+                        </Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                  <Text style={styles.iCloudHint}>
+                    ☁️ Videos stored in iCloud may take a moment to load
+                  </Text>
                 </>
               )}
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Upload Media <Text style={styles.labelHint}>(optimal: 5-6 files)</Text></Text>
-                {mediaUris.length > 0 && (
-                  <ScrollView 
-                    horizontal 
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.mediaScroll}
-                    contentContainerStyle={styles.mediaScrollContent}
-                  >
-                    {mediaUris.map((media, index) => (
-                      <View key={media.id} style={styles.mediaPreview}>
-                        {media.type === 'video' ? (
-                          <VideoThumbnail
-                            uri={media.uri}
-                            style={styles.mediaThumbnail}
-                          />
-                        ) : (
-                          <Image
-                            source={{ uri: media.uri }}
-                            style={styles.mediaThumbnail}
-                          />
-                        )}
-                        <TouchableOpacity
-                          style={styles.removeButton}
-                          onPress={() => removeMedia(index)}
-                          activeOpacity={0.7}
-                        >
-                          <X size={16} color={Colors.white} />
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </ScrollView>
-                )}
-                {!isTestRun && (
-                  <>
-                    <TouchableOpacity
-                      style={[styles.pickerButton, isPickingMedia && styles.pickerButtonLoading]}
-                      onPress={pickMedia}
-                      activeOpacity={0.7}
-                      disabled={isPickingMedia}
-                    >
-                      {isPickingMedia ? (
-                        <>
-                          <ActivityIndicator size="small" color={Colors.white} />
-                          <Text style={styles.pickerButtonText}>Loading media...</Text>
-                        </>
-                      ) : (
-                        <>
-                          <Camera size={20} color={Colors.white} strokeWidth={2} />
-                          <Text style={styles.pickerButtonText}>
-                            {mediaUris.length > 0 ? 'Add More Media' : 'Select Photos/Videos'}
-                          </Text>
-                        </>
-                      )}
-                    </TouchableOpacity>
-                    <Text style={styles.iCloudHint}>
-                      ☁️ Videos stored in iCloud may take a moment to load
-                    </Text>
-                  </>
-                )}
-              </View>
-
-              <View style={styles.inputGroup}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Describe your day, event, or experience..."
-                  placeholderTextColor={Colors.grayLight}
-                  value={prompt}
-                  onChangeText={setPrompt}
-                  multiline
-                  numberOfLines={4}
-                  textAlignVertical="top"
-                />
-              </View>
-
-              <View style={styles.exampleContainer}>
-                <View style={styles.exampleHeader}>
-                  <LucideImage size={14} color={Colors.orange} />
-                  <Text style={styles.exampleTitle}>Example Story</Text>
-                </View>
-                <Text style={styles.exampleText}>
-                  &quot;I went to the a16z Tech Week in SF - met inspiring founders and caught up with old friends. The focus was on pre-seed fundraising. My three main takeaways: storytelling wins, community opens doors, and clarity beats buzzwords.&quot;
-                </Text>
-              </View>
-
-              <TouchableOpacity
-                style={[styles.button, (!isValid || isUploading) && styles.buttonDisabled]}
-                onPress={handleSubmit}
-                disabled={!isValid || isUploading}
-                activeOpacity={0.8}
-              >
-                <LinearGradient
-                  colors={
-                    isValid && !isUploading
-                      ? [Colors.orange, Colors.orangeLight]
-                      : [Colors.gray, Colors.grayLight]
-                  }
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.buttonGradient}
-                >
-                  {isUploading ? (
-                    <View style={styles.buttonLoadingContent}>
-                      <ActivityIndicator size="small" color={Colors.white} />
-                      <Text style={styles.buttonText}>Generating Script...</Text>
-                    </View>
-                  ) : (
-                    <Text style={styles.buttonText}>Generate Script</Text>
-                  )}
-                </LinearGradient>
-              </TouchableOpacity>
             </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-        </Animated.View>
-      </GestureDetector>
-    </Animated.View>
+
+            <View style={styles.inputGroup}>
+              <TextInput
+                style={styles.input}
+                placeholder="Describe your day, event, or experience..."
+                placeholderTextColor={Colors.grayLight}
+                value={prompt}
+                onChangeText={setPrompt}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+            </View>
+
+            <View style={styles.exampleContainer}>
+              <View style={styles.exampleHeader}>
+                <LucideImage size={14} color={Colors.orange} />
+                <Text style={styles.exampleTitle}>Example Story</Text>
+              </View>
+              <Text style={styles.exampleText}>
+                &quot;I went to the a16z Tech Week in SF - met inspiring founders and caught up with old friends. The focus was on pre-seed fundraising. My three main takeaways: storytelling wins, community opens doors, and clarity beats buzzwords.&quot;
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.button, (!isValid || isUploading) && styles.buttonDisabled]}
+              onPress={handleSubmit}
+              disabled={!isValid || isUploading}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={
+                  isValid && !isUploading
+                    ? [Colors.orange, Colors.orangeLight]
+                    : [Colors.gray, Colors.grayLight]
+                }
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.buttonGradient}
+              >
+                {isUploading ? (
+                  <View style={styles.buttonLoadingContent}>
+                    <ActivityIndicator size="small" color={Colors.white} />
+                    <Text style={styles.buttonText}>Generating Script...</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.buttonText}>Generate Script</Text>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  modalBackdrop: {
+  container: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'flex-end',
+    backgroundColor: Colors.black,
   },
-  backdropTouchable: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  modalContainer: {
-    backgroundColor: '#000000',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    height: '94%',
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  dragHandle: {
-    width: 40,
-    height: 5,
-    backgroundColor: '#333333',
-    borderRadius: 3,
-    alignSelf: 'center',
-    marginTop: 12,
-    marginBottom: 8,
-  },
-  modalHeader: {
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 24,
     paddingBottom: 8,
-    alignItems: 'flex-start',
+    backgroundColor: Colors.black,
   },
   closeButton: {
     width: 40,
     height: 40,
     justifyContent: 'center',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+  },
+  navButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.gray,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  placeholder: {
+    width: 40,
   },
   keyboardView: {
     flex: 1,
@@ -553,12 +528,11 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: 0,
+    paddingTop: 8,
     paddingBottom: 40,
   },
-  header: {
+  titleSection: {
     marginBottom: 20,
-    paddingTop: 8,
     alignItems: 'center',
   },
   title: {
