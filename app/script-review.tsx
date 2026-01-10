@@ -74,17 +74,13 @@ export default function ScriptReviewScreen() {
     if (project?.voiceSpeed) {
       setVoiceSpeed(project.voiceSpeed);
     }
-    // Load music/captions/keepOrder settings (default to true/true/false if not set)
-    if (project?.includeMusic !== undefined) {
-      setIncludeMusic(project.includeMusic);
-    }
-    if (project?.includeCaptions !== undefined) {
-      setIncludeCaptions(project.includeCaptions);
-    }
+    // Load keepOrder setting (default to false if not set)
+    // Note: includeMusic and includeCaptions are always true since UI is hidden
+    // We don't load them from project to ensure they're always true
     if (project?.keepOrder !== undefined) {
       setKeepOrder(project.keepOrder);
     }
-  }, [project?.script, project?.renderMode, project?.voiceSpeed, project?.includeMusic, project?.includeCaptions, project?.keepOrder, isEditing]);
+  }, [project?.script, project?.renderMode, project?.voiceSpeed, project?.keepOrder, isEditing]);
 
   const handleSaveEdit = async () => {
     if (!projectId || !editedScript.trim()) {
@@ -198,16 +194,12 @@ export default function ScriptReviewScreen() {
           await markProjectSubmitted({ id: projectId });
           console.log('[script-review] Media generation scheduled server-side, navigating to feed...');
           
-          // Show first project welcome message
-          if (isFirstProject) {
-            Alert.alert(
-              '🎬 Generation Started!',
-              'Your video is being created! Feel free to close the app — we\'ll send you a notification when it\'s ready',
-              [{ text: 'Got it!', style: 'default', onPress: () => router.replace('/feed') }]
-            );
-          } else {
-            router.replace('/feed');
-          }
+          // Show generation started message
+          Alert.alert(
+            '🎬 Generation Started!',
+            'Your video is being created! Feel free to close the app — we\'ll send you a notification when it\'s ready.',
+            [{ text: 'Got it!', style: 'default', onPress: () => router.replace('/feed') }]
+          );
           return; // Exit early - generation continues in background
         } catch (submitError) {
           // Check if this is a free tier limit error
