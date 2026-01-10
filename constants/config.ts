@@ -4,7 +4,8 @@
  * Toggle these flags to enable/disable features for dev vs prod builds
  */
 
-// Set to true to force onboarding flow for testing (even for registered users)
+// Set to true to enable test run mode features (sample media, test buttons, etc.)
+// Note: Onboarding always shows for authenticated users regardless of this flag
 export const ENABLE_TEST_RUN_MODE = false;
 
 // Set to false to hide style preference during onboarding and settings
