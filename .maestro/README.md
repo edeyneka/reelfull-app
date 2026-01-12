@@ -36,7 +36,7 @@ maestro test .maestro/flows/
 The flows use these test credentials (backdoor login):
 
 - **Phone**: `0000000000`
-- **Password**: `PHqvs8TUxr8HFv`
+- **Password**: `3rwnSHUx2TFRvU`
 
 ## 📸 Screenshot Output
 

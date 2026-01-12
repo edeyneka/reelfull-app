@@ -11,7 +11,7 @@ appId: app.rork.reelfull
 # Test credentials - CHANGE THESE TO YOUR VALUES
 env:
   TEST_PHONE: "0000000000"
-  TEST_PASSWORD: "PHqvs8TUxr8HFv"
+  TEST_PASSWORD: "3rwnSHUx2TFRvU"
   TEST_NAME: "Kate"
 
 ---
