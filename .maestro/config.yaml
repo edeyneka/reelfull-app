@@ -1,0 +1,16 @@
+# Maestro Configuration for Reelful App
+# https://maestro.mobile.dev/
+
+appId: app.rork.reelfull
+name: Reelful Screenshot Flows
+
+# Default timeout for all assertions
+defaultTimeout: 30000
+
+# Screenshot output directory
+screenshotPath: .maestro/screenshots
+
+# Device settings
+device:
+  platform: ios
+  model: iPhone 15 Pro

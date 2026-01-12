@@ -340,6 +340,7 @@ export default function OnboardingScreen() {
                   <View style={styles.inputGroup}>
                     <Text style={styles.label}>What&apos;s your name?</Text>
                     <TextInput
+                      testID="nameInput"
                       style={styles.input}
                       placeholder="Enter your name"
                       placeholderTextColor={Colors.grayLight}
@@ -351,6 +352,7 @@ export default function OnboardingScreen() {
                   </View>
 
                   <TouchableOpacity
+                    testID="nextButton"
                     style={[styles.button, !isStep1Valid && styles.buttonDisabled]}
                     onPress={handleNext}
                     disabled={!isStep1Valid}
@@ -435,6 +437,7 @@ export default function OnboardingScreen() {
                   </View>
                   
                   <TouchableOpacity
+                    testID="skipVoiceButton"
                     style={styles.skipButton}
                     onPress={handleSkipVoice}
                     activeOpacity={0.7}

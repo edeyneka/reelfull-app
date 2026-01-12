@@ -1,0 +1,37 @@
+# 02-auth-phone.yaml - Capture auth screen with phone input
+# Run: maestro test .maestro/flows/02-auth-phone.yaml
+
+appId: app.rork.reelfull
+
+---
+# Launch app fresh
+- launchApp:
+    clearState: true
+
+# Wait for intro and tap Get Started
+- extendedWaitUntil:
+    visible:
+      text: "Get Started"
+    timeout: 10000
+
+- tapOn:
+    text: "Get Started"
+
+# Wait for auth screen
+- extendedWaitUntil:
+    visible:
+      text: "Welcome!"
+    timeout: 5000
+
+# Take screenshot of empty auth screen
+- takeScreenshot: .maestro/screenshots/02-auth-empty
+
+# Enter test phone number (backdoor)
+- tapOn:
+    text: "Phone number"
+    optional: true
+
+- inputText: "0000000000"
+
+# Take screenshot with phone entered
+- takeScreenshot: .maestro/screenshots/02-auth-phone-entered

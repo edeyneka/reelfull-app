@@ -6,7 +6,13 @@
     "start": "bunx rork start -p qk9zn8ilqyx530aaemb0i --tunnel",
     "start-web": "bunx rork start -p qk9zn8ilqyx530aaemb0i --web --tunnel",
     "start-web-dev": "DEBUG=expo* bunx rork start -p qk9zn8ilqyx530aaemb0i --web --tunnel",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "screenshots": "maestro test .maestro/flows/complete-with-testids.yaml --output .maestro/screenshots",
+    "screenshots:all": "maestro test .maestro/flows/",
+    "screenshots:intro": "maestro test .maestro/flows/01-intro.yaml",
+    "maestro:studio": "maestro studio",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",

@@ -433,17 +433,16 @@ export default function FeedScreen() {
     registerForPushNotificationsAsync();
   }, []);
 
-  // In test mode, show paywall on first access if not completed this session
-  useEffect(() => {
-    if (ENABLE_TEST_RUN_MODE && !hasCompletedPaywallThisSession && !hasShownInitialPaywall) {
-      console.log('[feed] Test mode: showing initial paywall');
-      setHasShownInitialPaywall(true);
-      // Small delay to ensure the feed is rendered first
-      setTimeout(() => {
-        router.push('/paywall');
-      }, 100);
-    }
-  }, [hasCompletedPaywallThisSession, hasShownInitialPaywall, router]);
+  // Disabled: automatic paywall popup on first access
+  // useEffect(() => {
+  //   if (ENABLE_TEST_RUN_MODE && !hasCompletedPaywallThisSession && !hasShownInitialPaywall) {
+  //     console.log('[feed] Test mode: showing initial paywall');
+  //     setHasShownInitialPaywall(true);
+  //     setTimeout(() => {
+  //       router.push('/paywall');
+  //     }, 100);
+  //   }
+  // }, [hasCompletedPaywallThisSession, hasShownInitialPaywall, router]);
 
   // Handle create new video - check limit before allowing
   const handleCreateNew = useCallback(() => {
