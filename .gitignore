@@ -38,5 +38,5 @@ yarn-error.*
 .vercel
 
 # Maestro
-.maestro/screenshots/
+.maestro
 constants/testData.ts
