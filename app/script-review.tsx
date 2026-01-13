@@ -86,11 +86,14 @@ export default function ScriptReviewScreen() {
       setVoiceSpeed(project.voiceSpeed);
     }
     // Load keepOrder setting (default to false if not set)
-    // Note: includeMusic and includeCaptions are always true since UI is hidden
-    // We don't load them from project to ensure they're always true
     if (project?.keepOrder !== undefined) {
       setKeepOrder(project.keepOrder);
     }
+    
+    // Always ensure audio settings are ON (user can configure in final project)
+    // These are explicitly set to true and NOT loaded from project
+    setIncludeMusic(true);
+    setIncludeCaptions(true);
   }, [project?.script, project?.renderMode, project?.voiceSpeed, project?.keepOrder, isEditing, isTestMode]);
 
   const handleSaveEdit = async () => {
@@ -121,6 +124,11 @@ export default function ScriptReviewScreen() {
 
   const handleRegenerate = async () => {
     if (!projectId) return;
+
+    // Always ensure audio settings are ON for regeneration
+    // (user can configure these in the final project anyway)
+    setIncludeMusic(true);
+    setIncludeCaptions(true);
 
     setIsRegenerating(true);
     try {
