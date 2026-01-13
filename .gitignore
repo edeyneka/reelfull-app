@@ -40,3 +40,4 @@ yarn-error.*
 # Maestro
 .maestro/
 constants/testData.ts
+assets/test-video.mp4
