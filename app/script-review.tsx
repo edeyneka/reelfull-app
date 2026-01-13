@@ -21,17 +21,20 @@ import { Asset } from 'expo-asset';
 import { uploadFileToConvex } from '@/lib/api-helpers';
 import { Fonts } from '@/constants/typography';
 import { ENABLE_TEST_RUN_MODE } from '@/constants/config';
+import { TEST_MODE_DATA } from '@/constants/testData';
 
 export default function ScriptReviewScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ projectId: string; testRun?: string }>();
+  const params = useLocalSearchParams<{ projectId: string; testRun?: string; testMode?: string }>();
   const projectId = params.projectId as any;
   const isTestRun = params.testRun === 'true';
+  // Test mode is active if ENABLE_TEST_RUN_MODE is true AND we're coming from composer with testMode flag
+  const isTestMode = params.testMode === 'true' || (ENABLE_TEST_RUN_MODE && projectId === 'test-mode-project');
   const { addVideo, videos } = useApp();
 
-  // Convex hooks
-  const project = useQuery(api.tasks.getProject, projectId ? { id: projectId } : "skip");
+  // Convex hooks - SKIP all queries in test mode to avoid API calls
+  const project = useQuery(api.tasks.getProject, (!isTestMode && projectId) ? { id: projectId } : "skip");
   const updateProjectScript = useMutation(api.tasks.updateProjectScript);
   const regenerateScript = useAction(api.tasks.regenerateScript);
   const markProjectSubmitted = useMutation(api.tasks.markProjectSubmitted);
@@ -53,8 +56,16 @@ export default function ScriptReviewScreen() {
   const [includeCaptions, setIncludeCaptions] = useState<boolean>(true); // Default to include captions
   const [keepOrder, setKeepOrder] = useState<boolean>(false); // Default to not keeping original order
 
-  // Initialize script and render mode from project
+  // Initialize script and render mode from project (or mock data in test mode)
   useEffect(() => {
+    // Test Mode: Use predefined script from test data - NO API calls
+    if (isTestMode && !editedScript) {
+      console.log('[script-review] Test Mode: Using predefined script (no API calls)');
+      setEditedScript(TEST_MODE_DATA.script);
+      setLastProjectScript(TEST_MODE_DATA.script);
+      return;
+    }
+    
     if (project?.script) {
       // Update editedScript when project script changes (e.g., after regeneration)
       // But only if we're not currently editing
@@ -74,17 +85,16 @@ export default function ScriptReviewScreen() {
     if (project?.voiceSpeed) {
       setVoiceSpeed(project.voiceSpeed);
     }
-    // Load music/captions/keepOrder settings (default to true/true/false if not set)
-    if (project?.includeMusic !== undefined) {
-      setIncludeMusic(project.includeMusic);
-    }
-    if (project?.includeCaptions !== undefined) {
-      setIncludeCaptions(project.includeCaptions);
-    }
+    // Load keepOrder setting (default to false if not set)
     if (project?.keepOrder !== undefined) {
       setKeepOrder(project.keepOrder);
     }
-  }, [project?.script, project?.renderMode, project?.voiceSpeed, project?.includeMusic, project?.includeCaptions, project?.keepOrder, isEditing]);
+    
+    // Always ensure audio settings are ON (user can configure in final project)
+    // These are explicitly set to true and NOT loaded from project
+    setIncludeMusic(true);
+    setIncludeCaptions(true);
+  }, [project?.script, project?.renderMode, project?.voiceSpeed, project?.keepOrder, isEditing, isTestMode]);
 
   const handleSaveEdit = async () => {
     if (!projectId || !editedScript.trim()) {
@@ -115,6 +125,11 @@ export default function ScriptReviewScreen() {
   const handleRegenerate = async () => {
     if (!projectId) return;
 
+    // Always ensure audio settings are ON for regeneration
+    // (user can configure these in the final project anyway)
+    setIncludeMusic(true);
+    setIncludeCaptions(true);
+
     setIsRegenerating(true);
     try {
       const result = await regenerateScript({ projectId });
@@ -131,7 +146,46 @@ export default function ScriptReviewScreen() {
     }
   };
 
+  // Action to get fresh video URL from the source project (only used in production mode)
+  const getFreshVideoUrl = useAction(api.tasks.getFreshProjectVideoUrl);
+  
   const handleApprove = async () => {
+    // Test Mode: Skip ALL API calls and use local video file
+    if (isTestMode) {
+      console.log('[script-review] Test Mode: Using local video file (NO API calls)');
+
+      setIsSubmitting(true);
+
+      // Get the local video URI from the require() asset
+      const localVideoUri = Asset.fromModule(TEST_MODE_DATA.localVideoPath).uri;
+
+      console.log('[script-review] Test Mode: Local video URI:', localVideoUri);
+
+      // Show generation started message (same as production)
+      Alert.alert(
+        '🎬 Generation Started!',
+        'Your video is being created! Feel free to close the app — we\'ll send you a notification when it\'s ready.',
+        [{
+          text: 'Got it!',
+          style: 'default',
+          onPress: () => {
+            // Navigate to video-preview with the LOCAL video file
+            router.replace({
+              pathname: '/video-preview',
+              params: {
+                videoId: 'test-mode-video',
+                videoUri: localVideoUri,
+                prompt: TEST_MODE_DATA.prompt,
+                script: TEST_MODE_DATA.script,
+                testMode: 'true',
+              },
+            });
+          }
+        }]
+      );
+      return;
+    }
+
     if (!projectId || !project?.script) {
       Alert.alert('Error', 'No script available');
       return;
@@ -141,12 +195,59 @@ export default function ScriptReviewScreen() {
     const isFirstProject = videos.filter(v => v.status !== 'draft').length === 0;
 
     setIsSubmitting(true);
-    try {
-      // Save any edits (replace ? with ??? before saving, matching studio behavior)
-      const scriptToSave = editedScript !== project.script 
+
+    // For normal mode, add video to context FIRST, then show alert
+    if (!isTestRun) {
+      // Get the script to save
+      const scriptToSave = editedScript !== project.script
         ? editedScript.trim().replace(/\?(?!\?\?)/g, "???")
         : project.script.replace(/\?(?!\?\?)/g, "???");
-      
+
+      // Optimistically update video status to "processing" BEFORE showing alert
+      console.log('[script-review] Adding video with processing status before alert...');
+      addVideo({
+        id: projectId,
+        uri: '',
+        prompt: project.prompt,
+        script: scriptToSave,
+        createdAt: project.createdAt || Date.now(),
+        status: 'processing',
+        projectId: projectId,
+        thumbnailUrl: project.thumbnailUrl,
+      });
+
+      // NOW show the alert and navigate
+      Alert.alert(
+        '🎬 Generation Started!',
+        'Your video is being created! Feel free to close the app — we\'ll send you a notification when it\'s ready.',
+        [{
+          text: 'Got it!',
+          style: 'default',
+          onPress: () => {
+            // Navigate to feed immediately
+            router.replace('/feed');
+          }
+        }]
+      );
+
+      // Process API calls in background after showing alert
+      processBackgroundTasks();
+    } else {
+      // For test run, process normally without showing alert
+      await processBackgroundTasks();
+    }
+  };
+
+  // Helper function to process all API calls in background
+  const processBackgroundTasks = async () => {
+    if (!projectId || !project?.script) return;
+
+    try {
+      // Save any edits (replace ? with ??? before saving, matching studio behavior)
+      const scriptToSave = editedScript !== project.script
+        ? editedScript.trim().replace(/\?(?!\?\?)/g, "???")
+        : project.script.replace(/\?(?!\?\?)/g, "???");
+
       if (editedScript !== project.script || scriptToSave !== project.script) {
         console.log('[script-review] Saving edited script...');
         await updateProjectScript({
@@ -178,37 +279,28 @@ export default function ScriptReviewScreen() {
         keepOrder,
       });
 
-      // Optimistically update video status to "processing" for instant UI feedback
-      console.log('[script-review] Optimistically updating video to processing state...');
-      addVideo({
-        id: projectId,
-        uri: '',
-        prompt: project.prompt,
-        script: scriptToSave,
-        createdAt: project.createdAt || Date.now(),
-        status: 'processing',
-        projectId: projectId,
-        thumbnailUrl: project.thumbnailUrl,
-      });
+      // Skip adding video here if not test run (already added before alert)
+      if (isTestRun) {
+        // Only add video for test run mode
+        console.log('[script-review] Test run: updating video to processing state...');
+        addVideo({
+          id: projectId,
+          uri: '',
+          prompt: project.prompt,
+          script: scriptToSave,
+          createdAt: project.createdAt || Date.now(),
+          status: 'processing',
+          projectId: projectId,
+          thumbnailUrl: project.thumbnailUrl,
+        });
+      }
 
       // For normal mode, mark as submitted and schedule generation server-side
       if (!isTestRun) {
         console.log('[script-review] Marking project as submitted (schedules generation server-side)...');
         try {
           await markProjectSubmitted({ id: projectId });
-          console.log('[script-review] Media generation scheduled server-side, navigating to feed...');
-          
-          // Show first project welcome message
-          if (isFirstProject) {
-            Alert.alert(
-              '🎬 Generation Started!',
-              'Your video is being created! Feel free to close the app — we\'ll send you a notification when it\'s ready',
-              [{ text: 'Got it!', style: 'default', onPress: () => router.replace('/feed') }]
-            );
-          } else {
-            router.replace('/feed');
-          }
-          return; // Exit early - generation continues in background
+          console.log('[script-review] Media generation scheduled server-side');
         } catch (submitError) {
           // Check if this is a free tier limit error
           const errorMessage = submitError instanceof Error ? submitError.message : String(submitError);
@@ -224,17 +316,12 @@ export default function ScriptReviewScreen() {
       }
 
       // Test run mode requested but not available when ENABLE_TEST_RUN_MODE is false
-      if (!ENABLE_TEST_RUN_MODE) {
+      if (isTestRun && !ENABLE_TEST_RUN_MODE) {
         console.error('[script-review] Test run mode requested but ENABLE_TEST_RUN_MODE is disabled');
         Alert.alert('Error', 'Test mode is not available in this build. Sample assets are not configured.');
         setIsSubmitting(false);
         return;
       }
-
-      // If we reach here, test mode is enabled but this shouldn't happen in production
-      console.error('[script-review] Test run mode is enabled but sample assets are not configured');
-      Alert.alert('Error', 'Test mode is enabled but sample assets are missing. Please add sample media files or disable test mode.');
-      setIsSubmitting(false);
     } catch (error) {
       console.error('[script-review] Approve error:', error);
       Alert.alert('Error', `Failed to start generation: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -242,7 +329,11 @@ export default function ScriptReviewScreen() {
     }
   };
 
-  if (!projectId) {
+  // Test Mode: Skip the normal project loading checks
+  const hasScript = isTestMode ? !!editedScript : !!project?.script;
+  const isLoadingScript = !isTestMode && project?.status === 'processing' && !hasScript;
+
+  if (!projectId && !isTestMode) {
     return (
       <View style={styles.container}>
         <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
@@ -263,7 +354,7 @@ export default function ScriptReviewScreen() {
     );
   }
 
-  if (!project) {
+  if (!project && !isTestMode) {
     return (
       <View style={styles.container}>
         <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
@@ -283,9 +374,6 @@ export default function ScriptReviewScreen() {
       </View>
     );
   }
-
-  const hasScript = !!project.script;
-  const isLoadingScript = project.status === 'processing' && !hasScript;
 
   // Navigate back to composer (reverse slide animation)
   const handleBackToComposer = () => {
@@ -384,7 +472,7 @@ export default function ScriptReviewScreen() {
                   </View>
                 </View>
               ) : (
-                <View style={styles.scriptContainer}>
+                <View testID="scriptContainer" style={styles.scriptContainer}>
                   <Text style={styles.scriptText}>{editedScript || (project.script ? project.script.replace(/\?\?\?/g, "?") : '')}</Text>
                 </View>
               )}
@@ -500,6 +588,7 @@ export default function ScriptReviewScreen() {
             </View> */}
 
             <TouchableOpacity
+              testID="approveScriptButton"
               style={[styles.approveButton, isSubmitting && styles.approveButtonDisabled]}
               onPress={handleApprove}
               disabled={isSubmitting}

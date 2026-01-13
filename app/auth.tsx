@@ -517,6 +517,7 @@ export default function AuthScreen() {
                       />
                       <View style={styles.divider} />
                       <TextInput
+                        testID="phoneInput"
                         style={styles.phoneInput}
                         placeholder={selectedCountry.code === 'US' || selectedCountry.code === 'CA' 
                           ? '(555) 123-4567' 
@@ -531,6 +532,7 @@ export default function AuthScreen() {
                   </View>
 
                   <TouchableOpacity
+                    testID="continueButton"
                     style={[
                       styles.button,
                       { backgroundColor: isPhoneValid() && !isLoading ? Colors.orange : Colors.gray },
@@ -581,6 +583,7 @@ export default function AuthScreen() {
                   <View style={styles.inputGroup}>
                     <Text style={styles.label}>Password</Text>
                     <TextInput
+                      testID="passwordInput"
                       style={styles.codeInput}
                       placeholder="Enter password"
                       placeholderTextColor={Colors.grayLight}
@@ -593,6 +596,7 @@ export default function AuthScreen() {
                   </View>
 
                   <TouchableOpacity
+                    testID="loginButton"
                     style={[
                       styles.button,
                       { backgroundColor: isPasswordValid && !isLoading ? Colors.orange : Colors.gray },

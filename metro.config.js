@@ -7,10 +7,12 @@ const config = getDefaultConfig(__dirname);
 // Add support for .txt and .srt files as assets
 config.resolver.assetExts.push('txt', 'srt');
 
-// Ensure uppercase video extensions are also treated as assets
-// (MOV, MP4, etc. - case insensitive)
+// Ensure video extensions are treated as assets (both cases)
 if (!config.resolver.assetExts.includes('MOV')) {
   config.resolver.assetExts.push('MOV');
+}
+if (!config.resolver.assetExts.includes('MP4')) {
+  config.resolver.assetExts.push('MP4');
 }
 
 // Provide web mocks for native-only modules

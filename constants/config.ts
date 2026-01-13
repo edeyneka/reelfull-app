@@ -4,7 +4,19 @@
  * Toggle these flags to enable/disable features for dev vs prod builds
  */
 
-// Set to true to force onboarding flow for testing (even for registered users)
+/**
+ * Test Run Mode Configuration
+ * 
+ * When enabled (true), the app will:
+ * - Skip ALL API calls (no uploads, no AI script generation, no video rendering)
+ * - Use predefined test script from testData.ts
+ * - Use local video file from .maestro/test-data/
+ * 
+ * When disabled (false):
+ * - Run the full production flow with all API calls
+ * 
+ * Set this to true when running Maestro tests or testing the UI flow.
+ */
 export const ENABLE_TEST_RUN_MODE = false;
 
 // Set to false to hide style preference during onboarding and settings

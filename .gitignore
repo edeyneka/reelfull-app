@@ -36,3 +36,8 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 .vercel
+
+# Maestro
+.maestro/
+constants/testData.ts
+assets/test-video.mp4
