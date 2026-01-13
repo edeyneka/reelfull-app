@@ -145,21 +145,21 @@ export default function ScriptReviewScreen() {
     // Test Mode: Skip ALL API calls and use local video file
     if (isTestMode) {
       console.log('[script-review] Test Mode: Using local video file (NO API calls)');
-      
+
       setIsSubmitting(true);
-      
+
       // Get the local video URI from the require() asset
       const localVideoUri = Asset.fromModule(TEST_MODE_DATA.localVideoPath).uri;
-      
+
       console.log('[script-review] Test Mode: Local video URI:', localVideoUri);
-      
+
       // Show generation started message (same as production)
       Alert.alert(
         '🎬 Generation Started!',
         'Your video is being created! Feel free to close the app — we\'ll send you a notification when it\'s ready.',
-        [{ 
-          text: 'Got it!', 
-          style: 'default', 
+        [{
+          text: 'Got it!',
+          style: 'default',
           onPress: () => {
             // Navigate to video-preview with the LOCAL video file
             router.replace({
@@ -177,7 +177,7 @@ export default function ScriptReviewScreen() {
       );
       return;
     }
-    
+
     if (!projectId || !project?.script) {
       Alert.alert('Error', 'No script available');
       return;
@@ -187,12 +187,59 @@ export default function ScriptReviewScreen() {
     const isFirstProject = videos.filter(v => v.status !== 'draft').length === 0;
 
     setIsSubmitting(true);
-    try {
-      // Save any edits (replace ? with ??? before saving, matching studio behavior)
-      const scriptToSave = editedScript !== project.script 
+
+    // For normal mode, add video to context FIRST, then show alert
+    if (!isTestRun) {
+      // Get the script to save
+      const scriptToSave = editedScript !== project.script
         ? editedScript.trim().replace(/\?(?!\?\?)/g, "???")
         : project.script.replace(/\?(?!\?\?)/g, "???");
-      
+
+      // Optimistically update video status to "processing" BEFORE showing alert
+      console.log('[script-review] Adding video with processing status before alert...');
+      addVideo({
+        id: projectId,
+        uri: '',
+        prompt: project.prompt,
+        script: scriptToSave,
+        createdAt: project.createdAt || Date.now(),
+        status: 'processing',
+        projectId: projectId,
+        thumbnailUrl: project.thumbnailUrl,
+      });
+
+      // NOW show the alert and navigate
+      Alert.alert(
+        '🎬 Generation Started!',
+        'Your video is being created! Feel free to close the app — we\'ll send you a notification when it\'s ready.',
+        [{
+          text: 'Got it!',
+          style: 'default',
+          onPress: () => {
+            // Navigate to feed immediately
+            router.replace('/feed');
+          }
+        }]
+      );
+
+      // Process API calls in background after showing alert
+      processBackgroundTasks();
+    } else {
+      // For test run, process normally without showing alert
+      await processBackgroundTasks();
+    }
+  };
+
+  // Helper function to process all API calls in background
+  const processBackgroundTasks = async () => {
+    if (!projectId || !project?.script) return;
+
+    try {
+      // Save any edits (replace ? with ??? before saving, matching studio behavior)
+      const scriptToSave = editedScript !== project.script
+        ? editedScript.trim().replace(/\?(?!\?\?)/g, "???")
+        : project.script.replace(/\?(?!\?\?)/g, "???");
+
       if (editedScript !== project.script || scriptToSave !== project.script) {
         console.log('[script-review] Saving edited script...');
         await updateProjectScript({
@@ -224,33 +271,28 @@ export default function ScriptReviewScreen() {
         keepOrder,
       });
 
-      // Optimistically update video status to "processing" for instant UI feedback
-      console.log('[script-review] Optimistically updating video to processing state...');
-      addVideo({
-        id: projectId,
-        uri: '',
-        prompt: project.prompt,
-        script: scriptToSave,
-        createdAt: project.createdAt || Date.now(),
-        status: 'processing',
-        projectId: projectId,
-        thumbnailUrl: project.thumbnailUrl,
-      });
+      // Skip adding video here if not test run (already added before alert)
+      if (isTestRun) {
+        // Only add video for test run mode
+        console.log('[script-review] Test run: updating video to processing state...');
+        addVideo({
+          id: projectId,
+          uri: '',
+          prompt: project.prompt,
+          script: scriptToSave,
+          createdAt: project.createdAt || Date.now(),
+          status: 'processing',
+          projectId: projectId,
+          thumbnailUrl: project.thumbnailUrl,
+        });
+      }
 
       // For normal mode, mark as submitted and schedule generation server-side
       if (!isTestRun) {
         console.log('[script-review] Marking project as submitted (schedules generation server-side)...');
         try {
           await markProjectSubmitted({ id: projectId });
-          console.log('[script-review] Media generation scheduled server-side, navigating to feed...');
-          
-          // Show generation started message
-          Alert.alert(
-            '🎬 Generation Started!',
-            'Your video is being created! Feel free to close the app — we\'ll send you a notification when it\'s ready.',
-            [{ text: 'Got it!', style: 'default', onPress: () => router.replace('/feed') }]
-          );
-          return; // Exit early - generation continues in background
+          console.log('[script-review] Media generation scheduled server-side');
         } catch (submitError) {
           // Check if this is a free tier limit error
           const errorMessage = submitError instanceof Error ? submitError.message : String(submitError);
@@ -266,17 +308,12 @@ export default function ScriptReviewScreen() {
       }
 
       // Test run mode requested but not available when ENABLE_TEST_RUN_MODE is false
-      if (!ENABLE_TEST_RUN_MODE) {
+      if (isTestRun && !ENABLE_TEST_RUN_MODE) {
         console.error('[script-review] Test run mode requested but ENABLE_TEST_RUN_MODE is disabled');
         Alert.alert('Error', 'Test mode is not available in this build. Sample assets are not configured.');
         setIsSubmitting(false);
         return;
       }
-
-      // If we reach here, test mode is enabled but this shouldn't happen in production
-      console.error('[script-review] Test run mode is enabled but sample assets are not configured');
-      Alert.alert('Error', 'Test mode is enabled but sample assets are missing. Please add sample media files or disable test mode.');
-      setIsSubmitting(false);
     } catch (error) {
       console.error('[script-review] Approve error:', error);
       Alert.alert('Error', `Failed to start generation: ${error instanceof Error ? error.message : 'Unknown error'}`);

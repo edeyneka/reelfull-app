@@ -1,5 +1,5 @@
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Camera, X, ArrowRight, Info, Plus } from 'lucide-react-native';
+import { Camera, X, ArrowRight } from 'lucide-react-native';
 import { useState, useEffect, useRef } from 'react';
 import {
   Alert,
@@ -13,10 +13,10 @@ import {
   TouchableOpacity,
   View,
   ActivityIndicator,
+  Keyboard,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { VideoExportPreset } from 'expo-image-picker';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { useMutation, useAction, useQuery } from "convex/react";
@@ -102,7 +102,6 @@ export default function ComposerScreen() {
   }[]>([]);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const [isPickingMedia, setIsPickingMedia] = useState(false);
-  const [showHint, setShowHint] = useState(false);
   const [draftLoaded, setDraftLoaded] = useState(false);
   const [showUploadOverlay, setShowUploadOverlay] = useState(false);
   const [showGeneratingOverlay, setShowGeneratingOverlay] = useState(false);
@@ -389,6 +388,8 @@ export default function ComposerScreen() {
   };
 
   const handleAddMoreMedia = () => {
+    // Dismiss keyboard before opening media picker
+    Keyboard.dismiss();
     pickMedia();
   };
 
@@ -480,22 +481,53 @@ export default function ComposerScreen() {
             <Text style={styles.title}>
               Hey, {user?.name || 'there'}, share your story!
             </Text>
-            
-            <View style={styles.emptyMediaContainer}>
-              <TouchableOpacity
-                testID="selectMediaButton"
-                style={[styles.pickerButton, styles.pickerButtonLarge, isPickingMedia && styles.buttonDisabled]}
-                onPress={pickMedia}
-                activeOpacity={0.7}
-                disabled={isPickingMedia}
-              >
-                <Camera size={24} color={Colors.white} strokeWidth={2} />
-                <Text style={styles.pickerButtonText}>Select Photos/Videos</Text>
-              </TouchableOpacity>
-              <Text style={styles.optimalHint}>
-                {ENABLE_TEST_RUN_MODE ? 'Optimal: 5-6 files' : 'Optimal: 5-6 files'}
-              </Text>
-            </View>
+
+            <Text style={styles.uploadLabel}>
+              Upload Media {mediaUris.length > 0 && `(${mediaUris.length} files)`}
+            </Text>
+
+            {/* Media Grid */}
+            {mediaUris.length > 0 ? (
+              <View style={styles.mediaGrid}>
+                {mediaUris.slice(0, 3).map((media, index) => (
+                  <View key={media.id} style={styles.mediaItem}>
+                    {media.type === 'video' ? (
+                      <VideoThumbnail uri={media.uri} style={styles.mediaThumbnail} />
+                    ) : (
+                      <Image source={{ uri: media.uri }} style={styles.mediaThumbnail} />
+                    )}
+                    <TouchableOpacity
+                      style={styles.removeButton}
+                      onPress={() => removeMedia(index)}
+                      activeOpacity={0.7}
+                    >
+                      <X size={16} color={Colors.white} strokeWidth={2} />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <View style={styles.emptyMediaGrid}>
+                <Text style={styles.emptyMediaText}>No media selected</Text>
+              </View>
+            )}
+
+            {/* Add More Media Button */}
+            <TouchableOpacity
+              testID="selectMediaButton"
+              style={styles.addMediaButton}
+              onPress={pickMedia}
+              activeOpacity={0.7}
+              disabled={isPickingMedia}
+            >
+              <Camera size={20} color={Colors.white} strokeWidth={2} />
+              <Text style={styles.addMediaButtonText}>Add More Media</Text>
+            </TouchableOpacity>
+
+            {/* iCloud warning */}
+            <Text style={styles.icloudWarning}>
+            ☁️ Videos stored in iCloud may take a moment to load
+            </Text>
           </View>
         );
         
@@ -510,53 +542,57 @@ export default function ComposerScreen() {
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             >
-              {/* Media Preview */}
-              <View style={styles.mediaPreviewSection}>
-                <ScrollView 
-                  horizontal 
+              <Text style={styles.title}>
+                Hey, {user?.name || 'there'}, share your story!
+              </Text>
+
+              <Text style={styles.uploadLabel}>
+                Upload Media {`(optimal: 5-6 files)`}
+              </Text>
+
+              {/* Media Preview Grid */}
+              <View style={styles.mediaGridSmall}>
+                <ScrollView
+                  horizontal
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.mediaScrollContent}
                 >
-                  {mediaUris.map((media, index) => (
-                    <View key={media.id} style={styles.mediaPreviewSmall}>
+                  {mediaUris.map((media) => (
+                    <View key={media.id} style={styles.mediaItemSmall}>
                       {media.type === 'video' ? (
                         <VideoThumbnail uri={media.uri} style={styles.mediaThumbnailSmall} />
                       ) : (
                         <Image source={{ uri: media.uri }} style={styles.mediaThumbnailSmall} />
                       )}
+                      <TouchableOpacity
+                        style={styles.removeButtonSmall}
+                        onPress={() => removeMedia(mediaUris.indexOf(media))}
+                        activeOpacity={0.7}
+                      >
+                        <X size={14} color={Colors.white} strokeWidth={2} />
+                      </TouchableOpacity>
                     </View>
                   ))}
-                  <TouchableOpacity
-                    style={styles.addMoreButton}
-                    onPress={handleAddMoreMedia}
-                    activeOpacity={0.7}
-                  >
-                    <Plus size={24} color={Colors.grayLight} strokeWidth={2} />
-                  </TouchableOpacity>
                 </ScrollView>
               </View>
-              
+
+              {/* Add More Media Button */}
+              <TouchableOpacity
+                style={styles.addMediaButton}
+                onPress={handleAddMoreMedia}
+                activeOpacity={0.7}
+              >
+                <Camera size={20} color={Colors.white} strokeWidth={2} />
+                <Text style={styles.addMediaButtonText}>Add More Media</Text>
+              </TouchableOpacity>
+
+              {/* iCloud warning */}
+              <Text style={styles.icloudWarning}>
+              ☁️ Videos stored in iCloud may take a moment to load
+              </Text>
+
               {/* Description Input */}
               <View style={styles.inputGroup}>
-                <View style={styles.labelRow}>
-                  <Text style={styles.label}>Describe Your Story</Text>
-                  <TouchableOpacity
-                    onPress={() => setShowHint(!showHint)}
-                    activeOpacity={0.7}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  >
-                    <Info size={16} color={Colors.grayLight} strokeWidth={2} />
-                  </TouchableOpacity>
-                </View>
-                
-                {showHint && (
-                  <View style={styles.hintBubble}>
-                    <Text style={styles.hintText}>
-                      Your story is the narrative that ties your photos together. Describe what happened, how you felt, and what you want your audience to take away.
-                    </Text>
-                  </View>
-                )}
-                
                 <TextInput
                   testID="promptInput"
                   ref={textInputRef}
@@ -566,41 +602,31 @@ export default function ComposerScreen() {
                   value={prompt}
                   onChangeText={setPrompt}
                   multiline
-                  numberOfLines={4}
+                  numberOfLines={3}
                   textAlignVertical="top"
                 />
               </View>
-              
+
               {/* Example Story */}
               <View style={styles.exampleContainer}>
                 <View style={styles.exampleHeader}>
+                  <Camera size={14} color={Colors.orange} strokeWidth={2} />
                   <Text style={styles.exampleTitle}>Example Story</Text>
                 </View>
                 <Text style={styles.exampleText}>
                   "I went to the a16z Tech Week in SF - met inspiring founders and caught up with old friends. The focus was on pre-seed fundraising. My three main takeaways: storytelling wins, community opens doors, and clarity beats buzzwords."
                 </Text>
               </View>
-              
+
               {/* Generate Script Button */}
               <TouchableOpacity
                 testID="generateScriptButton"
-                style={[styles.button, !isValid && styles.buttonDisabled]}
+                style={[styles.generateButton, !isValid && styles.buttonDisabled]}
                 onPress={handleSubmit}
                 disabled={!isValid}
                 activeOpacity={0.8}
               >
-                <LinearGradient
-                  colors={
-                    isValid
-                      ? [Colors.orange, Colors.orangeLight]
-                      : [Colors.gray, Colors.grayLight]
-                  }
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.buttonGradient}
-                >
-                  <Text style={styles.buttonText}>Generate Script</Text>
-                </LinearGradient>
+                <Text style={styles.generateButtonText}>Generate Script</Text>
               </TouchableOpacity>
             </ScrollView>
           </KeyboardAvoidingView>
@@ -722,40 +748,122 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 24,
   },
-  emptyMediaContainer: {
-    flex: 1,
+  mediaScrollContent: {
+    gap: 10,
+  },
+  
+  // Media Upload Screen
+  uploadLabel: {
+    fontSize: 14,
+    color: Colors.grayLight,
+    marginBottom: 16,
+    fontFamily: Fonts.regular,
+  },
+  mediaGrid: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 24,
+  },
+  mediaItem: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    width: 100,
+    height: 100,
+    backgroundColor: Colors.gray,
+    position: 'relative',
+  },
+  mediaThumbnail: {
+    width: '100%',
+    height: '100%',
+  },
+  removeButton: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderRadius: 12,
+    width: 24,
+    height: 24,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  pickerButton: {
+  emptyMediaGrid: {
+    height: 100,
+    borderRadius: 12,
+    backgroundColor: Colors.gray,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+    borderWidth: 2,
+    borderColor: Colors.grayLight,
+    borderStyle: 'dashed',
+  },
+  emptyMediaText: {
+    fontSize: 14,
+    color: Colors.grayLight,
+    fontFamily: Fonts.regular,
+  },
+  addMediaButton: {
     backgroundColor: Colors.orange,
     borderRadius: 12,
-    paddingVertical: 14,
+    paddingVertical: 16,
     paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+    marginBottom: 16,
   },
-  pickerButtonLarge: {
+  addMediaButtonText: {
+    fontSize: 16,
+    color: Colors.white,
+    fontFamily: Fonts.title,
+  },
+  icloudWarning: {
+    fontSize: 12,
+    color: Colors.grayLight,
+    textAlign: 'center',
+    marginBottom: 16,
+    fontFamily: Fonts.regular,
+  },
+
+  // Description Screen
+  mediaGridSmall: {
+    marginBottom: 16,
+  },
+  mediaItemSmall: {
+    borderRadius: 8,
+    overflow: 'hidden',
+    width: 80,
+    height: 80,
+    backgroundColor: Colors.gray,
+    marginRight: 10,
+    position: 'relative',
+  },
+  removeButtonSmall: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  generateButton: {
+    backgroundColor: Colors.orange,
+    borderRadius: 12,
     paddingVertical: 18,
-    paddingHorizontal: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  pickerButtonText: {
+  generateButtonText: {
     fontSize: 17,
     color: Colors.white,
     fontFamily: Fonts.title,
   },
-  optimalHint: {
-    fontSize: 14,
-    color: Colors.grayLight,
-    marginTop: 12,
-    fontFamily: Fonts.regular,
-  },
-  mediaScrollContent: {
-    gap: 10,
-  },
-  
+
   // Full Screen Loader
   // Overlay Loader
   overlayLoader: {
@@ -798,59 +906,13 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   
-  // Description Step
-  mediaPreviewSection: {
-    marginBottom: 20,
-  },
-  mediaPreviewSmall: {
-    borderRadius: 8,
-    overflow: 'hidden',
-    width: 60,
-    height: 60,
-    backgroundColor: Colors.gray,
-  },
+  // Common styles
   mediaThumbnailSmall: {
     width: '100%',
     height: '100%',
   },
-  addMoreButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-    backgroundColor: Colors.gray,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: Colors.grayLight,
-    borderStyle: 'dashed',
-  },
   inputGroup: {
     marginBottom: 16,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 10,
-  },
-  label: {
-    fontSize: 15,
-    fontFamily: Fonts.regular,
-    color: Colors.white,
-  },
-  hintBubble: {
-    backgroundColor: Colors.gray,
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 10,
-    borderLeftWidth: 3,
-    borderLeftColor: Colors.orange,
-  },
-  hintText: {
-    fontSize: 13,
-    fontFamily: Fonts.regular,
-    color: Colors.grayLight,
-    lineHeight: 18,
   },
   input: {
     backgroundColor: Colors.gray,
@@ -889,21 +951,7 @@ const styles = StyleSheet.create({
     fontStyle: 'italic' as const,
     fontFamily: Fonts.regular,
   },
-  button: {
-    borderRadius: 12,
-    overflow: 'hidden',
-    marginTop: 8,
-  },
   buttonDisabled: {
     opacity: 0.5,
-  },
-  buttonGradient: {
-    padding: 16,
-    alignItems: 'center',
-  },
-  buttonText: {
-    fontSize: 17,
-    fontFamily: Fonts.title,
-    color: Colors.white,
   },
 });
