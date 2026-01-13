@@ -105,6 +105,8 @@ export default function ComposerScreen() {
   const [draftLoaded, setDraftLoaded] = useState(false);
   const [showUploadOverlay, setShowUploadOverlay] = useState(false);
   const [showGeneratingOverlay, setShowGeneratingOverlay] = useState(false);
+  // Track project ID created during this session (for when user goes back from script-review)
+  const [createdProjectId, setCreatedProjectId] = useState<string | null>(null);
   
   // Track if picker was auto-opened
   const hasAutoOpenedPicker = useRef(false);
@@ -196,8 +198,12 @@ export default function ComposerScreen() {
   }, [step]);
 
   const handleClose = async () => {
-    // Save draft if we have any data
-    if (mediaUris.length > 0 || prompt.trim()) {
+    // Only save draft for NEW projects that haven't been created yet
+    // Don't save if:
+    // - We have a projectId from params (editing existing draft)
+    // - We created a project during this session (went to script-review and came back)
+    const hasExistingProject = projectId || createdProjectId;
+    if (!hasExistingProject && (mediaUris.length > 0 || prompt.trim())) {
       await saveDraft();
     }
     router.back();
@@ -409,8 +415,11 @@ export default function ComposerScreen() {
       await new Promise(resolve => setTimeout(resolve, 1000));
       setShowGeneratingOverlay(false);
       
-      // Navigate to script review with test mode flag
-      router.replace({
+      // Mark as created so no draft is saved when going back
+      setCreatedProjectId('test-mode-project');
+      
+      // Navigate to script review with test mode flag (use push so user can go back)
+      router.push({
         pathname: '/script-review',
         params: { 
           projectId: 'test-mode-project',
@@ -450,14 +459,17 @@ export default function ComposerScreen() {
 
         console.log('[composer] Project created:', finalProjectId);
         
+        // Track created project ID so we don't save duplicate draft if user goes back
+        setCreatedProjectId(finalProjectId.toString());
+        
         // Generate script
         await generateScriptOnly({ projectId: finalProjectId });
       }
 
       setShowGeneratingOverlay(false);
       
-      // Navigate to script review
-      router.replace({
+      // Navigate to script review (use push so user can go back)
+      router.push({
         pathname: '/script-review',
         params: { projectId: finalProjectId.toString() },
       });

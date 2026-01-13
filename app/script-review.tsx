@@ -331,7 +331,9 @@ export default function ScriptReviewScreen() {
 
   // Test Mode: Skip the normal project loading checks
   const hasScript = isTestMode ? !!editedScript : !!project?.script;
-  const isLoadingScript = !isTestMode && project?.status === 'processing' && !hasScript;
+  // Show loading if we don't have a script yet (regardless of status)
+  // This ensures we never show "No script available" when script is being generated
+  const isLoadingScript = !isTestMode && project && !hasScript;
 
   if (!projectId && !isTestMode) {
     return (
