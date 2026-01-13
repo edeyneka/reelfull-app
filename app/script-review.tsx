@@ -21,17 +21,20 @@ import { Asset } from 'expo-asset';
 import { uploadFileToConvex } from '@/lib/api-helpers';
 import { Fonts } from '@/constants/typography';
 import { ENABLE_TEST_RUN_MODE } from '@/constants/config';
+import { TEST_MODE_DATA } from '@/constants/testData';
 
 export default function ScriptReviewScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ projectId: string; testRun?: string }>();
+  const params = useLocalSearchParams<{ projectId: string; testRun?: string; testMode?: string }>();
   const projectId = params.projectId as any;
   const isTestRun = params.testRun === 'true';
+  // Test mode is active if ENABLE_TEST_RUN_MODE is true AND we're coming from composer with testMode flag
+  const isTestMode = params.testMode === 'true' || (ENABLE_TEST_RUN_MODE && projectId === 'test-mode-project');
   const { addVideo, videos } = useApp();
 
-  // Convex hooks
-  const project = useQuery(api.tasks.getProject, projectId ? { id: projectId } : "skip");
+  // Convex hooks - SKIP all queries in test mode to avoid API calls
+  const project = useQuery(api.tasks.getProject, (!isTestMode && projectId) ? { id: projectId } : "skip");
   const updateProjectScript = useMutation(api.tasks.updateProjectScript);
   const regenerateScript = useAction(api.tasks.regenerateScript);
   const markProjectSubmitted = useMutation(api.tasks.markProjectSubmitted);
@@ -53,8 +56,16 @@ export default function ScriptReviewScreen() {
   const [includeCaptions, setIncludeCaptions] = useState<boolean>(true); // Default to include captions
   const [keepOrder, setKeepOrder] = useState<boolean>(false); // Default to not keeping original order
 
-  // Initialize script and render mode from project
+  // Initialize script and render mode from project (or mock data in test mode)
   useEffect(() => {
+    // Test Mode: Use predefined script from test data - NO API calls
+    if (isTestMode && !editedScript) {
+      console.log('[script-review] Test Mode: Using predefined script (no API calls)');
+      setEditedScript(TEST_MODE_DATA.script);
+      setLastProjectScript(TEST_MODE_DATA.script);
+      return;
+    }
+    
     if (project?.script) {
       // Update editedScript when project script changes (e.g., after regeneration)
       // But only if we're not currently editing
@@ -80,7 +91,7 @@ export default function ScriptReviewScreen() {
     if (project?.keepOrder !== undefined) {
       setKeepOrder(project.keepOrder);
     }
-  }, [project?.script, project?.renderMode, project?.voiceSpeed, project?.keepOrder, isEditing]);
+  }, [project?.script, project?.renderMode, project?.voiceSpeed, project?.keepOrder, isEditing, isTestMode]);
 
   const handleSaveEdit = async () => {
     if (!projectId || !editedScript.trim()) {
@@ -127,7 +138,46 @@ export default function ScriptReviewScreen() {
     }
   };
 
+  // Action to get fresh video URL from the source project (only used in production mode)
+  const getFreshVideoUrl = useAction(api.tasks.getFreshProjectVideoUrl);
+  
   const handleApprove = async () => {
+    // Test Mode: Skip ALL API calls and use local video file
+    if (isTestMode) {
+      console.log('[script-review] Test Mode: Using local video file (NO API calls)');
+      
+      setIsSubmitting(true);
+      
+      // Get the local video URI from the require() asset
+      const localVideoUri = Asset.fromModule(TEST_MODE_DATA.localVideoPath).uri;
+      
+      console.log('[script-review] Test Mode: Local video URI:', localVideoUri);
+      
+      // Show generation started message (same as production)
+      Alert.alert(
+        '🎬 Generation Started!',
+        'Your video is being created! Feel free to close the app — we\'ll send you a notification when it\'s ready.',
+        [{ 
+          text: 'Got it!', 
+          style: 'default', 
+          onPress: () => {
+            // Navigate to video-preview with the LOCAL video file
+            router.replace({
+              pathname: '/video-preview',
+              params: {
+                videoId: 'test-mode-video',
+                videoUri: localVideoUri,
+                prompt: TEST_MODE_DATA.prompt,
+                script: TEST_MODE_DATA.script,
+                testMode: 'true',
+              },
+            });
+          }
+        }]
+      );
+      return;
+    }
+    
     if (!projectId || !project?.script) {
       Alert.alert('Error', 'No script available');
       return;
@@ -234,7 +284,11 @@ export default function ScriptReviewScreen() {
     }
   };
 
-  if (!projectId) {
+  // Test Mode: Skip the normal project loading checks
+  const hasScript = isTestMode ? !!editedScript : !!project?.script;
+  const isLoadingScript = !isTestMode && project?.status === 'processing' && !hasScript;
+
+  if (!projectId && !isTestMode) {
     return (
       <View style={styles.container}>
         <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
@@ -255,7 +309,7 @@ export default function ScriptReviewScreen() {
     );
   }
 
-  if (!project) {
+  if (!project && !isTestMode) {
     return (
       <View style={styles.container}>
         <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
@@ -275,9 +329,6 @@ export default function ScriptReviewScreen() {
       </View>
     );
   }
-
-  const hasScript = !!project.script;
-  const isLoadingScript = project.status === 'processing' && !hasScript;
 
   // Navigate back to composer (reverse slide animation)
   const handleBackToComposer = () => {
@@ -376,7 +427,7 @@ export default function ScriptReviewScreen() {
                   </View>
                 </View>
               ) : (
-                <View style={styles.scriptContainer}>
+                <View testID="scriptContainer" style={styles.scriptContainer}>
                   <Text style={styles.scriptText}>{editedScript || (project.script ? project.script.replace(/\?\?\?/g, "?") : '')}</Text>
                 </View>
               )}
@@ -492,6 +543,7 @@ export default function ScriptReviewScreen() {
             </View> */}
 
             <TouchableOpacity
+              testID="approveScriptButton"
               style={[styles.approveButton, isSubmitting && styles.approveButtonDisabled]}
               onPress={handleApprove}
               disabled={isSubmitting}

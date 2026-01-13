@@ -25,6 +25,7 @@ import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
 import { uploadMediaFiles } from '@/lib/api-helpers';
 import { Fonts } from '@/constants/typography';
+import { ENABLE_TEST_RUN_MODE } from '@/constants/config';
 
 // Step types for the composer flow
 type ComposerStep = 'media_selection' | 'description';
@@ -285,6 +286,19 @@ export default function ComposerScreen() {
   };
 
   const startUpload = async (allMedia: typeof mediaUris, newMediaOnly?: typeof mediaUris) => {
+    // Test Mode: Skip actual uploads, just assign mock storageIds and proceed
+    if (ENABLE_TEST_RUN_MODE) {
+      console.log('[composer] Test Mode: Skipping uploads, assigning mock storageIds');
+      const updatedMedia = allMedia.map(m => ({
+        ...m,
+        storageId: m.storageId || `mock-storage-${m.id}`,
+      }));
+      setMediaUris(updatedMedia);
+      setShowUploadOverlay(false);
+      setStep('description');
+      return;
+    }
+    
     // Only upload files that don't have a storageId yet
     const filesToUpload = newMediaOnly || allMedia.filter(m => !m.storageId);
     
@@ -385,6 +399,26 @@ export default function ComposerScreen() {
       return;
     }
 
+    // Test Mode: Skip ALL API calls and navigate directly with mock data
+    if (ENABLE_TEST_RUN_MODE) {
+      console.log('[composer] Test Mode: Skipping ALL API calls, navigating to script review with mock data');
+      
+      // Short delay to simulate loading
+      setShowGeneratingOverlay(true);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setShowGeneratingOverlay(false);
+      
+      // Navigate to script review with test mode flag
+      router.replace({
+        pathname: '/script-review',
+        params: { 
+          projectId: 'test-mode-project',
+          testMode: 'true',
+        },
+      });
+      return;
+    }
+
     setShowGeneratingOverlay(true);
 
     try {
@@ -449,6 +483,7 @@ export default function ComposerScreen() {
             
             <View style={styles.emptyMediaContainer}>
               <TouchableOpacity
+                testID="selectMediaButton"
                 style={[styles.pickerButton, styles.pickerButtonLarge, isPickingMedia && styles.buttonDisabled]}
                 onPress={pickMedia}
                 activeOpacity={0.7}
@@ -457,7 +492,9 @@ export default function ComposerScreen() {
                 <Camera size={24} color={Colors.white} strokeWidth={2} />
                 <Text style={styles.pickerButtonText}>Select Photos/Videos</Text>
               </TouchableOpacity>
-              <Text style={styles.optimalHint}>Optimal: 5-6 files</Text>
+              <Text style={styles.optimalHint}>
+                {ENABLE_TEST_RUN_MODE ? 'Optimal: 5-6 files' : 'Optimal: 5-6 files'}
+              </Text>
             </View>
           </View>
         );
@@ -521,6 +558,7 @@ export default function ComposerScreen() {
                 )}
                 
                 <TextInput
+                  testID="promptInput"
                   ref={textInputRef}
                   style={styles.input}
                   placeholder="Describe your day, event, or experience..."
@@ -545,6 +583,7 @@ export default function ComposerScreen() {
               
               {/* Generate Script Button */}
               <TouchableOpacity
+                testID="generateScriptButton"
                 style={[styles.button, !isValid && styles.buttonDisabled]}
                 onPress={handleSubmit}
                 disabled={!isValid}

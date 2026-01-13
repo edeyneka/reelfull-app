@@ -552,6 +552,7 @@ export default function SettingsScreen() {
           {/* Close Button */}
           <View style={styles.closeButtonContainer}>
             <TouchableOpacity
+              testID="closeSettingsButton"
               style={styles.closeButton}
               onPress={closeModal}
               activeOpacity={0.7}
@@ -575,6 +576,7 @@ export default function SettingsScreen() {
             {/* Menu Items */}
             <View style={styles.menuSection}>
               <TouchableOpacity
+                testID="settingsCreditsButton"
                 style={styles.menuItem}
                 onPress={() => router.push('/paywall')}
                 activeOpacity={0.7}
@@ -603,6 +605,7 @@ export default function SettingsScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity
+                testID="settingsAccountButton"
                 style={styles.menuItem}
                 onPress={() => setIsEditingName(true)}
                 activeOpacity={0.7}
@@ -633,6 +636,7 @@ export default function SettingsScreen() {
               )}
 
               <TouchableOpacity
+                testID="settingsVoiceSettingsButton"
                 style={styles.menuItem}
                 onPress={() => setIsSelectingVoice(true)}
                 activeOpacity={0.7}
@@ -647,6 +651,7 @@ export default function SettingsScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity
+                testID="settingsVoiceCloneButton"
                 style={styles.menuItem}
                 onPress={() => setIsEditingVoice(true)}
                 activeOpacity={0.7}
@@ -661,6 +666,7 @@ export default function SettingsScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity
+                testID="settingsAboutButton"
                 style={styles.menuItem}
                 onPress={() => setIsAboutOpen(true)}
                 activeOpacity={0.7}
@@ -700,11 +706,12 @@ export default function SettingsScreen() {
 
           {/* Edit Name Modal */}
           {isEditingName && (
-            <View style={styles.editModalOverlay}>
+            <View testID="accountModal" style={styles.editModalOverlay}>
               <View style={styles.editModalContent}>
                 <View style={styles.editModalHeader}>
                   <Text style={styles.editModalTitle}>Edit Name</Text>
                   <TouchableOpacity
+                    testID="closeAccountModal"
                     onPress={handleCancelName}
                     activeOpacity={0.7}
                     disabled={isLoading}
@@ -811,11 +818,12 @@ export default function SettingsScreen() {
 
           {/* Voice Recording Modal */}
           {isEditingVoice && (
-            <View style={styles.editModalOverlay}>
+            <View testID="voiceCloneModal" style={styles.editModalOverlay}>
               <View style={styles.voiceCloneModalContent}>
                 <View style={styles.voiceModalHeader}>
                   <Text style={styles.editModalTitle}>Voice Clone</Text>
                   <TouchableOpacity
+                    testID="closeVoiceCloneModal"
                     onPress={() => setIsEditingVoice(false)}
                     activeOpacity={0.7}
                     disabled={isLoading}
@@ -838,11 +846,12 @@ export default function SettingsScreen() {
 
           {/* Voice Selection Modal */}
           {isSelectingVoice && (
-            <View style={styles.editModalOverlay}>
+            <View testID="voiceSettingsModal" style={styles.editModalOverlay}>
               <View style={styles.voiceModalContent}>
                 <View style={styles.editModalHeader}>
                   <Text style={styles.editModalTitle}>Select Voice</Text>
                   <TouchableOpacity
+                    testID="closeVoiceSettingsModal"
                     onPress={() => setIsSelectingVoice(false)}
                     activeOpacity={0.7}
                   >
@@ -930,11 +939,12 @@ export default function SettingsScreen() {
 
           {/* About Modal */}
           {isAboutOpen && (
-            <View style={styles.editModalOverlay}>
+            <View testID="aboutModal" style={styles.editModalOverlay}>
               <View style={styles.editModalContent}>
                 <View style={styles.editModalHeader}>
                   <Text style={styles.editModalTitle}>About Reelful</Text>
                   <TouchableOpacity
+                    testID="closeAboutModal"
                     onPress={() => setIsAboutOpen(false)}
                     activeOpacity={0.7}
                   >

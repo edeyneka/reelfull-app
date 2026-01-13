@@ -672,6 +672,7 @@ export default function FeedScreen() {
               </TouchableOpacity>
             )}
             <TouchableOpacity
+              testID="settingsButton"
               style={styles.settingsButton}
               onPress={() => router.push('/settings')}
               activeOpacity={0.7}
@@ -700,6 +701,7 @@ export default function FeedScreen() {
       />
 
       <TouchableOpacity
+        testID="createProjectButton"
         style={[styles.fab, { bottom: insets.bottom + 24 }]}
         onPress={handleCreateNew}
         activeOpacity={0.8}

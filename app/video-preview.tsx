@@ -280,6 +280,7 @@ export default function VideoPreviewScreen() {
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <TouchableOpacity
+          testID="closeVideoPreviewButton"
           style={styles.closeButton}
           onPress={handleClose}
           activeOpacity={0.7}
@@ -298,7 +299,7 @@ export default function VideoPreviewScreen() {
           <Text style={styles.title}>Ready to share!</Text>
         </View>
 
-        <View style={styles.videoPreviewContainer}>
+        <View testID="videoPreviewContainer" style={styles.videoPreviewContainer}>
           <VideoView
             player={videoPlayer}
             style={styles.videoPreview}
