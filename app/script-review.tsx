@@ -154,6 +154,16 @@ export default function ScriptReviewScreen() {
     if (isTestMode) {
       console.log('[script-review] Test Mode: Using local video file (NO API calls)');
 
+      // Check if local video is available (it's excluded from production builds)
+      if (!TEST_MODE_DATA.localVideoPath) {
+        Alert.alert(
+          'Test Mode Error',
+          'Local test video is not available. The video file is excluded from production builds. For local testing, add test-video.mp4 to assets/ folder.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
       setIsSubmitting(true);
 
       // Get the local video URI from the require() asset
