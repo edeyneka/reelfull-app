@@ -21,7 +21,20 @@ import { Asset } from 'expo-asset';
 import { uploadFileToConvex } from '@/lib/api-helpers';
 import { Fonts } from '@/constants/typography';
 import { ENABLE_TEST_RUN_MODE } from '@/constants/config';
-import { TEST_MODE_DATA } from '@/constants/testData';
+
+// Conditionally load test data only when test mode is enabled
+// This prevents Metro from bundling testData.ts in production builds
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+// UNCOMMENT THIS FOR LOCAL TESTING
+// const TEST_MODE_DATA = ENABLE_TEST_RUN_MODE 
+//   ? require('@/constants/testData').TEST_MODE_DATA 
+//   : { script: '', prompt: '', localVideoPath: null };
+
+const TEST_MODE_DATA = { 
+  script: '', 
+  prompt: '', 
+  localVideoPath: null 
+};
 
 export default function ScriptReviewScreen() {
   const router = useRouter();
