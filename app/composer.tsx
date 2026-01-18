@@ -269,10 +269,11 @@ export default function ComposerScreen() {
         // Show overlay immediately
         setShowUploadOverlay(true);
         
-        const newMedia = result.assets.map(asset => ({
+        const baseTimestamp = Date.now();
+        const newMedia = result.assets.map((asset, index) => ({
           uri: asset.uri,
           type: (asset.type === 'video' ? 'video' : 'image') as 'video' | 'image',
-          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          id: `${baseTimestamp + index}`,
           assetId: asset.assetId ?? undefined,
         }));
         
