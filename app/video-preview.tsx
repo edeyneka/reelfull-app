@@ -33,6 +33,7 @@ export default function VideoPreviewScreen() {
     script?: string;
     projectId?: string;
     thumbnailUrl?: string;
+    testMode?: string;
   }>();
   
   const { addVideo } = useApp();
@@ -44,6 +45,7 @@ export default function VideoPreviewScreen() {
   const script = params.script || '';
   const projectId = params.projectId as any;
   const thumbnailUrl = params.thumbnailUrl;
+  const isTestMode = params.testMode === 'true';
 
   // Local state
   const [isDownloading, setIsDownloading] = useState(false);
@@ -75,7 +77,13 @@ export default function VideoPreviewScreen() {
   );
 
   const handleClose = () => {
-    router.back();
+    // In test mode, navigate directly to feed since the navigation stack may be inconsistent
+    // In production, router.back() goes to feed (since video-preview is opened from feed)
+    if (isTestMode) {
+      router.replace('/feed');
+    } else {
+      router.back();
+    }
   };
 
   const handleDownload = async () => {
