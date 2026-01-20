@@ -11,6 +11,7 @@ import {
   Alert,
   ActivityIndicator,
   Animated,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -359,7 +360,22 @@ export default function SettingsScreen() {
     return 'Custom Voice';
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // Use window.confirm on web since Alert.alert doesn't work
+    if (Platform.OS === 'web') {
+      if (window.confirm('Are you sure you want to logout?')) {
+        try {
+          await clearData();
+          router.replace('/auth');
+        } catch (error) {
+          console.error('Logout error:', error);
+          window.alert('Failed to logout. Please try again.');
+        }
+      }
+      return;
+    }
+
+    // Native platforms use Alert.alert
     Alert.alert(
       'Logout',
       'Are you sure you want to logout?',
