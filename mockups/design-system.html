@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reelful - Design System</title>
+  <style>
+    /* ========================================
+       REELFUL DESIGN SYSTEM
+       Cinema-inspired, warm & sophisticated
+       ======================================== */
+
+    /* PP Neue Montreal font */
+    @font-face {
+      font-family: 'PP Neue Montreal';
+      src: url('../assets/fonts/PPNeueMontreal-Book.woff2') format('woff2'),
+           url('../assets/fonts/PPNeueMontreal-Book.otf') format('opentype');
+      font-weight: 400;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'PP Neue Montreal';
+      src: url('../assets/fonts/PPNeueMontreal-Medium.woff2') format('woff2'),
+           url('../assets/fonts/PPNeueMontreal-Medium.otf') format('opentype');
+      font-weight: 500;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'PP Neue Montreal';
+      src: url('../assets/fonts/PPNeueMontreal-Bold.woff2') format('woff2'),
+           url('../assets/fonts/PPNeueMontreal-Bold.otf') format('opentype');
+      font-weight: 700;
+      font-style: normal;
+    }
+
+    :root {
+      /* ========================================
+         COLORS
+         ======================================== */
+
+      /* Primary Brand Colors */
+      --color-cream: #f3ebe3;
+      --color-cream-light: #f8f0e8;
+      --color-cream-medium: #e8ddd3;
+      --color-cream-dark: #ddd0c4;
+      --color-cream-darker: #d3c4b8;
+
+      /* Dark Theme Colors */
+      --color-dark: #1a1a18;
+      --color-dark-elevated: #232321;
+      --color-dark-surface: #2d2d2a;
+
+      /* Neutral Grays */
+      --color-gray-100: #f5f5f5;
+      --color-gray-200: #e5e5e5;
+      --color-gray-300: #d4d4d4;
+      --color-gray-400: #a3a3a3;
+      --color-gray-500: #9a9a9a;
+      --color-gray-600: #636363;
+      --color-gray-700: #404040;
+      --color-gray-800: #262626;
+      --color-gray-900: #171717;
+
+      /* Accent - Warm Amber (for glows & highlights) */
+      --color-amber-glow: rgba(255, 200, 150, 0.08);
+      --color-amber-glow-medium: rgba(255, 180, 130, 0.04);
+      --color-spotlight: rgba(255, 250, 242, 0.55);
+      --color-spotlight-medium: rgba(255, 235, 210, 0.22);
+      --color-spotlight-soft: rgba(255, 215, 190, 0.07);
+
+      /* Text Colors */
+      --color-text-primary-light: #000000;
+      --color-text-secondary-light: #636363;
+      --color-text-primary-dark: #f3ebe3;
+      --color-text-secondary-dark: #9a9a9a;
+
+      /* ========================================
+         TYPOGRAPHY
+         ======================================== */
+
+      --font-primary: 'PP Neue Montreal', -apple-system, BlinkMacSystemFont, sans-serif;
+
+      /* Font Sizes */
+      --text-xs: 12px;
+      --text-sm: 14px;
+      --text-base: 16px;
+      --text-lg: 18px;
+      --text-xl: 20px;
+      --text-2xl: 24px;
+      --text-3xl: 32px;
+      --text-4xl: 40px;
+      --text-5xl: 50px;
+
+      /* Font Weights */
+      --font-regular: 400;
+      --font-medium: 500;
+      --font-bold: 700;
+
+      /* Letter Spacing */
+      --tracking-tight: -1px;
+      --tracking-normal: 0;
+      --tracking-wide: 0.3px;
+
+      /* Line Heights */
+      --leading-none: 1;
+      --leading-tight: 1.2;
+      --leading-normal: 1.5;
+      --leading-relaxed: 1.6;
+
+      /* ========================================
+         SPACING
+         ======================================== */
+
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 20px;
+      --space-6: 24px;
+      --space-8: 32px;
+      --space-10: 40px;
+      --space-12: 48px;
+      --space-16: 64px;
+      --space-20: 80px;
+
+      /* ========================================
+         BORDER RADIUS
+         ======================================== */
+
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 24px;
+      --radius-2xl: 32px;
+      --radius-3xl: 44px;
+      --radius-full: 100px;
+
+      /* ========================================
+         SHADOWS
+         ======================================== */
+
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+      --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.25);
+      --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.2);
+      --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+
+      /* Button Shadows (3D pillowy effect) */
+      --shadow-btn-light:
+        inset 0 2px 4px rgba(255, 255, 255, 0.3),
+        inset 0 -1px 2px rgba(0, 0, 0, 0.08),
+        0 1px 2px rgba(0, 0, 0, 0.3);
+      --shadow-btn-light-hover:
+        inset 0 2px 4px rgba(255, 255, 255, 0.35),
+        inset 0 -1px 2px rgba(0, 0, 0, 0.06),
+        0 1px 2px rgba(0, 0, 0, 0.35);
+      --shadow-btn-light-active:
+        inset 0 3px 6px rgba(0, 0, 0, 0.15),
+        inset 0 -1px 1px rgba(255, 255, 255, 0.2);
+
+      --shadow-btn-dark:
+        inset 0 2px 4px rgba(0, 0, 0, 0.4),
+        inset 0 -1px 2px rgba(255, 255, 255, 0.05),
+        0 1px 2px rgba(255, 255, 255, 0.08);
+
+      /* ========================================
+         TRANSITIONS
+         ======================================== */
+
+      --transition-fast: 150ms ease;
+      --transition-base: 200ms ease;
+      --transition-slow: 300ms ease;
+      --transition-spotlight: 1.5s ease-in-out;
+
+      /* ========================================
+         ANIMATIONS
+         ======================================== */
+
+      --animation-roll: roll 6s linear infinite;
+      --animation-roll-eased: rollEased 6s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+      --animation-glow-pulse: glowPulse 3s ease-in-out infinite;
+    }
+
+    /* ========================================
+       KEYFRAME ANIMATIONS
+       ======================================== */
+
+    @keyframes roll {
+      from { rotate: 0deg; }
+      to { rotate: 360deg; }
+    }
+
+    @keyframes rollEased {
+      0% { rotate: 0deg; }
+      25% { rotate: 95deg; }
+      50% { rotate: 180deg; }
+      75% { rotate: 265deg; }
+      100% { rotate: 360deg; }
+    }
+
+    @keyframes glowPulse {
+      0%, 100% {
+        opacity: 0.85;
+        transform: scale(1);
+      }
+      50% {
+        opacity: 1;
+        transform: scale(1.08);
+      }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* ========================================
+       BASE STYLES
+       ======================================== */
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: var(--font-primary);
+      font-size: var(--text-base);
+      line-height: var(--leading-normal);
+      background-color: var(--color-dark);
+      color: var(--color-text-primary-dark);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* ========================================
+       DOCUMENTATION STYLES
+       ======================================== */
+
+    .ds-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: var(--space-8);
+    }
+
+    .ds-header {
+      text-align: center;
+      padding: var(--space-16) 0;
+      margin-bottom: var(--space-12);
+      border-bottom: 1px solid var(--color-gray-700);
+    }
+
+    .ds-header h1 {
+      font-size: var(--text-5xl);
+      font-weight: var(--font-medium);
+      letter-spacing: var(--tracking-tight);
+      margin-bottom: var(--space-4);
+    }
+
+    .ds-header p {
+      font-size: var(--text-lg);
+      color: var(--color-text-secondary-dark);
+    }
+
+    .ds-section {
+      margin-bottom: var(--space-16);
+    }
+
+    .ds-section-title {
+      font-size: var(--text-2xl);
+      font-weight: var(--font-medium);
+      margin-bottom: var(--space-8);
+      padding-bottom: var(--space-4);
+      border-bottom: 2px solid var(--color-cream);
+    }
+
+    .ds-subsection-title {
+      font-size: var(--text-lg);
+      font-weight: var(--font-medium);
+      margin-bottom: var(--space-4);
+      color: var(--color-text-secondary-dark);
+    }
+
+    .ds-grid {
+      display: grid;
+      gap: var(--space-4);
+    }
+
+    .ds-grid-2 { grid-template-columns: repeat(2, 1fr); }
+    .ds-grid-3 { grid-template-columns: repeat(3, 1fr); }
+    .ds-grid-4 { grid-template-columns: repeat(4, 1fr); }
+    .ds-grid-5 { grid-template-columns: repeat(5, 1fr); }
+
+    @media (max-width: 768px) {
+      .ds-grid-2, .ds-grid-3, .ds-grid-4, .ds-grid-5 {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    /* ========================================
+       COLOR SWATCHES
+       ======================================== */
+
+    .color-swatch {
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      background: var(--color-dark-elevated);
+    }
+
+    .color-swatch-preview {
+      height: 80px;
+      width: 100%;
+    }
+
+    .color-swatch-info {
+      padding: var(--space-3);
+    }
+
+    .color-swatch-name {
+      font-weight: var(--font-medium);
+      font-size: var(--text-sm);
+      margin-bottom: var(--space-1);
+    }
+
+    .color-swatch-value {
+      font-family: monospace;
+      font-size: var(--text-xs);
+      color: var(--color-text-secondary-dark);
+    }
+
+    /* ========================================
+       TYPOGRAPHY SAMPLES
+       ======================================== */
+
+    .type-sample {
+      background: var(--color-dark-elevated);
+      padding: var(--space-6);
+      border-radius: var(--radius-md);
+      margin-bottom: var(--space-4);
+    }
+
+    .type-sample-label {
+      font-family: monospace;
+      font-size: var(--text-xs);
+      color: var(--color-text-secondary-dark);
+      margin-bottom: var(--space-2);
+    }
+
+    /* ========================================
+       BUTTON COMPONENTS
+       ======================================== */
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 64px;
+      padding: 0 var(--space-8);
+      font-family: var(--font-primary);
+      font-size: var(--text-lg);
+      font-weight: var(--font-medium);
+      letter-spacing: var(--tracking-wide);
+      text-decoration: none;
+      border: none;
+      border-radius: var(--radius-full);
+      cursor: pointer;
+      transition: all var(--transition-base);
+    }
+
+    /* Primary Button - Cream (for dark backgrounds) */
+    .btn-primary {
+      background:
+        radial-gradient(ellipse 80% 50% at 50% 0%, rgba(255, 255, 255, 0.15) 0%, transparent 50%),
+        linear-gradient(180deg, #f5ede5 0%, #e8ddd3 50%, #ddd0c4 100%);
+      color: rgba(0, 0, 0, 0.85);
+      box-shadow: var(--shadow-btn-light);
+    }
+
+    .btn-primary:hover {
+      background:
+        radial-gradient(ellipse 80% 50% at 50% 0%, rgba(255, 255, 255, 0.2) 0%, transparent 50%),
+        linear-gradient(180deg, #f8f0e8 0%, #ebe0d6 50%, #e0d3c7 100%);
+      box-shadow: var(--shadow-btn-light-hover);
+    }
+
+    .btn-primary:active {
+      background:
+        radial-gradient(ellipse 80% 50% at 50% 0%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+        linear-gradient(180deg, #ebe0d6 0%, #ddd0c4 50%, #d3c4b8 100%);
+      box-shadow: var(--shadow-btn-light-active);
+    }
+
+    /* Secondary Button - Dark (for light backgrounds) */
+    .btn-secondary {
+      background:
+        radial-gradient(ellipse 80% 50% at 50% 0%, rgba(80, 80, 75, 0.6) 0%, transparent 50%),
+        linear-gradient(180deg, #2d2d2a 0%, #232321 50%, #1a1a18 100%);
+      color: rgba(255, 255, 255, 0.9);
+      box-shadow: var(--shadow-btn-dark);
+    }
+
+    .btn-secondary:hover {
+      background:
+        radial-gradient(ellipse 80% 50% at 50% 0%, rgba(90, 90, 85, 0.7) 0%, transparent 50%),
+        linear-gradient(180deg, #333330 0%, #282826 50%, #1e1e1c 100%);
+    }
+
+    /* Small Button */
+    .btn-sm {
+      height: 48px;
+      padding: 0 var(--space-6);
+      font-size: var(--text-base);
+    }
+
+    /* ========================================
+       CARD COMPONENTS
+       ======================================== */
+
+    .card {
+      background: var(--color-dark-elevated);
+      border-radius: var(--radius-xl);
+      padding: var(--space-6);
+      transition: all var(--transition-base);
+    }
+
+    .card-light {
+      background: var(--color-cream);
+      color: var(--color-text-primary-light);
+    }
+
+    /* ========================================
+       INPUT COMPONENTS
+       ======================================== */
+
+    .input {
+      width: 100%;
+      padding: var(--space-4);
+      font-family: var(--font-primary);
+      font-size: var(--text-base);
+      color: var(--color-text-primary-dark);
+      background: var(--color-dark-elevated);
+      border: 1px solid var(--color-gray-700);
+      border-radius: var(--radius-md);
+      transition: all var(--transition-fast);
+    }
+
+    .input::placeholder {
+      color: var(--color-text-secondary-dark);
+    }
+
+    .input:focus {
+      outline: none;
+      border-color: var(--color-cream);
+      box-shadow: 0 0 0 3px rgba(243, 235, 227, 0.15);
+    }
+
+    .input-light {
+      background: white;
+      color: var(--color-text-primary-light);
+      border-color: var(--color-gray-300);
+    }
+
+    .input-light:focus {
+      border-color: var(--color-dark);
+      box-shadow: 0 0 0 3px rgba(26, 26, 24, 0.1);
+    }
+
+    /* ========================================
+       TEXT LINK STYLES
+       ======================================== */
+
+    .link {
+      color: var(--color-text-secondary-dark);
+      text-decoration: underline;
+      transition: color var(--transition-fast);
+    }
+
+    .link:hover {
+      color: var(--color-text-primary-dark);
+    }
+
+    .link-light {
+      color: var(--color-text-secondary-light);
+    }
+
+    .link-light:hover {
+      color: var(--color-text-primary-light);
+    }
+
+    /* ========================================
+       CINEMA EFFECTS
+       ======================================== */
+
+    .spotlight-blob {
+      position: absolute;
+      pointer-events: none;
+      opacity: 0;
+      filter: blur(60px);
+      width: 250px;
+      height: 180px;
+      background: radial-gradient(
+        ellipse 100% 80% at 50% 50%,
+        var(--color-spotlight) 0%,
+        var(--color-spotlight-medium) 30%,
+        var(--color-spotlight-soft) 60%,
+        transparent 100%
+      );
+      transition: opacity var(--transition-spotlight), transform var(--transition-spotlight);
+    }
+
+    .spotlight-blob.visible {
+      opacity: 1;
+      transform: scale(1.05);
+    }
+
+    .ambient-glow {
+      position: absolute;
+      pointer-events: none;
+      background: radial-gradient(
+        ellipse 100% 100% at 100% 50%,
+        var(--color-amber-glow) 0%,
+        var(--color-amber-glow-medium) 40%,
+        transparent 70%
+      );
+    }
+
+    /* ========================================
+       SPACING VISUALIZATION
+       ======================================== */
+
+    .spacing-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      margin-bottom: var(--space-3);
+    }
+
+    .spacing-bar {
+      height: 24px;
+      background: var(--color-cream);
+      border-radius: var(--radius-sm);
+    }
+
+    .spacing-label {
+      font-family: monospace;
+      font-size: var(--text-sm);
+      min-width: 120px;
+      color: var(--color-text-secondary-dark);
+    }
+
+    /* ========================================
+       COMPONENT PREVIEW
+       ======================================== */
+
+    .component-preview {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-4);
+      padding: var(--space-6);
+      background: var(--color-dark-surface);
+      border-radius: var(--radius-lg);
+      margin-bottom: var(--space-4);
+    }
+
+    .component-preview-light {
+      background: var(--color-cream);
+    }
+
+    /* ========================================
+       PHONE MOCKUP
+       ======================================== */
+
+    .phone-mockup {
+      width: 280px;
+      height: 560px;
+      background: var(--color-dark);
+      border-radius: var(--radius-3xl);
+      padding: var(--space-4);
+      box-shadow: var(--shadow-xl);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .phone-mockup-light {
+      background: var(--color-cream);
+    }
+
+    /* ========================================
+       FOOTER
+       ======================================== */
+
+    .ds-footer {
+      text-align: center;
+      padding: var(--space-12) 0;
+      border-top: 1px solid var(--color-gray-700);
+      margin-top: var(--space-16);
+    }
+
+    .ds-footer p {
+      color: var(--color-text-secondary-dark);
+      font-size: var(--text-sm);
+    }
+  </style>
+</head>
+<body>
+  <div class="ds-container">
+    <!-- Header -->
+    <header class="ds-header">
+      <h1>Reelful</h1>
+      <p>Design System Reference</p>
+    </header>
+
+    <!-- Colors -->
+    <section class="ds-section">
+      <h2 class="ds-section-title">Colors</h2>
+
+      <h3 class="ds-subsection-title">Brand - Cream Palette</h3>
+      <div class="ds-grid ds-grid-5" style="margin-bottom: var(--space-8);">
+        <div class="color-swatch">
+          <div class="color-swatch-preview" style="background-color: #f3ebe3;"></div>
+          <div class="color-swatch-info">
+            <div class="color-swatch-name">Cream</div>
+            <div class="color-swatch-value">#f3ebe3</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch-preview" style="background-color: #f8f0e8;"></div>
+          <div class="color-swatch-info">
+            <div class="color-swatch-name">Cream Light</div>
+            <div class="color-swatch-value">#f8f0e8</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch-preview" style="background-color: #e8ddd3;"></div>
+          <div class="color-swatch-info">
+            <div class="color-swatch-name">Cream Medium</div>
+            <div class="color-swatch-value">#e8ddd3</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch-preview" style="background-color: #ddd0c4;"></div>
+          <div class="color-swatch-info">
+            <div class="color-swatch-name">Cream Dark</div>
+            <div class="color-swatch-value">#ddd0c4</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch-preview" style="background-color: #d3c4b8;"></div>
+          <div class="color-swatch-info">
+            <div class="color-swatch-name">Cream Darker</div>
+            <div class="color-swatch-value">#d3c4b8</div>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="ds-subsection-title">Brand - Dark Palette</h3>
+      <div class="ds-grid ds-grid-3" style="margin-bottom: var(--space-8);">
+        <div class="color-swatch">
+          <div class="color-swatch-preview" style="background-color: #1a1a18;"></div>
+          <div class="color-swatch-info">
+            <div class="color-swatch-name">Dark</div>
+            <div class="color-swatch-value">#1a1a18</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch-preview" style="background-color: #232321;"></div>
+          <div class="color-swatch-info">
+            <div class="color-swatch-name">Dark Elevated</div>
+            <div class="color-swatch-value">#232321</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch-preview" style="background-color: #2d2d2a;"></div>
+          <div class="color-swatch-info">
+            <div class="color-swatch-name">Dark Surface</div>
+            <div class="color-swatch-value">#2d2d2a</div>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="ds-subsection-title">Neutral Grays</h3>
+      <div class="ds-grid ds-grid-5">
+        <div class="color-swatch">
+          <div class="color-swatch-preview" style="background-color: #9a9a9a;"></div>
+          <div class="color-swatch-info">
+            <div class="color-swatch-name">Gray 500</div>
+            <div class="color-swatch-value">#9a9a9a</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch-preview" style="background-color: #636363;"></div>
+          <div class="color-swatch-info">
+            <div class="color-swatch-name">Gray 600</div>
+            <div class="color-swatch-value">#636363</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch-preview" style="background-color: #404040;"></div>
+          <div class="color-swatch-info">
+            <div class="color-swatch-name">Gray 700</div>
+            <div class="color-swatch-value">#404040</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch-preview" style="background-color: #262626;"></div>
+          <div class="color-swatch-info">
+            <div class="color-swatch-name">Gray 800</div>
+            <div class="color-swatch-value">#262626</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch-preview" style="background-color: #171717;"></div>
+          <div class="color-swatch-info">
+            <div class="color-swatch-name">Gray 900</div>
+            <div class="color-swatch-value">#171717</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Typography -->
+    <section class="ds-section">
+      <h2 class="ds-section-title">Typography</h2>
+
+      <p style="margin-bottom: var(--space-6); color: var(--color-text-secondary-dark);">
+        Font Family: <strong>PP Neue Montreal</strong>
+      </p>
+
+      <div class="type-sample">
+        <div class="type-sample-label">Display - 50px / Medium / -1px tracking</div>
+        <div style="font-size: var(--text-5xl); font-weight: var(--font-medium); letter-spacing: var(--tracking-tight);">
+          Reelful
+        </div>
+      </div>
+
+      <div class="type-sample">
+        <div class="type-sample-label">Heading 1 - 40px / Medium</div>
+        <div style="font-size: var(--text-4xl); font-weight: var(--font-medium);">
+          Create amazing content
+        </div>
+      </div>
+
+      <div class="type-sample">
+        <div class="type-sample-label">Heading 2 - 32px / Medium</div>
+        <div style="font-size: var(--text-3xl); font-weight: var(--font-medium);">
+          Your story, beautifully told
+        </div>
+      </div>
+
+      <div class="type-sample">
+        <div class="type-sample-label">Heading 3 - 24px / Medium</div>
+        <div style="font-size: var(--text-2xl); font-weight: var(--font-medium);">
+          Powerful editing tools
+        </div>
+      </div>
+
+      <div class="type-sample">
+        <div class="type-sample-label">Button Text - 18px / Medium / +0.3px tracking</div>
+        <div style="font-size: var(--text-lg); font-weight: var(--font-medium); letter-spacing: var(--tracking-wide);">
+          Get Started
+        </div>
+      </div>
+
+      <div class="type-sample">
+        <div class="type-sample-label">Body - 16px / Regular</div>
+        <div style="font-size: var(--text-base); font-weight: var(--font-regular); line-height: var(--leading-relaxed); max-width: 500px;">
+          Transform your videos into captivating stories with our intuitive editing tools and AI-powered features.
+        </div>
+      </div>
+
+      <div class="type-sample">
+        <div class="type-sample-label">Caption / Terms - 12px / Regular</div>
+        <div style="font-size: var(--text-xs); font-weight: var(--font-regular); color: var(--color-text-secondary-dark); line-height: var(--leading-normal);">
+          By tapping "Get Started", you agree to our <a href="#" class="link">Terms of Service</a> and <a href="#" class="link">Privacy Policy</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Buttons -->
+    <section class="ds-section">
+      <h2 class="ds-section-title">Buttons</h2>
+
+      <h3 class="ds-subsection-title">Primary Button (for dark backgrounds)</h3>
+      <div class="component-preview">
+        <button class="btn btn-primary">Get Started</button>
+        <button class="btn btn-primary btn-sm">Get Started</button>
+      </div>
+
+      <h3 class="ds-subsection-title">Secondary Button (for light backgrounds)</h3>
+      <div class="component-preview component-preview-light">
+        <button class="btn btn-secondary">Get Started</button>
+        <button class="btn btn-secondary btn-sm">Get Started</button>
+      </div>
+
+      <h3 class="ds-subsection-title">Button Specifications</h3>
+      <div class="card" style="margin-top: var(--space-4);">
+        <ul style="list-style: none; line-height: 2;">
+          <li><strong>Height:</strong> 64px (default), 48px (small)</li>
+          <li><strong>Border Radius:</strong> 100px (full pill shape)</li>
+          <li><strong>Font Size:</strong> 18px (default), 16px (small)</li>
+          <li><strong>Font Weight:</strong> Medium (500)</li>
+          <li><strong>Effect:</strong> 3D pillowy dome with top highlight gradient</li>
+          <li><strong>Shadow:</strong> Inset light from top, subtle outer shadow</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Form Elements -->
+    <section class="ds-section">
+      <h2 class="ds-section-title">Form Elements</h2>
+
+      <div class="ds-grid ds-grid-2">
+        <div>
+          <h3 class="ds-subsection-title">Dark Theme Input</h3>
+          <input type="text" class="input" placeholder="Enter your email">
+        </div>
+        <div class="component-preview-light" style="padding: var(--space-6); border-radius: var(--radius-lg);">
+          <div style="width: 100%;">
+            <h3 class="ds-subsection-title" style="color: var(--color-text-primary-light);">Light Theme Input</h3>
+            <input type="text" class="input input-light" placeholder="Enter your email">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Spacing -->
+    <section class="ds-section">
+      <h2 class="ds-section-title">Spacing Scale</h2>
+
+      <div class="card">
+        <div class="spacing-row">
+          <span class="spacing-label">4px (space-1)</span>
+          <div class="spacing-bar" style="width: 4px;"></div>
+        </div>
+        <div class="spacing-row">
+          <span class="spacing-label">8px (space-2)</span>
+          <div class="spacing-bar" style="width: 8px;"></div>
+        </div>
+        <div class="spacing-row">
+          <span class="spacing-label">12px (space-3)</span>
+          <div class="spacing-bar" style="width: 12px;"></div>
+        </div>
+        <div class="spacing-row">
+          <span class="spacing-label">16px (space-4)</span>
+          <div class="spacing-bar" style="width: 16px;"></div>
+        </div>
+        <div class="spacing-row">
+          <span class="spacing-label">24px (space-6)</span>
+          <div class="spacing-bar" style="width: 24px;"></div>
+        </div>
+        <div class="spacing-row">
+          <span class="spacing-label">32px (space-8)</span>
+          <div class="spacing-bar" style="width: 32px;"></div>
+        </div>
+        <div class="spacing-row">
+          <span class="spacing-label">48px (space-12)</span>
+          <div class="spacing-bar" style="width: 48px;"></div>
+        </div>
+        <div class="spacing-row">
+          <span class="spacing-label">64px (space-16)</span>
+          <div class="spacing-bar" style="width: 64px;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Border Radius -->
+    <section class="ds-section">
+      <h2 class="ds-section-title">Border Radius</h2>
+
+      <div style="display: flex; flex-wrap: wrap; gap: var(--space-6); align-items: flex-end;">
+        <div style="text-align: center;">
+          <div style="width: 60px; height: 60px; background: var(--color-cream); border-radius: var(--radius-sm);"></div>
+          <span style="font-size: var(--text-xs); margin-top: var(--space-2); display: block; color: var(--color-text-secondary-dark);">8px</span>
+        </div>
+        <div style="text-align: center;">
+          <div style="width: 60px; height: 60px; background: var(--color-cream); border-radius: var(--radius-md);"></div>
+          <span style="font-size: var(--text-xs); margin-top: var(--space-2); display: block; color: var(--color-text-secondary-dark);">12px</span>
+        </div>
+        <div style="text-align: center;">
+          <div style="width: 60px; height: 60px; background: var(--color-cream); border-radius: var(--radius-lg);"></div>
+          <span style="font-size: var(--text-xs); margin-top: var(--space-2); display: block; color: var(--color-text-secondary-dark);">16px</span>
+        </div>
+        <div style="text-align: center;">
+          <div style="width: 60px; height: 60px; background: var(--color-cream); border-radius: var(--radius-xl);"></div>
+          <span style="font-size: var(--text-xs); margin-top: var(--space-2); display: block; color: var(--color-text-secondary-dark);">24px</span>
+        </div>
+        <div style="text-align: center;">
+          <div style="width: 60px; height: 60px; background: var(--color-cream); border-radius: var(--radius-2xl);"></div>
+          <span style="font-size: var(--text-xs); margin-top: var(--space-2); display: block; color: var(--color-text-secondary-dark);">32px</span>
+        </div>
+        <div style="text-align: center;">
+          <div style="width: 80px; height: 80px; background: var(--color-cream); border-radius: var(--radius-3xl);"></div>
+          <span style="font-size: var(--text-xs); margin-top: var(--space-2); display: block; color: var(--color-text-secondary-dark);">44px (phone)</span>
+        </div>
+        <div style="text-align: center;">
+          <div style="width: 60px; height: 60px; background: var(--color-cream); border-radius: var(--radius-full);"></div>
+          <span style="font-size: var(--text-xs); margin-top: var(--space-2); display: block; color: var(--color-text-secondary-dark);">100px (pill)</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Cinema Effects -->
+    <section class="ds-section">
+      <h2 class="ds-section-title">Cinema Effects</h2>
+
+      <h3 class="ds-subsection-title">Spotlight Blobs</h3>
+      <div class="card" style="margin-bottom: var(--space-6);">
+        <p style="margin-bottom: var(--space-4);">Soft, blurry light blobs that fade in and out randomly to create a cinematic atmosphere.</p>
+        <ul style="list-style: none; line-height: 2; color: var(--color-text-secondary-dark);">
+          <li><strong>Filter:</strong> blur(60px)</li>
+          <li><strong>Transition:</strong> 1.5s ease-in-out</li>
+          <li><strong>Colors:</strong> Warm cream/amber gradient</li>
+          <li><strong>Behavior:</strong> Random position, random size, fade in/out</li>
+        </ul>
+      </div>
+
+      <h3 class="ds-subsection-title">Ambient Glow</h3>
+      <div class="card">
+        <p style="margin-bottom: var(--space-4);">Subtle warm glow applied where light elements meet dark backgrounds.</p>
+        <ul style="list-style: none; line-height: 2; color: var(--color-text-secondary-dark);">
+          <li><strong>Type:</strong> Radial gradient</li>
+          <li><strong>Color:</strong> rgba(255, 200, 150, 0.08)</li>
+          <li><strong>Purpose:</strong> Creates depth and warmth</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Animations -->
+    <section class="ds-section">
+      <h2 class="ds-section-title">Animations</h2>
+
+      <div class="ds-grid ds-grid-2">
+        <div class="card">
+          <h3 style="font-size: var(--text-lg); font-weight: var(--font-medium); margin-bottom: var(--space-3);">Roll (Linear)</h3>
+          <p style="color: var(--color-text-secondary-dark); margin-bottom: var(--space-3);">Continuous rotation for the film reel.</p>
+          <code style="font-size: var(--text-sm); color: var(--color-cream);">6s linear infinite</code>
+        </div>
+        <div class="card">
+          <h3 style="font-size: var(--text-lg); font-weight: var(--font-medium); margin-bottom: var(--space-3);">Roll (Eased)</h3>
+          <p style="color: var(--color-text-secondary-dark); margin-bottom: var(--space-3);">Organic rolling with subtle speed variation.</p>
+          <code style="font-size: var(--text-sm); color: var(--color-cream);">6s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite</code>
+        </div>
+        <div class="card">
+          <h3 style="font-size: var(--text-lg); font-weight: var(--font-medium); margin-bottom: var(--space-3);">Glow Pulse</h3>
+          <p style="color: var(--color-text-secondary-dark); margin-bottom: var(--space-3);">Subtle pulsing for projector light effects.</p>
+          <code style="font-size: var(--text-sm); color: var(--color-cream);">3s ease-in-out infinite</code>
+        </div>
+        <div class="card">
+          <h3 style="font-size: var(--text-lg); font-weight: var(--font-medium); margin-bottom: var(--space-3);">Fade In Up</h3>
+          <p style="color: var(--color-text-secondary-dark); margin-bottom: var(--space-3);">Entrance animation for content.</p>
+          <code style="font-size: var(--text-sm); color: var(--color-cream);">opacity: 0 → 1, translateY: 20px → 0</code>
+        </div>
+      </div>
+    </section>
+
+    <!-- Key Screens -->
+    <section class="ds-section">
+      <h2 class="ds-section-title">Key Screen Layouts</h2>
+
+      <h3 class="ds-subsection-title">Welcome / Intro Screen</h3>
+      <div class="card">
+        <ul style="list-style: none; line-height: 2;">
+          <li><strong>Background:</strong> #1a1a18 (Dark)</li>
+          <li><strong>Title Position:</strong> Top-left, 32px left padding, 60px top padding</li>
+          <li><strong>Reel:</strong> 780px, positioned right edge (half visible), centered vertically at 43%</li>
+          <li><strong>Button:</strong> Fixed 48px from bottom, 24px horizontal padding</li>
+          <li><strong>Terms Text:</strong> Centered below button, 12px size, muted color</li>
+          <li><strong>Effects:</strong> Random spotlight blobs, ambient glow on reel edge</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="ds-footer">
+      <p>Reelful Design System v1.0</p>
+    </footer>
+  </div>
+</body>
+</html>
