@@ -61,12 +61,18 @@
       --color-gray-800: #262626;
       --color-gray-900: #171717;
 
-      /* Accent - Warm Amber (for glows & highlights) */
-      --color-amber-glow: rgba(255, 200, 150, 0.08);
-      --color-amber-glow-medium: rgba(255, 180, 130, 0.04);
+      /* Accent - Orange (from reel highlights) */
+      --color-accent: #E8906A;
+      --color-accent-light: #F0A080;
+      --color-accent-dark: #D07850;
+      --color-accent-muted: #C4856B;
+
+      /* Warm Amber (for glows & highlights) */
+      --color-amber-glow: rgba(232, 144, 106, 0.12);
+      --color-amber-glow-medium: rgba(232, 144, 106, 0.06);
       --color-spotlight: rgba(255, 250, 242, 0.55);
       --color-spotlight-medium: rgba(255, 235, 210, 0.22);
-      --color-spotlight-soft: rgba(255, 215, 190, 0.07);
+      --color-spotlight-soft: rgba(232, 144, 106, 0.1);
 
       /* Text Colors */
       --color-text-primary-light: #000000;
@@ -416,6 +422,37 @@
         linear-gradient(180deg, #333330 0%, #282826 50%, #1e1e1c 100%);
     }
 
+    /* Accent Button - Orange (for emphasis) */
+    .btn-accent {
+      background:
+        radial-gradient(ellipse 80% 50% at 50% 0%, rgba(255, 255, 255, 0.2) 0%, transparent 50%),
+        linear-gradient(180deg, #F0A080 0%, #E8906A 50%, #D07850 100%);
+      color: #ffffff;
+      box-shadow:
+        inset 0 2px 4px rgba(255, 255, 255, 0.25),
+        inset 0 -1px 2px rgba(0, 0, 0, 0.15),
+        0 2px 4px rgba(208, 120, 80, 0.3);
+    }
+
+    .btn-accent:hover {
+      background:
+        radial-gradient(ellipse 80% 50% at 50% 0%, rgba(255, 255, 255, 0.25) 0%, transparent 50%),
+        linear-gradient(180deg, #F5A888 0%, #EDA07A 50%, #D88060 100%);
+      box-shadow:
+        inset 0 2px 4px rgba(255, 255, 255, 0.3),
+        inset 0 -1px 2px rgba(0, 0, 0, 0.12),
+        0 4px 8px rgba(208, 120, 80, 0.4);
+    }
+
+    .btn-accent:active {
+      background:
+        radial-gradient(ellipse 80% 50% at 50% 0%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+        linear-gradient(180deg, #E8906A 0%, #D07850 50%, #C06840 100%);
+      box-shadow:
+        inset 0 3px 6px rgba(0, 0, 0, 0.2),
+        inset 0 -1px 1px rgba(255, 255, 255, 0.15);
+    }
+
     /* Small Button */
     .btn-sm {
       height: 48px;
@@ -689,6 +726,38 @@
         </div>
       </div>
 
+      <h3 class="ds-subsection-title">Accent - Orange (from reel highlights)</h3>
+      <div class="ds-grid ds-grid-4" style="margin-bottom: var(--space-8);">
+        <div class="color-swatch">
+          <div class="color-swatch-preview" style="background-color: #E8906A;"></div>
+          <div class="color-swatch-info">
+            <div class="color-swatch-name">Accent</div>
+            <div class="color-swatch-value">#E8906A</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch-preview" style="background-color: #F0A080;"></div>
+          <div class="color-swatch-info">
+            <div class="color-swatch-name">Accent Light</div>
+            <div class="color-swatch-value">#F0A080</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch-preview" style="background-color: #D07850;"></div>
+          <div class="color-swatch-info">
+            <div class="color-swatch-name">Accent Dark</div>
+            <div class="color-swatch-value">#D07850</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-swatch-preview" style="background-color: #C4856B;"></div>
+          <div class="color-swatch-info">
+            <div class="color-swatch-name">Accent Muted</div>
+            <div class="color-swatch-value">#C4856B</div>
+          </div>
+        </div>
+      </div>
+
       <h3 class="ds-subsection-title">Neutral Grays</h3>
       <div class="ds-grid ds-grid-5">
         <div class="color-swatch">
@@ -801,6 +870,12 @@
       <div class="component-preview component-preview-light">
         <button class="btn btn-secondary">Get Started</button>
         <button class="btn btn-secondary btn-sm">Get Started</button>
+      </div>
+
+      <h3 class="ds-subsection-title">Accent Button (for emphasis / CTAs)</h3>
+      <div class="component-preview">
+        <button class="btn btn-accent">Subscribe</button>
+        <button class="btn btn-accent btn-sm">Subscribe</button>
       </div>
 
       <h3 class="ds-subsection-title">Button Specifications</h3>
@@ -964,12 +1039,383 @@
       </div>
     </section>
 
+    <!-- Brand Wordings & Copy -->
+    <section class="ds-section">
+      <h2 class="ds-section-title">Brand Wordings & Copy</h2>
+
+      <h3 class="ds-subsection-title">Brand Taglines</h3>
+      <div class="card" style="margin-bottom: var(--space-6);">
+        <ul style="list-style: none; line-height: 2.2;">
+          <li><strong>Primary Tagline:</strong> "Your story, beautifully told"</li>
+          <li><strong>Alt Tagline:</strong> "Transform memories into magic"</li>
+          <li><strong>App Store:</strong> "Turn your photos and videos into scroll-stopping reels"</li>
+        </ul>
+      </div>
+
+      <h3 class="ds-subsection-title">Value Proposition Copy</h3>
+      <div class="card" style="margin-bottom: var(--space-6);">
+        <p style="margin-bottom: var(--space-4); color: var(--color-text-secondary-dark);">About description (Settings > About):</p>
+        <blockquote style="border-left: 3px solid var(--color-cream); padding-left: var(--space-4); margin: 0; font-style: italic;">
+          "Upload your photos and videos with a short description and get a ready-to-share clip in minutes. Transform your memories into engaging content effortlessly."
+        </blockquote>
+        <p style="margin-top: var(--space-4); text-align: center; color: var(--color-accent);">Made with love 🧡</p>
+      </div>
+
+      <h3 class="ds-subsection-title">Screen Titles & Headings</h3>
+      <div class="ds-grid ds-grid-2" style="margin-bottom: var(--space-6);">
+        <div class="card">
+          <p style="font-weight: var(--font-medium); margin-bottom: var(--space-2);">Welcome Screen</p>
+          <p style="color: var(--color-text-secondary-dark);">"Welcome!" / "Enter your phone number to continue"</p>
+        </div>
+        <div class="card">
+          <p style="font-weight: var(--font-medium); margin-bottom: var(--space-2);">Onboarding</p>
+          <p style="color: var(--color-text-secondary-dark);">"Welcome to Reelful" / "Let's personalize your experience"</p>
+        </div>
+        <div class="card">
+          <p style="font-weight: var(--font-medium); margin-bottom: var(--space-2);">Composer</p>
+          <p style="color: var(--color-text-secondary-dark);">"Hey, [Name], share your story!"</p>
+        </div>
+        <div class="card">
+          <p style="font-weight: var(--font-medium); margin-bottom: var(--space-2);">Empty State (Feed)</p>
+          <p style="color: var(--color-text-secondary-dark);">"Start a project!" / "Upload your photos and videos and let the magic begin!"</p>
+        </div>
+      </div>
+
+      <h3 class="ds-subsection-title">Button Labels</h3>
+      <div class="card" style="margin-bottom: var(--space-6);">
+        <div style="display: flex; flex-wrap: wrap; gap: var(--space-3);">
+          <span style="background: var(--color-dark-surface); padding: var(--space-2) var(--space-4); border-radius: var(--radius-sm);">Get Started</span>
+          <span style="background: var(--color-dark-surface); padding: var(--space-2) var(--space-4); border-radius: var(--radius-sm);">Continue</span>
+          <span style="background: var(--color-dark-surface); padding: var(--space-2) var(--space-4); border-radius: var(--radius-sm);">Next</span>
+          <span style="background: var(--color-dark-surface); padding: var(--space-2) var(--space-4); border-radius: var(--radius-sm);">Verify</span>
+          <span style="background: var(--color-dark-surface); padding: var(--space-2) var(--space-4); border-radius: var(--radius-sm);">Start Creating</span>
+          <span style="background: var(--color-dark-surface); padding: var(--space-2) var(--space-4); border-radius: var(--radius-sm);">Generate Script</span>
+          <span style="background: var(--color-dark-surface); padding: var(--space-2) var(--space-4); border-radius: var(--radius-sm);">Add More Media</span>
+          <span style="background: var(--color-dark-surface); padding: var(--space-2) var(--space-4); border-radius: var(--radius-sm);">Use This Recording</span>
+          <span style="background: var(--color-dark-surface); padding: var(--space-2) var(--space-4); border-radius: var(--radius-sm);">Save</span>
+          <span style="background: var(--color-dark-surface); padding: var(--space-2) var(--space-4); border-radius: var(--radius-sm);">Skip for now</span>
+        </div>
+      </div>
+
+      <h3 class="ds-subsection-title">Legal Text (Terms)</h3>
+      <div class="card">
+        <p style="font-size: var(--text-xs); color: var(--color-text-secondary-dark); line-height: var(--leading-relaxed);">
+          By tapping "Get Started", you agree to our <a href="#" class="link">Terms of Service</a> and <a href="#" class="link">Privacy Policy</a>
+        </p>
+        <p style="font-size: var(--text-xs); color: var(--color-text-secondary-dark); margin-top: var(--space-2);">
+          <em>Alternative:</em> By continuing, you agree to our Terms of Service and Privacy Policy
+        </p>
+      </div>
+    </section>
+
+    <!-- App Components -->
+    <section class="ds-section">
+      <h2 class="ds-section-title">App Components</h2>
+
+      <h3 class="ds-subsection-title">Phone Input with Country Selector</h3>
+      <div class="component-preview" style="flex-direction: column; align-items: flex-start; gap: var(--space-4);">
+        <p style="font-size: var(--text-sm); color: var(--color-text-secondary-dark);">Used in Auth screen for phone number entry</p>
+        <div style="display: flex; align-items: center; background: rgba(50, 50, 50, 0.8); border-radius: var(--radius-md); border: 2px solid rgba(255, 255, 255, 0.1); width: 100%; max-width: 340px;">
+          <div style="padding: var(--space-4); display: flex; align-items: center; gap: var(--space-2);">
+            <span>🇺🇸</span>
+            <span style="color: var(--color-text-primary-dark);">+1</span>
+            <span style="color: var(--color-gray-500);">▼</span>
+          </div>
+          <div style="width: 1px; height: 24px; background: var(--color-gray-600); opacity: 0.3;"></div>
+          <div style="flex: 1; padding: var(--space-4); color: var(--color-gray-500);">(555) 123-4567</div>
+        </div>
+      </div>
+
+      <h3 class="ds-subsection-title">OTP Code Input</h3>
+      <div class="component-preview">
+        <input type="text" class="input" value="123456" style="text-align: center; letter-spacing: 12px; font-family: var(--font-primary); font-weight: var(--font-bold); font-size: var(--text-lg); max-width: 200px;" readonly>
+      </div>
+
+      <h3 class="ds-subsection-title">Style Selection Cards</h3>
+      <div class="component-preview" style="flex-direction: column; gap: var(--space-3); width: 100%; max-width: 340px;">
+        <div style="background: rgba(255, 107, 53, 0.2); border: 2px solid var(--color-accent); border-radius: var(--radius-md); padding: var(--space-4); text-align: center; color: var(--color-accent);">
+          Playful
+        </div>
+        <div style="background: rgba(50, 50, 50, 0.8); border: 2px solid rgba(255, 255, 255, 0.1); border-radius: var(--radius-md); padding: var(--space-4); text-align: center; color: var(--color-text-primary-dark);">
+          Professional
+        </div>
+        <div style="background: rgba(50, 50, 50, 0.8); border: 2px solid rgba(255, 255, 255, 0.1); border-radius: var(--radius-md); padding: var(--space-4); text-align: center; color: var(--color-text-primary-dark);">
+          Dreamy
+        </div>
+      </div>
+
+      <h3 class="ds-subsection-title">Voice Recorder Component</h3>
+      <div class="component-preview" style="flex-direction: column; align-items: center; gap: var(--space-4);">
+        <div style="width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, var(--color-accent), var(--color-accent-light)); display: flex; align-items: center; justify-content: center;">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" x2="12" y1="19" y2="22"/>
+          </svg>
+        </div>
+        <p style="font-size: var(--text-sm); color: var(--color-text-secondary-dark);">Tap to start recording</p>
+      </div>
+
+      <h3 class="ds-subsection-title">Media Grid Thumbnails</h3>
+      <div class="component-preview" style="gap: var(--space-2);">
+        <div style="width: 100px; height: 100px; background: var(--color-gray-700); border-radius: var(--radius-md); position: relative; overflow: hidden;">
+          <div style="position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; background: rgba(0,0,0,0.7); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+            <span style="color: white; font-size: 12px;">×</span>
+          </div>
+        </div>
+        <div style="width: 100px; height: 100px; background: var(--color-gray-700); border-radius: var(--radius-md); position: relative; overflow: hidden;">
+          <div style="position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; background: rgba(0,0,0,0.7); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+            <span style="color: white; font-size: 12px;">×</span>
+          </div>
+        </div>
+        <div style="width: 100px; height: 100px; background: var(--color-gray-700); border-radius: var(--radius-md); position: relative; overflow: hidden;">
+          <div style="position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; background: rgba(0,0,0,0.7); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+            <span style="color: white; font-size: 12px;">×</span>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="ds-subsection-title">Video Grid States</h3>
+      <div class="component-preview" style="gap: var(--space-4);">
+        <!-- Ready State -->
+        <div style="width: 100px; height: 150px; background: var(--color-gray-700); border-radius: var(--radius-md); position: relative; overflow: hidden;">
+          <div style="position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.75); padding: 6px 10px; border-radius: 6px;">
+            <span style="font-size: 11px; color: white;">My trip...</span>
+          </div>
+        </div>
+        <!-- Processing State -->
+        <div style="width: 100px; height: 150px; background: var(--color-gray-800); border-radius: var(--radius-md); position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;">
+          <div style="width: 40px; height: 40px; border: 3px solid var(--color-accent); border-top-color: transparent; border-radius: 50%; animation: roll 1s linear infinite;"></div>
+          <span style="font-size: 13px; color: var(--color-accent);">Generating...</span>
+        </div>
+        <!-- Draft State -->
+        <div style="width: 100px; height: 150px; background: var(--color-gray-800); border-radius: var(--radius-md); position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14,2 14,8 20,8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+          </svg>
+          <span style="font-size: 13px; color: white;">Draft</span>
+        </div>
+      </div>
+
+      <h3 class="ds-subsection-title">Floating Action Button (FAB)</h3>
+      <div class="component-preview">
+        <div style="width: 64px; height: 64px; background: var(--color-accent); border-radius: var(--radius-lg); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 8px rgba(232, 144, 106, 0.5);">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </div>
+      </div>
+
+      <h3 class="ds-subsection-title">Bottom Tab Bar / Menu Bar</h3>
+      <div class="component-preview" style="flex-direction: column; align-items: center; gap: var(--space-6); padding: var(--space-8);">
+        <p style="font-size: var(--text-sm); color: var(--color-text-secondary-dark); text-align: center;">Pill-shaped floating tab bar with Home, Create, and Profile navigation</p>
+
+        <!-- Dark variant (for dark backgrounds) -->
+        <div style="
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 32px;
+          background: linear-gradient(180deg, rgba(45, 45, 42, 0.95) 0%, rgba(35, 35, 33, 0.98) 100%);
+          border: 1.5px solid rgba(255, 255, 255, 0.08);
+          border-radius: var(--radius-full);
+          padding: 16px 40px;
+          box-shadow:
+            0 4px 24px rgba(0, 0, 0, 0.4),
+            0 1px 3px rgba(0, 0, 0, 0.3),
+            inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        ">
+          <!-- Home Icon -->
+          <div style="cursor: pointer; opacity: 0.5; transition: opacity 0.2s;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9a9a9a" stroke-width="1.5">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+              <polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+          </div>
+
+          <!-- Create Button (center, accent) -->
+          <div style="
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-dark) 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow:
+              0 4px 12px rgba(232, 144, 106, 0.4),
+              inset 0 1px 0 rgba(255, 255, 255, 0.2);
+          ">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="16"/>
+              <line x1="8" y1="12" x2="16" y2="12"/>
+            </svg>
+          </div>
+
+          <!-- Profile Icon (active state) -->
+          <div style="cursor: pointer;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--color-cream)" stroke-width="1.5">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Light variant (for light/cream backgrounds) -->
+        <div style="
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 32px;
+          background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 240, 232, 0.98) 100%);
+          border: 1.5px solid rgba(0, 0, 0, 0.08);
+          border-radius: var(--radius-full);
+          padding: 16px 40px;
+          box-shadow:
+            0 4px 24px rgba(0, 0, 0, 0.12),
+            0 1px 3px rgba(0, 0, 0, 0.08),
+            inset 0 1px 0 rgba(255, 255, 255, 0.8);
+        ">
+          <!-- Home Icon (active) -->
+          <div style="cursor: pointer;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--color-dark)" stroke-width="1.5">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+              <polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+          </div>
+
+          <!-- Create Button (center, dark) -->
+          <div style="
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--color-dark) 0%, #0a0a08 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow:
+              0 4px 12px rgba(0, 0, 0, 0.3),
+              inset 0 1px 0 rgba(255, 255, 255, 0.1);
+          ">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="16"/>
+              <line x1="8" y1="12" x2="16" y2="12"/>
+            </svg>
+          </div>
+
+          <!-- Profile Icon (inactive) -->
+          <div style="cursor: pointer; opacity: 0.4;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#636363" stroke-width="1.5">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Specifications -->
+        <div class="card" style="width: 100%; margin-top: var(--space-4);">
+          <h4 style="font-weight: var(--font-medium); margin-bottom: var(--space-3);">Tab Bar Specifications</h4>
+          <ul style="list-style: none; line-height: 2; color: var(--color-text-secondary-dark);">
+            <li><strong>Shape:</strong> Pill / Stadium (border-radius: 100px)</li>
+            <li><strong>Padding:</strong> 16px vertical, 40px horizontal</li>
+            <li><strong>Icon Gap:</strong> 32px between items</li>
+            <li><strong>Icon Size:</strong> 28px for nav icons, 24px for center button icon</li>
+            <li><strong>Center Button:</strong> 48px diameter circle with + icon</li>
+            <li><strong>Icon Stroke:</strong> 1.5px for nav icons, 2.5px for center button</li>
+            <li><strong>Active State:</strong> Full opacity, cream/dark stroke</li>
+            <li><strong>Inactive State:</strong> 50% opacity, gray stroke</li>
+            <li><strong>Dark Variant:</strong> Semi-transparent dark surface with subtle border</li>
+            <li><strong>Light Variant:</strong> Semi-transparent white/cream with subtle shadow</li>
+            <li><strong>Position:</strong> Fixed bottom, centered, with safe area padding</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3 class="ds-subsection-title">Credits Counter Badge</h3>
+      <div class="component-preview" style="gap: var(--space-4);">
+        <div style="display: flex; align-items: center; gap: 4px; background: rgba(255, 107, 53, 0.15); padding: 6px 10px; border-radius: 16px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E8906A" stroke-width="2.5">
+            <polygon points="13,2 3,14 12,14 11,22 21,10 12,10"/>
+          </svg>
+          <span style="font-size: 14px; font-weight: 600; color: var(--color-accent);">5</span>
+        </div>
+      </div>
+
+      <h3 class="ds-subsection-title">Settings Menu Item</h3>
+      <div class="component-preview" style="flex-direction: column; width: 100%; max-width: 340px; gap: 0;">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: var(--space-4) 0; border-bottom: 1px solid #1a1a1a;">
+          <div style="display: flex; align-items: center; gap: var(--space-4);">
+            <div style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+            </div>
+            <span style="color: white;">Account</span>
+          </div>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9a9a9a" stroke-width="2">
+            <polyline points="9,18 15,12 9,6"/>
+          </svg>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: var(--space-4) 0; border-bottom: 1px solid #1a1a1a;">
+          <div style="display: flex; align-items: center; gap: var(--space-4);">
+            <div style="width: 32px; height: 32px; background: rgba(255, 107, 53, 0.15); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E8906A" stroke-width="2">
+                <path d="M2 4l3 12h14l3-12H2z"/>
+                <circle cx="9" cy="20" r="2"/>
+                <circle cx="17" cy="20" r="2"/>
+              </svg>
+            </div>
+            <div>
+              <span style="color: white; display: block;">Reelful Pro</span>
+              <span style="color: #9a9a9a; font-size: 12px;">Unlock premium features</span>
+            </div>
+          </div>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9a9a9a" stroke-width="2">
+            <polyline points="9,18 15,12 9,6"/>
+          </svg>
+        </div>
+      </div>
+
+      <h3 class="ds-subsection-title">Example Hint Card</h3>
+      <div class="component-preview">
+        <div style="background: rgba(255, 107, 53, 0.1); border: 1px solid rgba(255, 107, 53, 0.3); border-radius: 10px; padding: var(--space-3); max-width: 300px;">
+          <div style="display: flex; align-items: center; gap: 5px; margin-bottom: 6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E8906A" stroke-width="2">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+              <circle cx="12" cy="13" r="4"/>
+            </svg>
+            <span style="font-size: 12px; color: var(--color-accent);">Example Story</span>
+          </div>
+          <p style="font-size: 11px; color: var(--color-gray-500); line-height: 16px; font-style: italic; margin: 0;">
+            "I went to the a16z Tech Week in SF - met inspiring founders and caught up with old friends..."
+          </p>
+        </div>
+      </div>
+
+      <h3 class="ds-subsection-title">Loading Overlay</h3>
+      <div class="component-preview" style="flex-direction: column; align-items: center; gap: var(--space-4); padding: var(--space-8);">
+        <div style="width: 40px; height: 40px; border: 3px solid var(--color-accent); border-top-color: transparent; border-radius: 50%; animation: roll 1s linear infinite;"></div>
+        <span style="font-size: 20px; font-weight: var(--font-medium); color: white;">Uploading...</span>
+        <span style="font-size: 16px; color: var(--color-gray-500);">2/5 files (40%)</span>
+        <span style="font-size: 14px; color: var(--color-accent);">Please don't leave the app</span>
+      </div>
+    </section>
+
     <!-- Key Screens -->
     <section class="ds-section">
       <h2 class="ds-section-title">Key Screen Layouts</h2>
 
       <h3 class="ds-subsection-title">Welcome / Intro Screen</h3>
-      <div class="card">
+      <div class="card" style="margin-bottom: var(--space-6);">
         <ul style="list-style: none; line-height: 2;">
           <li><strong>Background:</strong> #1a1a18 (Dark)</li>
           <li><strong>Title Position:</strong> Top-left, 32px left padding, 60px top padding</li>
@@ -979,11 +1425,171 @@
           <li><strong>Effects:</strong> Random spotlight blobs, ambient glow on reel edge</li>
         </ul>
       </div>
+
+      <h3 class="ds-subsection-title">Auth Screen</h3>
+      <div class="card" style="margin-bottom: var(--space-6);">
+        <ul style="list-style: none; line-height: 2;">
+          <li><strong>Background:</strong> Looping video with 70% black overlay</li>
+          <li><strong>Video Transition:</strong> Crossfade loop (800ms fade, trigger 1s before end)</li>
+          <li><strong>Logo:</strong> 56x56px app icon, centered above title</li>
+          <li><strong>Title:</strong> 24px, centered ("Welcome!" / "Enter Verification Code")</li>
+          <li><strong>Subtitle:</strong> 16px, muted gray, centered</li>
+          <li><strong>Input Container:</strong> Country selector + phone input, 12px border radius</li>
+          <li><strong>Button:</strong> Full width, 18px padding, 12px border radius</li>
+          <li><strong>Terms:</strong> 13px, centered, orange links</li>
+        </ul>
+      </div>
+
+      <h3 class="ds-subsection-title">Onboarding Flow</h3>
+      <div class="card" style="margin-bottom: var(--space-6);">
+        <ul style="list-style: none; line-height: 2;">
+          <li><strong>Background:</strong> Same video background as auth</li>
+          <li><strong>Steps:</strong> Name → (Optional: Style) → Voice Recording</li>
+          <li><strong>Icon Container:</strong> 50px padding, orange tinted background, Sparkles or Mic icon</li>
+          <li><strong>Step Titles:</strong> "Welcome to Reelful" / "Your Style" / "Record Your Voice"</li>
+          <li><strong>Back Button:</strong> Top-left, 28px ChevronLeft, appears on step 2+</li>
+          <li><strong>Voice Note:</strong> Hint card with "Don't want to record? No worries!" message</li>
+          <li><strong>Skip Button:</strong> Text link, underlined, "Skip for now"</li>
+        </ul>
+      </div>
+
+      <h3 class="ds-subsection-title">Feed / Gallery Screen</h3>
+      <div class="card" style="margin-bottom: var(--space-6);">
+        <ul style="list-style: none; line-height: 2;">
+          <li><strong>Header:</strong> "Reelful" title + icon, Credits badge, Settings gear</li>
+          <li><strong>Grid:</strong> 3-column, 8px spacing, 1.5:1 aspect ratio thumbnails</li>
+          <li><strong>Thumbnail Overlay:</strong> Bottom-left label, 75% black background, 6px radius</li>
+          <li><strong>FAB:</strong> 64x64px, 16px border radius, bottom-right, 24px from edge</li>
+          <li><strong>Empty State:</strong> "Start a project!" + "Start Creating" button</li>
+          <li><strong>Long Press:</strong> Context menu appears next to thumbnail</li>
+          <li><strong>Pull to Refresh:</strong> Orange refresh indicator</li>
+        </ul>
+      </div>
+
+      <h3 class="ds-subsection-title">Composer Screen</h3>
+      <div class="card" style="margin-bottom: var(--space-6);">
+        <ul style="list-style: none; line-height: 2;">
+          <li><strong>Header:</strong> X close button left, forward arrow right (for drafts with scripts)</li>
+          <li><strong>Title:</strong> "Hey, [Name], share your story!" - 24px, centered</li>
+          <li><strong>Media Section:</strong> "Upload Media (optimal: 5-6 files)" label</li>
+          <li><strong>Media Grid:</strong> Horizontal scroll, 80x80px thumbnails, X remove button</li>
+          <li><strong>Add Button:</strong> Camera icon + "Add More Media", orange background</li>
+          <li><strong>iCloud Note:</strong> "☁️ Videos stored in iCloud may take a moment to load"</li>
+          <li><strong>Description Input:</strong> Multiline, 100px min height, placeholder text</li>
+          <li><strong>Example Card:</strong> Orange-tinted hint with sample story</li>
+          <li><strong>Generate Button:</strong> "Generate Script", full width, orange</li>
+        </ul>
+      </div>
+
+      <h3 class="ds-subsection-title">Settings Modal</h3>
+      <div class="card">
+        <ul style="list-style: none; line-height: 2;">
+          <li><strong>Presentation:</strong> Bottom sheet, 94% height, slide-up animation</li>
+          <li><strong>Drag Handle:</strong> 40x5px, #333 color, 3px radius, centered</li>
+          <li><strong>Close Button:</strong> X icon, top-left, 32x32 touch area</li>
+          <li><strong>Profile Section:</strong> Name display, 24px, centered</li>
+          <li><strong>Menu Items:</strong> Icon + text + chevron, 16px vertical padding</li>
+          <li><strong>Menu Items:</strong> Pro/Credits, Account, Voice Settings, Voice Clone, About</li>
+          <li><strong>Logout:</strong> Red text, centered</li>
+          <li><strong>Delete Account:</strong> Fixed at bottom, red text + trash icon</li>
+          <li><strong>Sub-modals:</strong> 85% width, centered, 16px border radius</li>
+          <li><strong>Gesture:</strong> Swipe down to close, spring back if partial</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Voice Script -->
+    <section class="ds-section">
+      <h2 class="ds-section-title">Voice Clone Script</h2>
+      <div class="card">
+        <p style="color: var(--color-text-secondary-dark); margin-bottom: var(--space-4);">
+          The script users read when recording their voice for AI cloning:
+        </p>
+        <blockquote style="border-left: 3px solid var(--color-accent); padding-left: var(--space-4); margin: 0; font-style: italic; line-height: var(--leading-relaxed);">
+          "Wow, Reelful is such a cool app! It helps me turn my photos and videos into a complete reel using just one prompt. I don't need to record my voice, search for music, or spend hours editing. Reelful automatically adds voice-over, music, and captions. It makes content creation fast, fun, and effortless. I can't wait to use Reelful for my next reel!"
+        </blockquote>
+      </div>
+    </section>
+
+    <!-- Icon Set -->
+    <section class="ds-section">
+      <h2 class="ds-section-title">Icon Set (Lucide)</h2>
+      <div class="card">
+        <p style="color: var(--color-text-secondary-dark); margin-bottom: var(--space-4);">
+          The app uses <strong>lucide-react-native</strong> icons throughout. Common icons:
+        </p>
+        <div style="display: flex; flex-wrap: wrap; gap: var(--space-4);">
+          <div style="text-align: center; width: 80px;">
+            <div style="background: var(--color-dark-surface); padding: var(--space-3); border-radius: var(--radius-sm); margin-bottom: var(--space-2);">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </div>
+            <span style="font-size: 11px; color: var(--color-text-secondary-dark);">Plus</span>
+          </div>
+          <div style="text-align: center; width: 80px;">
+            <div style="background: var(--color-dark-surface); padding: var(--space-3); border-radius: var(--radius-sm); margin-bottom: var(--space-2);">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </div>
+            <span style="font-size: 11px; color: var(--color-text-secondary-dark);">X</span>
+          </div>
+          <div style="text-align: center; width: 80px;">
+            <div style="background: var(--color-dark-surface); padding: var(--space-3); border-radius: var(--radius-sm); margin-bottom: var(--space-2);">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            </div>
+            <span style="font-size: 11px; color: var(--color-text-secondary-dark);">Settings</span>
+          </div>
+          <div style="text-align: center; width: 80px;">
+            <div style="background: var(--color-dark-surface); padding: var(--space-3); border-radius: var(--radius-sm); margin-bottom: var(--space-2);">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+            </div>
+            <span style="font-size: 11px; color: var(--color-text-secondary-dark);">Mic</span>
+          </div>
+          <div style="text-align: center; width: 80px;">
+            <div style="background: var(--color-dark-surface); padding: var(--space-3); border-radius: var(--radius-sm); margin-bottom: var(--space-2);">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            </div>
+            <span style="font-size: 11px; color: var(--color-text-secondary-dark);">Camera</span>
+          </div>
+          <div style="text-align: center; width: 80px;">
+            <div style="background: var(--color-dark-surface); padding: var(--space-3); border-radius: var(--radius-sm); margin-bottom: var(--space-2);">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><polyline points="9,18 15,12 9,6"/></svg>
+            </div>
+            <span style="font-size: 11px; color: var(--color-text-secondary-dark);">ChevronRight</span>
+          </div>
+          <div style="text-align: center; width: 80px;">
+            <div style="background: var(--color-dark-surface); padding: var(--space-3); border-radius: var(--radius-sm); margin-bottom: var(--space-2);">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><polygon points="13,2 3,14 12,14 11,22 21,10 12,10"/></svg>
+            </div>
+            <span style="font-size: 11px; color: var(--color-text-secondary-dark);">Zap</span>
+          </div>
+          <div style="text-align: center; width: 80px;">
+            <div style="background: var(--color-dark-surface); padding: var(--space-3); border-radius: var(--radius-sm); margin-bottom: var(--space-2);">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            </div>
+            <span style="font-size: 11px; color: var(--color-text-secondary-dark);">FileText</span>
+          </div>
+          <div style="text-align: center; width: 80px;">
+            <div style="background: var(--color-dark-surface); padding: var(--space-3); border-radius: var(--radius-sm); margin-bottom: var(--space-2);">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </div>
+            <span style="font-size: 11px; color: var(--color-text-secondary-dark);">Trash2</span>
+          </div>
+          <div style="text-align: center; width: 80px;">
+            <div style="background: var(--color-dark-surface); padding: var(--space-3); border-radius: var(--radius-sm); margin-bottom: var(--space-2);">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+            <span style="font-size: 11px; color: var(--color-text-secondary-dark);">ArrowRight</span>
+          </div>
+        </div>
+        <p style="color: var(--color-text-secondary-dark); margin-top: var(--space-4); font-size: var(--text-sm);">
+          <strong>Icon Style:</strong> strokeWidth={2} for most icons, strokeWidth={2.5} for emphasis (Zap), strokeWidth={3} for FAB (Plus)
+        </p>
+      </div>
     </section>
 
     <!-- Footer -->
     <footer class="ds-footer">
-      <p>Reelful Design System v1.0</p>
+      <p>Reelful Design System v1.1</p>
+      <p style="margin-top: var(--space-2); font-size: var(--text-xs);">Cinema-inspired, warm & sophisticated</p>
     </footer>
   </div>
 </body>
