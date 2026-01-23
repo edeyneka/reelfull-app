@@ -13,6 +13,7 @@ export interface Video {
   id: string;
   uri: string;
   prompt: string;
+  name?: string; // AI-generated project name (e.g., "Summer Vibes")
   script?: string; // The actual generated script
   createdAt: number;
   status: 'draft' | 'pending' | 'processing' | 'ready' | 'failed';

@@ -105,6 +105,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
           id: project._id,
           uri: project.renderedVideoUrl || '',
           prompt: project.prompt,
+          name: project.name, // AI-generated project name
           script: transformScript(project.script),
           createdAt: project.createdAt,
           status: 'ready' as const,
@@ -119,6 +120,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
           id: project._id,
           uri: '',
           prompt: project.prompt,
+          name: project.name, // AI-generated project name
           script: transformScript(project.script),
           createdAt: project.createdAt,
           status: 'draft' as const,
@@ -136,6 +138,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
           id: project._id,
           uri: '',
           prompt: project.prompt,
+          name: project.name, // AI-generated project name
           script: transformScript(project.script),
           createdAt: project.createdAt,
           status: project.status === 'rendering' ? 'processing' as const : 'pending' as const,
@@ -150,6 +153,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
           id: project._id,
           uri: '',
           prompt: project.prompt,
+          name: project.name, // AI-generated project name
           script: transformScript(project.script),
           createdAt: project.createdAt,
           status: 'failed' as const,

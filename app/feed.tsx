@@ -87,9 +87,9 @@ function VideoThumbnail({
     const urlType = item.thumbnailUrl 
       ? (isImageUrl(item.thumbnailUrl) ? 'image' : 'video/other') 
       : 'missing';
-    const displayText = item.script || item.prompt;
+    const displayText = item.name || item.prompt;
     console.log(`[Thumbnail] ${displayText}: status=${item.status}, thumbnailUrl=${urlType}, using=${effectiveThumbnailUrl ? 'image' : (shouldUseVideoPreview ? 'video' : 'placeholder')}`);
-  }, [item.thumbnailUrl, item.status, item.script, item.prompt, effectiveThumbnailUrl, shouldUseVideoPreview]);
+  }, [item.thumbnailUrl, item.status, item.name, item.prompt, effectiveThumbnailUrl, shouldUseVideoPreview]);
 
   const handleLongPress = (event: any) => {
     if (thumbnailRef.current) {
@@ -181,7 +181,7 @@ function VideoThumbnail({
           )}
           <View style={styles.thumbnailOverlay}>
             <Text style={styles.thumbnailPrompt} numberOfLines={1} ellipsizeMode="tail">
-              {item.script || item.prompt}
+              {item.name || item.prompt}
             </Text>
           </View>
         </TouchableOpacity>
@@ -239,7 +239,7 @@ function VideoThumbnail({
           )}
         <View style={styles.thumbnailOverlay}>
           <Text style={styles.thumbnailPrompt} numberOfLines={1} ellipsizeMode="tail">
-            {item.prompt}
+            {item.name || item.prompt}
           </Text>
         </View>
       </TouchableOpacity>
@@ -290,7 +290,7 @@ if (item.status === 'failed') {
         )}
         <View style={styles.thumbnailOverlay}>
           <Text style={styles.thumbnailPrompt} numberOfLines={1} ellipsizeMode="tail">
-            {item.prompt}
+            {item.name || item.prompt}
           </Text>
         </View>
       </TouchableOpacity>
@@ -339,7 +339,7 @@ return (
       )}
       <View style={styles.thumbnailOverlay}>
         <Text style={styles.thumbnailPrompt} numberOfLines={1} ellipsizeMode="tail">
-          {item.prompt}
+          {item.name || item.prompt}
         </Text>
       </View>
       </TouchableOpacity>
