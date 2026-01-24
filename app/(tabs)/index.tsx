@@ -28,7 +28,7 @@ import { Trash2 } from 'lucide-react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const ITEM_SPACING = 8;
-const ITEM_WIDTH = (SCREEN_WIDTH - ITEM_SPACING * 4) / 3;
+const ITEM_WIDTH = (SCREEN_WIDTH - ITEM_SPACING * 3) / 2;
 
 // Bottom padding to account for the floating tab bar
 const TAB_BAR_HEIGHT = 100;
@@ -383,8 +383,8 @@ export default function FeedTab() {
   const videoRows = useMemo(() => {
     const sortedVideos = [...videos].sort((a, b) => b.createdAt - a.createdAt);
     const rows: VideoType[][] = [];
-    for (let i = 0; i < sortedVideos.length; i += 3) {
-      rows.push(sortedVideos.slice(i, i + 3));
+    for (let i = 0; i < sortedVideos.length; i += 2) {
+      rows.push(sortedVideos.slice(i, i + 2));
     }
     return rows;
   }, [videos]);
@@ -482,8 +482,8 @@ export default function FeedTab() {
   const renderRow = ({ item: row, index: rowIndex }: { item: VideoType[]; index: number }) => {
     return (
       <View style={styles.row}>
-        {row.map((video, colIndex) => renderVideoThumbnail(video, rowIndex * 3 + colIndex, colIndex))}
-        {row.length < 3 && Array.from({ length: 3 - row.length }).map((_, i) => (
+        {row.map((video, colIndex) => renderVideoThumbnail(video, rowIndex * 2 + colIndex, colIndex))}
+        {row.length < 2 && Array.from({ length: 2 - row.length }).map((_, i) => (
           <View key={`spacer-${rowIndex}-${i}`} style={{ width: ITEM_WIDTH }} />
         ))}
       </View>
@@ -606,7 +606,7 @@ export default function FeedTab() {
               styles.actionSheetContainer,
               {
                 position: 'absolute',
-                left: actionSheetPosition.columnIndex === 2
+                left: actionSheetPosition.columnIndex === 1
                   ? actionSheetPosition.pageX - 108
                   : actionSheetPosition.pageX + actionSheetPosition.width + 8,
                 top: actionSheetPosition.pageY + actionSheetPosition.height - 38,
