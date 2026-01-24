@@ -20,6 +20,7 @@ export interface Video {
   projectId?: string;
   error?: string;
   thumbnailUrl?: string; // Thumbnail image URL for grid display
+  duration?: number; // Video duration in seconds
 }
 
 // Convex types placeholder - will be replaced with generated types

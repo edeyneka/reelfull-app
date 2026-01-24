@@ -112,6 +112,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
           status: 'ready' as const,
           projectId: project._id,
           thumbnailUrl: project.thumbnailUrl, // Include thumbnail URL for grid display
+          duration: project.duration, // Video duration in seconds
         }));
 
       // Add draft videos (not yet approved by user)

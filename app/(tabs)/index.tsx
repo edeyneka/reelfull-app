@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Loader2, AlertCircle, FileText, Zap } from 'lucide-react-native';
+import { Loader2, AlertCircle, FileText, Zap, Clock, Calendar } from 'lucide-react-native';
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
   Dimensions,
@@ -42,6 +42,32 @@ const ACTION_SHEET_HEIGHT = 44; // Approximate height of the delete button
 // Bottom padding to account for the floating tab bar
 const TAB_BAR_HEIGHT = 100;
 
+// Helper function to format duration (seconds to "M:SS" format)
+const formatDuration = (seconds?: number): string | null => {
+  if (seconds === undefined || seconds === null) return null;
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+};
+
+// Helper function to format date ("Jan 12" for current year, "Jan 12, 2024" for other years)
+const formatVideoDate = (timestamp: number): string => {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const videoYear = date.getFullYear();
+  
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const month = months[date.getMonth()];
+  const day = date.getDate();
+  
+  if (videoYear === currentYear) {
+    return `${month} ${day}`;
+  } else {
+    return `${month} ${day}, ${videoYear}`;
+  }
+};
+
 function VideoThumbnail({ 
   item, 
   onPress, 
@@ -56,6 +82,9 @@ function VideoThumbnail({
   const spinAnim = useRef(new Animated.Value(0)).current;
   const thumbnailRef = useRef<View>(null);
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  
+  const formattedDuration = formatDuration(item.duration);
+  const formattedDate = formatVideoDate(item.createdAt);
 
   const isImageUrl = (url?: string) => {
     if (!url) return false;
@@ -332,6 +361,19 @@ return (
         <Text style={styles.thumbnailPrompt} numberOfLines={1} ellipsizeMode="tail">
           {item.name || item.prompt}
         </Text>
+      </View>
+      {/* Video metadata row */}
+      <View style={styles.videoMetadataRow}>
+        {formattedDuration && (
+          <View style={styles.metadataItem}>
+            <Clock size={12} color="rgba(255,255,255,0.8)" strokeWidth={2} />
+            <Text style={styles.metadataText}>{formattedDuration}</Text>
+          </View>
+        )}
+        <View style={styles.metadataItem}>
+          <Calendar size={12} color="rgba(255,255,255,0.8)" strokeWidth={2} />
+          <Text style={styles.metadataText}>{formattedDate}</Text>
+        </View>
       </View>
       </TouchableOpacity>
       {isSelected && <View style={styles.selectedBorder} />}
@@ -722,7 +764,7 @@ const styles = StyleSheet.create({
   },
   thumbnailOverlay: {
     position: 'absolute',
-    bottom: 8,
+    bottom: 32,
     left: 8,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -734,6 +776,29 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: Fonts.regular,
     color: Colors.white,
+  },
+  videoMetadataRow: {
+    position: 'absolute',
+    bottom: 6,
+    left: 8,
+    right: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  metadataItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 4,
+    gap: 4,
+  },
+  metadataText: {
+    fontSize: 10,
+    fontFamily: Fonts.regular,
+    color: 'rgba(255, 255, 255, 0.9)',
   },
   errorThumbnail: {
     flex: 1,
