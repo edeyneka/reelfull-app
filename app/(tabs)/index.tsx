@@ -34,9 +34,10 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const ITEM_SPACING = 8;
 const ITEM_WIDTH = (SCREEN_WIDTH - ITEM_SPACING * 3) / 2;
+const ACTION_SHEET_HEIGHT = 44; // Approximate height of the delete button
 
 // Bottom padding to account for the floating tab bar
 const TAB_BAR_HEIGHT = 100;
@@ -604,7 +605,10 @@ export default function FeedTab() {
                 left: actionSheetPosition.columnIndex === 1
                   ? actionSheetPosition.pageX - 108
                   : actionSheetPosition.pageX + actionSheetPosition.width + 8,
-                top: actionSheetPosition.pageY + actionSheetPosition.height - 38,
+                // Position above the video if it's near the bottom of the screen
+                top: actionSheetPosition.pageY + actionSheetPosition.height + ACTION_SHEET_HEIGHT + TAB_BAR_HEIGHT > SCREEN_HEIGHT
+                  ? actionSheetPosition.pageY - ACTION_SHEET_HEIGHT + 10 // Above the video
+                  : actionSheetPosition.pageY + actionSheetPosition.height - 38, // Below the video (original)
               },
             ]}
           >
