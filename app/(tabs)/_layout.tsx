@@ -16,7 +16,7 @@ function CustomTabBar({ state, descriptors, navigation }: TabBarProps) {
   const router = useRouter();
 
   const getIcon = (routeName: string, isFocused: boolean) => {
-    const color = isFocused ? Colors.white : Colors.grayLight;
+    const color = isFocused ? Colors.white : 'rgba(255, 255, 255, 0.5)';
     const size = 26;
     const strokeWidth = isFocused ? 2.5 : 2;
 
@@ -39,11 +39,14 @@ function CustomTabBar({ state, descriptors, navigation }: TabBarProps) {
     <View style={[styles.tabBarWrapper, { paddingBottom: insets.bottom + 8 }]}>
       <View style={styles.tabBarContainer}>
         {Platform.OS === 'ios' ? (
-          <BlurView intensity={80} tint="dark" style={styles.blurBackground} />
+          <BlurView intensity={40} tint="dark" style={styles.blurBackground} />
         ) : (
           <View style={styles.androidBackground} />
         )}
-        
+
+        {/* Glass border overlay */}
+        <View style={styles.glassBorder} />
+
         <View style={styles.tabBarContent}>
           {/* Home Tab */}
           <TouchableOpacity
@@ -118,14 +121,26 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     overflow: 'hidden',
     position: 'relative',
+    // Outer shadow for depth
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 10,
   },
   blurBackground: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(30, 30, 30, 0.85)',
+    backgroundColor: 'rgba(164, 164, 164, 0.08)',
   },
   androidBackground: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(30, 30, 30, 0.95)',
+    backgroundColor: 'rgba(40, 40, 40, 0.85)',
+  },
+  glassBorder: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 32,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   tabBarContent: {
     flex: 1,
