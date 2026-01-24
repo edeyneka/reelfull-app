@@ -35,8 +35,10 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 }
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const ITEM_SPACING = 8;
+const ITEM_SPACING = 12;
 const ITEM_WIDTH = (SCREEN_WIDTH - ITEM_SPACING * 3) / 2;
+const THUMBNAIL_HEIGHT = ITEM_WIDTH * 1.2; // Thumbnail aspect ratio
+const CARD_HEIGHT = THUMBNAIL_HEIGHT + 47; // Extra space for metadata below
 const ACTION_SHEET_HEIGHT = 44; // Approximate height of the delete button
 
 // Bottom padding to account for the floating tab bar
@@ -166,132 +168,67 @@ function VideoThumbnail({
     outputRange: ['0deg', '360deg'],
   });
 
-  if (item.status === 'draft') {
-    return (
-      <Animated.View 
-        ref={thumbnailRef} 
-        style={[
-          styles.thumbnailContainer,
-          { 
-            transform: [{ scale: scaleAnim }],
-            zIndex: isSelected ? 1000 : 1,
-          }
-        ]} 
-        collapsable={false}
-      >
-        <TouchableOpacity 
-          style={styles.thumbnailTouchable}
-          onPress={onPress}
-          onLongPress={handleLongPress}
-          activeOpacity={0.9}
-          delayLongPress={500}
-        >
-          {effectiveThumbnailUrl ? (
-            <>
-              <Image
-                source={{ uri: effectiveThumbnailUrl }}
-                style={styles.thumbnail}
-                resizeMode="cover"
-              />
-              <View style={styles.draftOverlay}>
-                <FileText size={36} color={Colors.white} strokeWidth={2} />
-                <Text style={styles.draftText}>Draft</Text>
-              </View>
-            </>
-          ) : (
-            <View style={styles.draftThumbnail}>
-              <FileText size={36} color={Colors.white} strokeWidth={2} />
+  // Render thumbnail content based on status
+  const renderThumbnailContent = () => {
+    if (item.status === 'draft') {
+      if (effectiveThumbnailUrl) {
+        return (
+          <>
+            <Image
+              source={{ uri: effectiveThumbnailUrl }}
+              style={styles.thumbnail}
+              resizeMode="cover"
+            />
+            <View style={styles.draftOverlay}>
+              <FileText size={28} color={Colors.white} strokeWidth={2} />
               <Text style={styles.draftText}>Draft</Text>
             </View>
-          )}
-          <View style={styles.thumbnailOverlay}>
-            <Text style={styles.thumbnailPrompt} numberOfLines={1} ellipsizeMode="tail">
-              {item.name || item.prompt}
-            </Text>
-          </View>
-        </TouchableOpacity>
-        {isSelected && <View style={styles.selectedBorder} />}
-      </Animated.View>
-    );
-  }
+          </>
+        );
+      }
+      return (
+        <View style={styles.draftThumbnail}>
+          <FileText size={28} color={Colors.white} strokeWidth={2} />
+          <Text style={styles.draftText}>Draft</Text>
+        </View>
+      );
+    }
 
-  if (item.status === 'pending' || item.status === 'processing') {
-    return (
-      <Animated.View 
-        ref={thumbnailRef} 
-        style={[
-          styles.thumbnailContainer,
-          { 
-            transform: [{ scale: scaleAnim }],
-            zIndex: isSelected ? 1000 : 1,
-          }
-        ]} 
-        collapsable={false}
-      >
-        <TouchableOpacity 
-          style={styles.thumbnailTouchable}
-          onLongPress={handleLongPress}
-          activeOpacity={0.9}
-          delayLongPress={500}
-        >
-          {effectiveThumbnailUrl ? (
-            <>
-              <Image
-                source={{ uri: effectiveThumbnailUrl }}
-                style={styles.thumbnail}
-                resizeMode="cover"
-              />
-              <View style={styles.processingOverlay}>
-                <Animated.View style={{ transform: [{ rotate: spin }] }}>
-                  <Loader2 size={40} color={Colors.orange} strokeWidth={2} />
-                </Animated.View>
-                <Text style={styles.processingText}>
-                  {item.status === 'pending' ? 'Queued...' : 'Generating...'}
-                </Text>
-              </View>
-            </>
-          ) : (
-            <View style={styles.processingThumbnail}>
+    if (item.status === 'pending' || item.status === 'processing') {
+      if (effectiveThumbnailUrl) {
+        return (
+          <>
+            <Image
+              source={{ uri: effectiveThumbnailUrl }}
+              style={styles.thumbnail}
+              resizeMode="cover"
+            />
+            <View style={styles.processingOverlay}>
               <Animated.View style={{ transform: [{ rotate: spin }] }}>
-                <Loader2 size={40} color={Colors.orange} strokeWidth={2} />
+                <Loader2 size={32} color={Colors.orange} strokeWidth={2} />
               </Animated.View>
               <Text style={styles.processingText}>
                 {item.status === 'pending' ? 'Queued...' : 'Generating...'}
               </Text>
             </View>
-          )}
-        <View style={styles.thumbnailOverlay}>
-          <Text style={styles.thumbnailPrompt} numberOfLines={1} ellipsizeMode="tail">
-            {item.name || item.prompt}
+          </>
+        );
+      }
+      return (
+        <View style={styles.processingThumbnail}>
+          <Animated.View style={{ transform: [{ rotate: spin }] }}>
+            <Loader2 size={32} color={Colors.orange} strokeWidth={2} />
+          </Animated.View>
+          <Text style={styles.processingText}>
+            {item.status === 'pending' ? 'Queued...' : 'Generating...'}
           </Text>
         </View>
-      </TouchableOpacity>
-      {isSelected && <View style={styles.selectedBorder} />}
-    </Animated.View>
-  );
-}
+      );
+    }
 
-if (item.status === 'failed') {
-  return (
-    <Animated.View 
-      ref={thumbnailRef} 
-      style={[
-        styles.thumbnailContainer,
-        { 
-          transform: [{ scale: scaleAnim }],
-          zIndex: isSelected ? 1000 : 1,
-        }
-      ]} 
-      collapsable={false}
-    >
-      <TouchableOpacity
-        style={styles.thumbnailTouchable}
-        onPress={() => Alert.alert('Generation Failed', item.error || 'Video generation failed. Please try again.')}
-        onLongPress={handleLongPress}
-        activeOpacity={0.9}
-        delayLongPress={500}
-      >
-        {effectiveThumbnailUrl ? (
+    if (item.status === 'failed') {
+      if (effectiveThumbnailUrl) {
+        return (
           <>
             <Image
               source={{ uri: effectiveThumbnailUrl }}
@@ -299,84 +236,103 @@ if (item.status === 'failed') {
               resizeMode="cover"
             />
             <View style={styles.errorOverlay}>
-              <AlertCircle size={32} color={Colors.white} strokeWidth={2} />
+              <AlertCircle size={28} color={Colors.white} strokeWidth={2} />
               <Text style={styles.errorText}>Failed</Text>
             </View>
           </>
-        ) : (
-          <View style={styles.errorThumbnail}>
-            <AlertCircle size={32} color={Colors.white} strokeWidth={2} />
-            <Text style={styles.errorText}>Failed</Text>
-          </View>
-        )}
-        <View style={styles.thumbnailOverlay}>
-          <Text style={styles.thumbnailPrompt} numberOfLines={1} ellipsizeMode="tail">
-            {item.name || item.prompt}
-          </Text>
-        </View>
-      </TouchableOpacity>
-      {isSelected && <View style={styles.selectedBorder} />}
-    </Animated.View>
-  );
-}
-
-return (
-  <Animated.View 
-    ref={thumbnailRef} 
-    style={[
-      styles.thumbnailContainer,
-      { 
-        transform: [{ scale: scaleAnim }],
-        zIndex: isSelected ? 1000 : 1,
+        );
       }
-    ]} 
-    collapsable={false}
-  >
-    <TouchableOpacity
-      style={styles.thumbnailTouchable}
-      onPress={onPress}
-      onLongPress={handleLongPress}
-      activeOpacity={0.9}
-      delayLongPress={500}
-    >
-      {effectiveThumbnailUrl ? (
+      return (
+        <View style={styles.errorThumbnail}>
+          <AlertCircle size={28} color={Colors.white} strokeWidth={2} />
+          <Text style={styles.errorText}>Failed</Text>
+        </View>
+      );
+    }
+
+    // Ready status
+    if (effectiveThumbnailUrl) {
+      return (
         <Image
           source={{ uri: effectiveThumbnailUrl }}
           style={styles.thumbnail}
           resizeMode="cover"
         />
-      ) : shouldUseVideoPreview ? (
+      );
+    }
+    if (shouldUseVideoPreview) {
+      return (
         <VideoView
           player={thumbnailPlayer}
           style={styles.thumbnail}
           contentFit="cover"
           nativeControls={false}
         />
-      ) : (
-        <View style={styles.noThumbnailContainer}>
-          <Text style={styles.noThumbnailText}>No Thumbnail</Text>
-        </View>
-      )}
-      <View style={styles.thumbnailOverlay}>
-        <Text style={styles.thumbnailPrompt} numberOfLines={1} ellipsizeMode="tail">
-          {item.name || item.prompt}
-        </Text>
+      );
+    }
+    return (
+      <View style={styles.noThumbnailContainer}>
+        <Text style={styles.noThumbnailText}>No Thumbnail</Text>
       </View>
-      {/* Video metadata row */}
-      <View style={styles.videoMetadataRow}>
-        {formattedDuration && (
-          <View style={styles.metadataItem}>
-            <Clock size={12} color="rgba(255,255,255,0.8)" strokeWidth={2} />
-            <Text style={styles.metadataText}>{formattedDuration}</Text>
+    );
+  };
+
+  // Handle press based on status
+  const handlePress = () => {
+    if (item.status === 'failed') {
+      Alert.alert('Generation Failed', item.error || 'Video generation failed. Please try again.');
+      return;
+    }
+    if (item.status === 'pending' || item.status === 'processing') {
+      return;
+    }
+    onPress();
+  };
+
+  return (
+    <Animated.View
+      ref={thumbnailRef}
+      style={[
+        styles.cardContainer,
+        {
+          transform: [{ scale: scaleAnim }],
+          zIndex: isSelected ? 1000 : 1,
+        }
+      ]}
+      collapsable={false}
+    >
+      <TouchableOpacity
+        style={styles.cardTouchable}
+        onPress={handlePress}
+        onLongPress={handleLongPress}
+        activeOpacity={0.9}
+        delayLongPress={500}
+      >
+        {/* Thumbnail Card */}
+        <View style={styles.thumbnailCard}>
+          {renderThumbnailContent()}
+          {isSelected && <View style={styles.selectedBorder} />}
+        </View>
+
+        {/* Metadata Section - Outside the thumbnail */}
+        <View style={styles.metadataContainer}>
+          <Text style={styles.cardTitle} numberOfLines={1} ellipsizeMode="tail">
+            {item.name || item.prompt}
+          </Text>
+          <View style={styles.metadataRow}>
+            {formattedDuration && (
+              <View style={styles.metadataItem}>
+                <Clock size={12} color={Colors.grayLight} strokeWidth={2} />
+                <Text style={styles.metadataText}>{formattedDuration}</Text>
+              </View>
+            )}
+            <View style={styles.metadataItem}>
+              <Calendar size={12} color={Colors.grayLight} strokeWidth={2} />
+              <Text style={styles.metadataText}>{formattedDate}</Text>
+            </View>
           </View>
-        )}
-        <View style={styles.metadataItem}>
-          <Calendar size={12} color="rgba(255,255,255,0.8)" strokeWidth={2} />
-          <Text style={styles.metadataText}>{formattedDate}</Text>
         </View>
-      </View>
       </TouchableOpacity>
-      {isSelected && <View style={styles.selectedBorder} />}
     </Animated.View>
   );
 }
@@ -751,10 +707,21 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: ITEM_SPACING,
   },
-  thumbnailContainer: {
+  // New card-based layout
+  cardContainer: {
     width: ITEM_WIDTH,
-    height: ITEM_WIDTH * 1.5,
-    borderRadius: 12,
+    height: CARD_HEIGHT,
+    backgroundColor: Colors.grayDark,
+    borderRadius: 14,
+    padding: 8,
+  },
+  cardTouchable: {
+    flex: 1,
+  },
+  thumbnailCard: {
+    width: '100%',
+    height: THUMBNAIL_HEIGHT - 16, // Account for padding
+    borderRadius: 14,
     overflow: 'hidden',
     backgroundColor: Colors.gray,
   },
@@ -762,43 +729,39 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  thumbnailOverlay: {
-    position: 'absolute',
-    bottom: 32,
-    left: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
-    borderRadius: 6,
-    maxWidth: ITEM_WIDTH - 16,
+  metadataContainer: {
+    paddingTop: 8,
+    paddingHorizontal: 0,
   },
-  thumbnailPrompt: {
-    fontSize: 11,
-    fontFamily: Fonts.regular,
+  cardTitle: {
+    fontSize: 15,
+    fontFamily: Fonts.title,
+    fontWeight: '600',
     color: Colors.white,
+    marginBottom: 4,
   },
-  videoMetadataRow: {
-    position: 'absolute',
-    bottom: 6,
-    left: 8,
-    right: 8,
+  metadataRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 12,
   },
   metadataItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 4,
     gap: 4,
   },
   metadataText: {
-    fontSize: 10,
+    fontSize: 12,
     fontFamily: Fonts.regular,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: Colors.grayLight,
+  },
+  // Legacy styles (kept for compatibility)
+  thumbnailContainer: {
+    width: ITEM_WIDTH,
+    height: ITEM_WIDTH * 1.5,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: Colors.gray,
   },
   errorThumbnail: {
     flex: 1,
@@ -971,7 +934,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     borderWidth: 3,
     borderColor: Colors.orange,
-    borderRadius: 12,
+    borderRadius: 16,
     pointerEvents: 'none',
   },
 });
