@@ -68,7 +68,7 @@ function AppContent() {
       <Stack.Screen name="index" />
       <Stack.Screen name="auth" />
       <Stack.Screen name="onboarding" />
-      <Stack.Screen name="feed" options={{ animation: 'fade' }} />
+      <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
       <Stack.Screen name="composer" options={{ gestureEnabled: false }} />
       <Stack.Screen name="script-review" options={{ gestureEnabled: false }} />
       <Stack.Screen name="video-preview" options={{ gestureEnabled: false }} />

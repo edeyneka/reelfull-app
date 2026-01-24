@@ -248,7 +248,7 @@ export default function ScriptReviewScreen() {
           style: 'default',
           onPress: () => {
             // Navigate to feed immediately
-            router.replace('/feed');
+            router.replace('/(tabs)');
           }
         }]
       );

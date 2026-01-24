@@ -100,7 +100,7 @@ export default function IntroScreen() {
         router.replace('/onboarding');
       } else {
         // Normal mode: go to feed
-        router.replace('/feed');
+        router.replace('/(tabs)');
       }
     } else {
       // No user, go to auth

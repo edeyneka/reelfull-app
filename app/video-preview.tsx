@@ -80,7 +80,7 @@ export default function VideoPreviewScreen() {
     // In test mode, navigate directly to feed since the navigation stack may be inconsistent
     // In production, router.back() goes to feed (since video-preview is opened from feed)
     if (isTestMode) {
-      router.replace('/feed');
+      router.replace('/(tabs)');
     } else {
       router.back();
     }
@@ -237,7 +237,7 @@ export default function VideoPreviewScreen() {
           thumbnailUrl: thumbnailUrl,
         });
 
-        router.replace('/feed');
+        router.replace('/(tabs)');
       } else {
         throw new Error('Failed to create regenerated project');
       }
