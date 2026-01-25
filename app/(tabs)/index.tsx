@@ -840,7 +840,7 @@ const styles = StyleSheet.create({
   },
   tabBackground: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(30, 30, 32, 0.85)',
+    backgroundColor: 'rgba(164, 164, 164, 0.08)',
     borderRadius: 28,
     padding: 4,
     overflow: 'hidden',
@@ -865,7 +865,7 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: 16,
     fontFamily: Fonts.regular,
-    color: Colors.grayLight,
+    color: 'rgba(255, 255, 255, 0.5)',
   },
   tabTextActive: {
     color: Colors.white,
