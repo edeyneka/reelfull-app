@@ -23,5 +23,32 @@ export interface Video {
   duration?: number; // Video duration in seconds
 }
 
+// Chat message types for conversational script refinement
+export type ChatMessageRole = 'user' | 'assistant' | 'system';
+
+export interface ChatMessage {
+  id: string;
+  projectId: string;
+  role: ChatMessageRole;
+  content: string;
+  mediaIds?: string[];
+  mediaUrls?: string[]; // Populated URLs for display
+  isEdited?: boolean;
+  originalContent?: string;
+  createdAt: number;
+  messageIndex?: number; // 1-10 for user messages
+}
+
+// Local chat message for UI before syncing with backend
+export interface LocalChatMessage {
+  id: string; // Temporary local ID
+  role: ChatMessageRole;
+  content: string;
+  mediaUris?: Array<{ uri: string; type: 'image' | 'video'; storageId?: string }>;
+  isEdited?: boolean;
+  createdAt: number;
+  isLoading?: boolean; // For AI response loading state
+}
+
 // Convex types placeholder - will be replaced with generated types
 export type ConvexId<T extends string> = string & { __tableName: T };

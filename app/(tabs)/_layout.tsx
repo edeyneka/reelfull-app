@@ -31,8 +31,8 @@ function CustomTabBar({ state, descriptors, navigation }: TabBarProps) {
   };
 
   const handleCreatePress = () => {
-    // Navigate to composer (outside of tabs)
-    router.push('/composer');
+    // Navigate to chat-based composer (new conversational UX)
+    router.push('/chat-composer');
   };
 
   return (

@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { X, Download, Copy, Check, RefreshCw, Mic, MicOff, Music, Music2, Subtitles } from 'lucide-react-native';
+import { X, Download, Copy, Check, RefreshCw, Mic, MicOff, Music, Music2, Subtitles, MessageSquare } from 'lucide-react-native';
 import { useState, useEffect } from 'react';
 import {
   Alert,
@@ -256,6 +256,16 @@ export default function VideoPreviewScreen() {
     }
   };
 
+  const handleChatHistory = () => {
+    // Navigate to chat composer with this project's chat history
+    if (projectId) {
+      router.push({
+        pathname: '/chat-composer',
+        params: { projectId, fromVideo: 'true' },
+      });
+    }
+  };
+
   if (!videoUri) {
     return (
       <View style={styles.container}>
@@ -296,7 +306,16 @@ export default function VideoPreviewScreen() {
           <X size={24} color={Colors.white} strokeWidth={2} />
         </TouchableOpacity>
         <View style={styles.placeholder} />
-        <View style={styles.placeholder} />
+        {projectId && !isTestMode && (
+          <TouchableOpacity
+            style={styles.chatButton}
+            onPress={handleChatHistory}
+            activeOpacity={0.7}
+          >
+            <MessageSquare size={22} color={Colors.white} strokeWidth={2} />
+          </TouchableOpacity>
+        )}
+        {(!projectId || isTestMode) && <View style={styles.placeholder} />}
       </View>
 
       <ScrollView
@@ -467,6 +486,12 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.black,
   },
   closeButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  chatButton: {
     width: 40,
     height: 40,
     justifyContent: 'center',
