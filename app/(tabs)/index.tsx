@@ -403,14 +403,14 @@ export default function FeedTab() {
     return [...videos].sort((a, b) => b.createdAt - a.createdAt);
   }, [videos]);
 
-  // Filter videos based on active tab
-  const filteredVideos = useMemo(() => {
-    if (activeTab === 'drafts') {
-      return sortedVideos.filter(v => v.status === 'draft');
-    }
-    // Projects tab: everything except drafts
+  // Pre-filter videos for both tabs (not dependent on activeTab to prevent re-renders)
+  const projectVideos = useMemo(() => {
     return sortedVideos.filter(v => v.status !== 'draft');
-  }, [sortedVideos, activeTab]);
+  }, [sortedVideos]);
+
+  const draftVideos = useMemo(() => {
+    return sortedVideos.filter(v => v.status === 'draft');
+  }, [sortedVideos]);
 
   // Animate tab indicator when tab changes
   useEffect(() => {
@@ -535,32 +535,30 @@ export default function FeedTab() {
     router.push('/composer');
   }, [videoGenerationStatus, subscriptionState.isPro, hasCompletedPaywallThisSession, router]);
 
-  const renderEmpty = () => (
+  const renderProjectsEmpty = useCallback(() => (
     <View style={styles.emptyContainer}>
-      {activeTab === 'projects' ? (
-        <>
-          <Text style={styles.emptyTitle}>Start a project!</Text>
-          <Text style={styles.emptySubtitle}>
-            Upload your photos and videos and let the magic begin!
-          </Text>
-          <TouchableOpacity
-            style={styles.startCreatingButton}
-            onPress={handleCreateNew}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.startCreatingText}>Start Creating</Text>
-          </TouchableOpacity>
-        </>
-      ) : (
-        <>
-          <Text style={styles.emptyTitle}>No drafts yet</Text>
-          <Text style={styles.emptySubtitle}>
-            Your unfinished projects will appear here
-          </Text>
-        </>
-      )}
+      <Text style={styles.emptyTitle}>Start a project!</Text>
+      <Text style={styles.emptySubtitle}>
+        Upload your photos and videos and let the magic begin!
+      </Text>
+      <TouchableOpacity
+        style={styles.startCreatingButton}
+        onPress={handleCreateNew}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.startCreatingText}>Start Creating</Text>
+      </TouchableOpacity>
     </View>
-  );
+  ), [handleCreateNew]);
+
+  const renderDraftsEmpty = useCallback(() => (
+    <View style={styles.emptyContainer}>
+      <Text style={styles.emptyTitle}>No drafts yet</Text>
+      <Text style={styles.emptySubtitle}>
+        Your unfinished projects will appear here
+      </Text>
+    </View>
+  ), []);
 
   const getCreditsDisplay = () => {
     if (!videoGenerationStatus) return null;
@@ -643,24 +641,49 @@ export default function FeedTab() {
         </View>
       </View>
 
-      <FlatList
-        data={filteredVideos}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        numColumns={2}
-        columnWrapperStyle={styles.row}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.grid, { paddingBottom: TAB_BAR_HEIGHT }]}
-        ListEmptyComponent={renderEmpty}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={handleRefresh}
-            tintColor={Colors.orange}
-            colors={[Colors.orange]}
+      {/* Dual FlatLists to prevent reload on tab switch */}
+      <View style={styles.listsContainer}>
+        <View style={[styles.listWrapper, { opacity: activeTab === 'projects' ? 1 : 0, zIndex: activeTab === 'projects' ? 1 : 0 }]} pointerEvents={activeTab === 'projects' ? 'auto' : 'none'}>
+          <FlatList
+            data={projectVideos}
+            renderItem={renderItem}
+            keyExtractor={(item) => item.id}
+            numColumns={2}
+            columnWrapperStyle={styles.row}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={[styles.grid, { paddingBottom: TAB_BAR_HEIGHT }]}
+            ListEmptyComponent={renderProjectsEmpty}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={handleRefresh}
+                tintColor={Colors.orange}
+                colors={[Colors.orange]}
+              />
+            }
           />
-        }
-      />
+        </View>
+        <View style={[styles.listWrapper, { opacity: activeTab === 'drafts' ? 1 : 0, zIndex: activeTab === 'drafts' ? 1 : 0 }]} pointerEvents={activeTab === 'drafts' ? 'auto' : 'none'}>
+          <FlatList
+            data={draftVideos}
+            renderItem={renderItem}
+            keyExtractor={(item) => item.id}
+            numColumns={2}
+            columnWrapperStyle={styles.row}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={[styles.grid, { paddingBottom: TAB_BAR_HEIGHT }]}
+            ListEmptyComponent={renderDraftsEmpty}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={handleRefresh}
+                tintColor={Colors.orange}
+                colors={[Colors.orange]}
+              />
+            }
+          />
+        </View>
+      </View>
 
       {/* Action Sheet Modal */}
       {showActionSheet && (
@@ -784,6 +807,17 @@ const styles = StyleSheet.create({
   },
   grid: {
     padding: ITEM_SPACING,
+  },
+  listsContainer: {
+    flex: 1,
+    position: 'relative',
+  },
+  listWrapper: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   // Segmented Tab Control
   tabContainer: {
