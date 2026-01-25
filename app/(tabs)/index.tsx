@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BlurView } from 'expo-blur';
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Colors from '@/constants/colors';
@@ -43,6 +44,9 @@ const ACTION_SHEET_HEIGHT = 44; // Approximate height of the delete button
 
 // Bottom padding to account for the floating tab bar
 const TAB_BAR_HEIGHT = 100;
+
+// Height of the floating segmented tab control
+const SEGMENTED_TAB_HEIGHT = 60;
 
 // Helper function to format duration (seconds to "M:SS" format)
 const formatDuration = (seconds?: number): string | null => {
@@ -602,86 +606,89 @@ export default function FeedTab() {
         </View>
       </View>
 
-      {/* Segmented Tab Control */}
-      <View style={styles.tabContainer}>
-        <View style={styles.tabBackground}>
-          <Animated.View
-            style={[
-              styles.tabIndicator,
-              {
-                transform: [
-                  {
-                    translateX: tabIndicatorAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0, (SCREEN_WIDTH - 80) / 2],
-                    }),
-                  },
-                ],
-              },
-            ]}
-          />
-          <TouchableOpacity
-            style={styles.tabButton}
-            onPress={() => setActiveTab('projects')}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.tabText, activeTab === 'projects' && styles.tabTextActive]}>
-              Projects
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.tabButton}
-            onPress={() => setActiveTab('drafts')}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.tabText, activeTab === 'drafts' && styles.tabTextActive]}>
-              Drafts
-            </Text>
-          </TouchableOpacity>
+      {/* Content area with floating tab */}
+      <View style={styles.contentArea}>
+        {/* Floating Oval Segmented Tab Control */}
+        <View style={styles.tabContainer}>
+          <BlurView intensity={60} tint="dark" style={styles.tabBackground}>
+            <Animated.View
+              style={[
+                styles.tabIndicator,
+                {
+                  transform: [
+                    {
+                      translateX: tabIndicatorAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0, (SCREEN_WIDTH - 80 - 8) / 2],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            />
+            <TouchableOpacity
+              style={styles.tabButton}
+              onPress={() => setActiveTab('projects')}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.tabText, activeTab === 'projects' && styles.tabTextActive]}>
+                Projects
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.tabButton}
+              onPress={() => setActiveTab('drafts')}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.tabText, activeTab === 'drafts' && styles.tabTextActive]}>
+                Drafts
+              </Text>
+            </TouchableOpacity>
+          </BlurView>
         </View>
-      </View>
 
-      {/* Dual FlatLists to prevent reload on tab switch */}
-      <View style={styles.listsContainer}>
-        <View style={[styles.listWrapper, { opacity: activeTab === 'projects' ? 1 : 0, zIndex: activeTab === 'projects' ? 1 : 0 }]} pointerEvents={activeTab === 'projects' ? 'auto' : 'none'}>
-          <FlatList
-            data={projectVideos}
-            renderItem={renderItem}
-            keyExtractor={(item) => item.id}
-            numColumns={2}
-            columnWrapperStyle={styles.row}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={[styles.grid, { paddingBottom: TAB_BAR_HEIGHT }]}
-            ListEmptyComponent={renderProjectsEmpty}
-            refreshControl={
-              <RefreshControl
-                refreshing={isRefreshing}
-                onRefresh={handleRefresh}
-                tintColor={Colors.orange}
-                colors={[Colors.orange]}
-              />
-            }
-          />
-        </View>
-        <View style={[styles.listWrapper, { opacity: activeTab === 'drafts' ? 1 : 0, zIndex: activeTab === 'drafts' ? 1 : 0 }]} pointerEvents={activeTab === 'drafts' ? 'auto' : 'none'}>
-          <FlatList
-            data={draftVideos}
-            renderItem={renderItem}
-            keyExtractor={(item) => item.id}
-            numColumns={2}
-            columnWrapperStyle={styles.row}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={[styles.grid, { paddingBottom: TAB_BAR_HEIGHT }]}
-            ListEmptyComponent={renderDraftsEmpty}
-            refreshControl={
-              <RefreshControl
-                refreshing={isRefreshing}
-                onRefresh={handleRefresh}
-                tintColor={Colors.orange}
-                colors={[Colors.orange]}
-              />
-            }
-          />
+        {/* Dual FlatLists to prevent reload on tab switch */}
+        <View style={styles.listsContainer}>
+          <View style={[styles.listWrapper, { opacity: activeTab === 'projects' ? 1 : 0, zIndex: activeTab === 'projects' ? 1 : 0 }]} pointerEvents={activeTab === 'projects' ? 'auto' : 'none'}>
+            <FlatList
+              data={projectVideos}
+              renderItem={renderItem}
+              keyExtractor={(item) => item.id}
+              numColumns={2}
+              columnWrapperStyle={styles.row}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={[styles.grid, { paddingTop: SEGMENTED_TAB_HEIGHT + 8, paddingBottom: TAB_BAR_HEIGHT }]}
+              ListEmptyComponent={renderProjectsEmpty}
+              refreshControl={
+                <RefreshControl
+                  refreshing={isRefreshing}
+                  onRefresh={handleRefresh}
+                  tintColor={Colors.orange}
+                  colors={[Colors.orange]}
+                />
+              }
+            />
+          </View>
+          <View style={[styles.listWrapper, { opacity: activeTab === 'drafts' ? 1 : 0, zIndex: activeTab === 'drafts' ? 1 : 0 }]} pointerEvents={activeTab === 'drafts' ? 'auto' : 'none'}>
+            <FlatList
+              data={draftVideos}
+              renderItem={renderItem}
+              keyExtractor={(item) => item.id}
+              numColumns={2}
+              columnWrapperStyle={styles.row}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={[styles.grid, { paddingTop: SEGMENTED_TAB_HEIGHT + 8, paddingBottom: TAB_BAR_HEIGHT }]}
+              ListEmptyComponent={renderDraftsEmpty}
+              refreshControl={
+                <RefreshControl
+                  refreshing={isRefreshing}
+                  onRefresh={handleRefresh}
+                  tintColor={Colors.orange}
+                  colors={[Colors.orange]}
+                />
+              }
+            />
+          </View>
         </View>
       </View>
 
@@ -808,6 +815,10 @@ const styles = StyleSheet.create({
   grid: {
     padding: ITEM_SPACING,
   },
+  contentArea: {
+    flex: 1,
+    position: 'relative',
+  },
   listsContainer: {
     flex: 1,
     position: 'relative',
@@ -819,23 +830,25 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
   },
-  // Segmented Tab Control
+  // Floating Oval Segmented Tab Control
   tabContainer: {
-    paddingHorizontal: 40,
-    paddingBottom: 0,
-    backgroundColor: Colors.black,
+    position: 'absolute',
+    top: 8,
+    left: 40,
+    right: 40,
+    zIndex: 100,
   },
   tabBackground: {
     flexDirection: 'row',
-    backgroundColor: Colors.grayDark,
+    backgroundColor: 'rgba(30, 30, 32, 0.85)',
     borderRadius: 28,
     padding: 4,
-    position: 'relative',
+    overflow: 'hidden',
   },
   tabIndicator: {
     position: 'absolute',
     height: '100%',
-    backgroundColor: '#3A3A3C',
+    backgroundColor: 'rgba(58, 58, 60, 0.9)',
     borderRadius: 24,
     top: 4,
     left: 4,
@@ -843,7 +856,7 @@ const styles = StyleSheet.create({
   },
   tabButton: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 10,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 24,
