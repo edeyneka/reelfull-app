@@ -740,6 +740,7 @@ const styles = StyleSheet.create({
   thumbnail: {
     width: '100%',
     height: '100%',
+    borderRadius: 14,
   },
   metadataContainer: {
     paddingTop: 8,
@@ -946,7 +947,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     borderWidth: 3,
     borderColor: Colors.orange,
-    borderRadius: 16,
+    borderRadius: 14,
     pointerEvents: 'none',
   },
 });
