@@ -16,7 +16,7 @@ export interface Video {
   name?: string; // AI-generated project name (e.g., "Summer Vibes")
   script?: string; // The actual generated script
   createdAt: number;
-  status: 'draft' | 'pending' | 'processing' | 'ready' | 'failed';
+  status: 'draft' | 'pending' | 'processing' | 'preparing' | 'ready' | 'failed';
   projectId?: string;
   error?: string;
   thumbnailUrl?: string; // Thumbnail image URL for grid display

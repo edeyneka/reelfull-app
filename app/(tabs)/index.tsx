@@ -143,9 +143,9 @@ function VideoThumbnail({
   }, [isSelected, scaleAnim]);
 
   useEffect(() => {
-    if (item.status === 'pending' || item.status === 'processing') {
+    if (item.status === 'pending' || item.status === 'processing' || item.status === 'preparing') {
       spinAnim.setValue(0);
-      
+
       const animation = Animated.loop(
         Animated.timing(spinAnim, {
           toValue: 1,
@@ -154,9 +154,9 @@ function VideoThumbnail({
           isInteraction: false,
         })
       );
-      
+
       animation.start();
-      
+
       return () => {
         animation.stop();
       };
@@ -194,7 +194,13 @@ function VideoThumbnail({
       );
     }
 
-    if (item.status === 'pending' || item.status === 'processing') {
+    if (item.status === 'pending' || item.status === 'processing' || item.status === 'preparing') {
+      const statusText = item.status === 'pending'
+        ? 'Queued...'
+        : item.status === 'preparing'
+          ? 'Preparing...'
+          : 'Generating...';
+
       if (effectiveThumbnailUrl) {
         return (
           <>
@@ -207,9 +213,7 @@ function VideoThumbnail({
               <Animated.View style={{ transform: [{ rotate: spin }] }}>
                 <Loader2 size={32} color={Colors.orange} strokeWidth={2} />
               </Animated.View>
-              <Text style={styles.processingText}>
-                {item.status === 'pending' ? 'Queued...' : 'Generating...'}
-              </Text>
+              <Text style={styles.processingText}>{statusText}</Text>
             </View>
           </>
         );
@@ -219,9 +223,7 @@ function VideoThumbnail({
           <Animated.View style={{ transform: [{ rotate: spin }] }}>
             <Loader2 size={32} color={Colors.orange} strokeWidth={2} />
           </Animated.View>
-          <Text style={styles.processingText}>
-            {item.status === 'pending' ? 'Queued...' : 'Generating...'}
-          </Text>
+          <Text style={styles.processingText}>{statusText}</Text>
         </View>
       );
     }
@@ -283,7 +285,7 @@ function VideoThumbnail({
       Alert.alert('Generation Failed', item.error || 'Video generation failed. Please try again.');
       return;
     }
-    if (item.status === 'pending' || item.status === 'processing') {
+    if (item.status === 'pending' || item.status === 'processing' || item.status === 'preparing') {
       return;
     }
     onPress();
@@ -347,8 +349,8 @@ export default function FeedTab() {
   const [actionSheetPosition, setActionSheetPosition] = useState({ pageX: 0, pageY: 0, width: 0, height: 0, columnIndex: 0 });
   const [isRefreshing, setIsRefreshing] = useState(false);
   
-  const hasPendingVideos = useMemo(() => 
-    videos.some(v => v.status === 'pending' || v.status === 'processing'),
+  const hasPendingVideos = useMemo(() =>
+    videos.some(v => v.status === 'pending' || v.status === 'processing' || v.status === 'preparing'),
     [videos]
   );
   
@@ -471,6 +473,8 @@ export default function FeedTab() {
             Alert.alert('Error', 'Video is not available. Please try again or contact support.');
           } else if (item.status === 'pending' || item.status === 'processing') {
             Alert.alert('Video Processing', 'Your video is still being generated. You\'ll receive a notification when it\'s ready!');
+          } else if (item.status === 'preparing') {
+            Alert.alert('Almost Ready', 'Your video is ready and preparing for playback. It will be available in a moment!');
           }
         }}
         onLongPress={(position) => {

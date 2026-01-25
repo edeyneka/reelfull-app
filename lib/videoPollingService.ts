@@ -27,9 +27,9 @@ export function useVideoPolling() {
   const pollingInterval = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    // Get all pending/processing videos
+    // Get all pending/processing/preparing videos
     const pendingVideos = videos.filter(
-      v => (v.status === 'pending' || v.status === 'processing') && v.projectId
+      v => (v.status === 'pending' || v.status === 'processing' || v.status === 'preparing') && v.projectId
     );
 
     // If no pending videos, clear interval and return
@@ -70,17 +70,39 @@ export function useVideoPolling() {
           }
           // Priority 2: Check if video is completely ready (has renderedVideoUrl)
           else if (project.status === 'completed' && project.renderedVideoUrl) {
-            // Video is ready! Update if not already marked as ready
+            // Video URL exists - verify it's actually accessible before marking as ready
             if (video.status !== 'ready') {
               // Validate that we have a non-empty video URL
               if (project.renderedVideoUrl && project.renderedVideoUrl.trim().length > 0) {
-                console.log('[VideoPolling] ✅ Video READY:', video.id);
-                console.log('[VideoPolling] Video URL:', project.renderedVideoUrl);
-                console.log('[VideoPolling] Thumbnail URL:', project.thumbnailUrl);
-                updateVideoStatus(video.id, 'ready', project.renderedVideoUrl, undefined, project.thumbnailUrl);
-                
-                // Send notification
-                sendVideoReadyNotification(project.script || project.prompt || 'Your video');
+                // If not already preparing, mark as preparing first
+                if (video.status !== 'preparing') {
+                  console.log('[VideoPolling] ⏳ Video URL exists, verifying CDN accessibility:', video.id);
+                  updateVideoStatus(video.id, 'preparing', project.renderedVideoUrl, undefined, project.thumbnailUrl);
+                }
+
+                // Verify the video URL is actually accessible from client
+                try {
+                  const verifyResponse = await fetch(project.renderedVideoUrl, {
+                    method: 'HEAD',
+                    cache: 'no-store',
+                  });
+
+                  if (verifyResponse.ok) {
+                    console.log('[VideoPolling] ✅ Video READY and VERIFIED:', video.id);
+                    console.log('[VideoPolling] Video URL:', project.renderedVideoUrl);
+                    console.log('[VideoPolling] Thumbnail URL:', project.thumbnailUrl);
+                    updateVideoStatus(video.id, 'ready', project.renderedVideoUrl, undefined, project.thumbnailUrl);
+
+                    // Send notification only after verification passes
+                    sendVideoReadyNotification(project.script || project.prompt || 'Your video');
+                  } else {
+                    console.log('[VideoPolling] ⏳ Video URL not yet accessible (status:', verifyResponse.status, '):', video.id);
+                    // Keep as preparing - will retry on next poll
+                  }
+                } catch (error) {
+                  console.log('[VideoPolling] ⏳ Video URL verification failed (CDN propagating):', video.id, error);
+                  // Keep as preparing - will retry on next poll
+                }
               }
             }
           }
