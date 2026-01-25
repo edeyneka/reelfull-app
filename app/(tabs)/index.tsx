@@ -84,6 +84,7 @@ function VideoThumbnail({
   const spinAnim = useRef(new Animated.Value(0)).current;
   const thumbnailRef = useRef<View>(null);
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const lastPressTimeRef = useRef<number>(0);
   
   const formattedDuration = formatDuration(item.duration);
   const formattedDate = formatVideoDate(item.createdAt);
@@ -279,8 +280,15 @@ function VideoThumbnail({
     );
   };
 
-  // Handle press based on status
+  // Handle press based on status with double-tap prevention
   const handlePress = () => {
+    const now = Date.now();
+    // Prevent double-tap by ignoring presses within 500ms of the last press
+    if (now - lastPressTimeRef.current < 500) {
+      return;
+    }
+    lastPressTimeRef.current = now;
+    
     if (item.status === 'failed') {
       Alert.alert('Generation Failed', item.error || 'Video generation failed. Please try again.');
       return;
