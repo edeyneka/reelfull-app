@@ -356,6 +356,8 @@ export default function FeedTab() {
   const [showActionSheet, setShowActionSheet] = useState(false);
   const [actionSheetPosition, setActionSheetPosition] = useState({ pageX: 0, pageY: 0, width: 0, height: 0, columnIndex: 0 });
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState<'projects' | 'drafts'>('projects');
+  const tabIndicatorAnim = useRef(new Animated.Value(0)).current;
   
   const hasPendingVideos = useMemo(() =>
     videos.some(v => v.status === 'pending' || v.status === 'processing' || v.status === 'preparing'),
@@ -400,6 +402,25 @@ export default function FeedTab() {
   const sortedVideos = useMemo(() => {
     return [...videos].sort((a, b) => b.createdAt - a.createdAt);
   }, [videos]);
+
+  // Filter videos based on active tab
+  const filteredVideos = useMemo(() => {
+    if (activeTab === 'drafts') {
+      return sortedVideos.filter(v => v.status === 'draft');
+    }
+    // Projects tab: everything except drafts
+    return sortedVideos.filter(v => v.status !== 'draft');
+  }, [sortedVideos, activeTab]);
+
+  // Animate tab indicator when tab changes
+  useEffect(() => {
+    Animated.spring(tabIndicatorAnim, {
+      toValue: activeTab === 'projects' ? 0 : 1,
+      useNativeDriver: true,
+      tension: 300,
+      friction: 30,
+    }).start();
+  }, [activeTab, tabIndicatorAnim]);
 
   const handleRefresh = useCallback(() => {
     console.log('[feed] User initiated refresh');
@@ -516,17 +537,28 @@ export default function FeedTab() {
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
-      <Text style={styles.emptyTitle}>Start a project!</Text>
-      <Text style={styles.emptySubtitle}>
-        Upload your photos and videos and let the magic begin!
-      </Text>
-      <TouchableOpacity
-        style={styles.startCreatingButton}
-        onPress={handleCreateNew}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.startCreatingText}>Start Creating</Text>
-      </TouchableOpacity>
+      {activeTab === 'projects' ? (
+        <>
+          <Text style={styles.emptyTitle}>Start a project!</Text>
+          <Text style={styles.emptySubtitle}>
+            Upload your photos and videos and let the magic begin!
+          </Text>
+          <TouchableOpacity
+            style={styles.startCreatingButton}
+            onPress={handleCreateNew}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.startCreatingText}>Start Creating</Text>
+          </TouchableOpacity>
+        </>
+      ) : (
+        <>
+          <Text style={styles.emptyTitle}>No drafts yet</Text>
+          <Text style={styles.emptySubtitle}>
+            Your unfinished projects will appear here
+          </Text>
+        </>
+      )}
     </View>
   );
 
@@ -572,8 +604,47 @@ export default function FeedTab() {
         </View>
       </View>
 
+      {/* Segmented Tab Control */}
+      <View style={styles.tabContainer}>
+        <View style={styles.tabBackground}>
+          <Animated.View
+            style={[
+              styles.tabIndicator,
+              {
+                transform: [
+                  {
+                    translateX: tabIndicatorAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0, (SCREEN_WIDTH - 80) / 2],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          />
+          <TouchableOpacity
+            style={styles.tabButton}
+            onPress={() => setActiveTab('projects')}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.tabText, activeTab === 'projects' && styles.tabTextActive]}>
+              Projects
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.tabButton}
+            onPress={() => setActiveTab('drafts')}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.tabText, activeTab === 'drafts' && styles.tabTextActive]}>
+              Drafts
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
       <FlatList
-        data={sortedVideos}
+        data={filteredVideos}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
         numColumns={2}
@@ -668,7 +739,7 @@ const styles = StyleSheet.create({
   header: {
     paddingLeft: 24,
     paddingRight: ITEM_SPACING,
-    paddingBottom: 16,
+    paddingBottom: 10,
     backgroundColor: Colors.black,
   },
   headerContent: {
@@ -713,6 +784,46 @@ const styles = StyleSheet.create({
   },
   grid: {
     padding: ITEM_SPACING,
+  },
+  // Segmented Tab Control
+  tabContainer: {
+    paddingHorizontal: 40,
+    paddingBottom: 0,
+    backgroundColor: Colors.black,
+  },
+  tabBackground: {
+    flexDirection: 'row',
+    backgroundColor: Colors.grayDark,
+    borderRadius: 28,
+    padding: 4,
+    position: 'relative',
+  },
+  tabIndicator: {
+    position: 'absolute',
+    height: '100%',
+    backgroundColor: '#3A3A3C',
+    borderRadius: 24,
+    top: 4,
+    left: 4,
+    width: (SCREEN_WIDTH - 80 - 8) / 2,
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 24,
+    zIndex: 1,
+  },
+  tabText: {
+    fontSize: 16,
+    fontFamily: Fonts.regular,
+    color: Colors.grayLight,
+  },
+  tabTextActive: {
+    color: Colors.white,
+    fontFamily: Fonts.title,
+    fontWeight: '500',
   },
   row: {
     flexDirection: 'row',
