@@ -473,7 +473,7 @@ export default function FeedTab() {
         onPress={async () => {
           if (item.status === 'draft' && item.projectId) {
             router.push({
-              pathname: '/composer',
+              pathname: '/chat-composer',
               params: { projectId: item.projectId },
             });
           }

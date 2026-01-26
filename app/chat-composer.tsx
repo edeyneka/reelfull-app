@@ -370,12 +370,37 @@ export default function ChatComposerScreen() {
       
       // If coming from video preview, load chat history
       if (existingProject.chatEnabled && existingMessages) {
+        // Create a lookup map from storageId to file metadata for media type detection
+        const metadataByStorageId = new Map<string, { contentType: string }>();
+        existingProject.fileMetadata?.forEach((meta: any) => {
+          if (meta?.storageId) {
+            metadataByStorageId.set(meta.storageId, meta);
+          }
+        });
+        
         const loadedMessages: LocalChatMessage[] = existingMessages.map((msg: any) => ({
           id: msg._id,
           role: msg.role,
           content: msg.content,
           isEdited: msg.isEdited,
           createdAt: msg.createdAt,
+          // Map mediaUrls back to mediaUris format for UI display
+          mediaUris: msg.mediaUrls && msg.mediaIds 
+            ? msg.mediaUrls
+                .map((url: string | null, index: number) => {
+                  if (!url) return null;
+                  const storageId = msg.mediaIds[index];
+                  // Look up media type from project metadata
+                  const metadata = storageId ? metadataByStorageId.get(storageId) : null;
+                  const isVideo = metadata?.contentType?.startsWith('video/') ?? false;
+                  return {
+                    uri: url,
+                    type: (isVideo ? 'video' : 'image') as 'video' | 'image',
+                    storageId: storageId,
+                  };
+                })
+                .filter((item: any): item is { uri: string; type: 'video' | 'image'; storageId: string } => item !== null)
+            : undefined,
         }));
         setMessages(loadedMessages);
         setUserMessageCount(existingProject.userMessageCount || 0);
@@ -633,11 +658,17 @@ export default function ChatComposerScreen() {
       }
       
       // Store user message in backend
+      // Get uploaded media for attaching to the first user message
+      const uploadedMediaForMessage = mediaUris.filter(m => m.storageId);
       await addChatMessage({
         projectId: currentProjectId,
         role: 'user',
         content: userInput || 'Generate a script based on my media',
         messageIndex: userMessageCount + 1,
+        // Attach media IDs to the first message only (when no script exists yet)
+        mediaIds: !hasScript && uploadedMediaForMessage.length > 0 
+          ? uploadedMediaForMessage.map(m => m.storageId).filter(Boolean) as any
+          : undefined,
       });
       
       // Build conversation history for AI
@@ -996,16 +1027,21 @@ export default function ChatComposerScreen() {
   };
   
   const handleClose = async () => {
-    const hasContent = mediaUris.length > 0 || messages.length > 0 || inputText.trim();
+    // Check if this is an existing draft that was opened (projectId param was provided)
+    const isExistingDraft = !!projectId;
     
-    // If no content, just exit silently
-    if (!hasContent) {
+    // Check if we created a new project during this session
+    const isNewlyCreatedProject = createdProjectId && !projectId;
+    
+    // If opening an existing draft without changes, exit silently
+    if (isExistingDraft) {
       router.back();
       return;
     }
     
-    // If we have a project and there's content, show the save notice
-    if (createdProjectId || hasContent) {
+    // For newly created chats with content, show the save notice
+    const hasContent = mediaUris.length > 0 || messages.length > 0 || inputText.trim();
+    if (isNewlyCreatedProject || hasContent) {
       Alert.alert(
         'Draft Saved',
         'Your draft will be saved in the Drafts tab. You can continue later.',
