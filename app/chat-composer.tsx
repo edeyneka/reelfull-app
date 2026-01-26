@@ -388,6 +388,32 @@ export default function ChatComposerScreen() {
     }
   }, [messages]);
   
+  // Scroll to bottom when keyboard appears
+  useEffect(() => {
+    const scrollToBottom = () => {
+      // Scroll immediately
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+      // And again after keyboard animation completes
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 350);
+    };
+    
+    const keyboardWillShowListener = Keyboard.addListener(
+      'keyboardWillShow',
+      scrollToBottom
+    );
+    const keyboardDidShowListener = Keyboard.addListener(
+      'keyboardDidShow',
+      scrollToBottom
+    );
+    
+    return () => {
+      keyboardWillShowListener.remove();
+      keyboardDidShowListener.remove();
+    };
+  }, []);
+  
   const pickMedia = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
@@ -1226,7 +1252,7 @@ const styles = StyleSheet.create({
   },
   chatContent: {
     padding: 16,
-    paddingBottom: 100,
+    paddingBottom: 0,
   },
   welcomeContainer: {
     alignItems: 'center',
