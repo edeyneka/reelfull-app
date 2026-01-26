@@ -69,6 +69,29 @@ function VideoThumbnail({ uri, style }: { uri: string; style: any }) {
   );
 }
 
+// Typing indicator with animated dots
+function TypingIndicator() {
+  const [dotCount, setDotCount] = useState(1);
+  
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDotCount(prev => prev >= 3 ? 1 : prev + 1);
+    }, 500);
+    
+    return () => clearInterval(interval);
+  }, []);
+  
+  const dots = '.'.repeat(dotCount);
+  // Pad with invisible dots to prevent text from shifting
+  const padding = '\u00A0'.repeat(3 - dotCount);
+  
+  return (
+    <Text style={styles.scriptLoadingText}>
+      Generating script{dots}{padding}
+    </Text>
+  );
+}
+
 // Chat message bubble component
 function ChatBubble({ 
   message, 
@@ -124,7 +147,7 @@ function ChatBubble({
       )}
       
       {/* Message content */}
-      {message.content && (
+      {(message.content || message.isLoading) && (
         <Pressable 
           style={[
             styles.messageBubble, 
@@ -136,8 +159,7 @@ function ChatBubble({
         >
           {message.isLoading ? (
             <View style={styles.scriptLoadingContainer}>
-              <ActivityIndicator size="small" color={Colors.orange} />
-              <Text style={styles.scriptLoadingText}>Generating script...</Text>
+              <TypingIndicator />
             </View>
           ) : (
             <>
@@ -1289,6 +1311,7 @@ const styles = StyleSheet.create({
   scriptLoadingText: {
     fontSize: 14,
     fontFamily: Fonts.regular,
+    fontStyle: 'italic',
     color: Colors.orange,
   },
   editedLabel: {
@@ -1421,6 +1444,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
+  },
+  processingOverlayText: {
+    fontSize: 16,
+    fontFamily: Fonts.regular,
+    color: Colors.white,
+    marginTop: 12,
   },
   addMediaButton: {
     width: 40,
