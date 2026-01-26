@@ -50,6 +50,7 @@ interface PendingMedia {
   assetId?: string;
   uploadStatus: 'pending' | 'uploading' | 'uploaded' | 'failed';
   storageId?: any;
+  thumbnailLoaded?: boolean; // Track if thumbnail has finished loading
 }
 
 // Video thumbnail component
@@ -65,118 +66,6 @@ function VideoThumbnail({ uri, style }: { uri: string; style: any }) {
       contentFit="cover"
       nativeControls={false}
     />
-  );
-}
-
-// Pending media bar component (ChatGPT-style inline attachments)
-function PendingMediaBar({ 
-  media, 
-  onRemove,
-}: { 
-  media: PendingMedia[];
-  onRemove: (id: string) => void;
-}) {
-  if (media.length === 0) return null;
-  
-  return (
-    <View style={styles.pendingMediaBar}>
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.pendingMediaScroll}
-      >
-        {media.map((item) => (
-          <View key={item.id} style={styles.pendingMediaItem}>
-            {item.type === 'video' ? (
-              <VideoThumbnail uri={item.uri} style={styles.pendingMediaImage} />
-            ) : (
-              <Image source={{ uri: item.uri }} style={styles.pendingMediaImage} />
-            )}
-            
-            {/* Upload status overlay */}
-            {item.uploadStatus === 'uploading' && (
-              <View style={styles.pendingMediaOverlay}>
-                <ActivityIndicator size="small" color={Colors.white} />
-              </View>
-            )}
-            {item.uploadStatus === 'uploaded' && (
-              <View style={styles.pendingMediaCheckmark}>
-                <Check size={12} color={Colors.white} strokeWidth={3} />
-              </View>
-            )}
-            {item.uploadStatus === 'failed' && (
-              <View style={styles.pendingMediaFailed}>
-                <X size={12} color={Colors.white} strokeWidth={3} />
-              </View>
-            )}
-            
-            {/* Remove button */}
-            <TouchableOpacity
-              style={styles.pendingMediaRemove}
-              onPress={() => onRemove(item.id)}
-              activeOpacity={0.7}
-            >
-              <X size={14} color={Colors.white} strokeWidth={2} />
-            </TouchableOpacity>
-          </View>
-        ))}
-      </ScrollView>
-    </View>
-  );
-}
-
-// Media grid display component
-function MediaGrid({ 
-  media, 
-  onRemove, 
-  expanded = false,
-  onToggleExpand,
-}: { 
-  media: Array<{ uri: string; type: 'image' | 'video'; id: string }>;
-  onRemove: (index: number) => void;
-  expanded?: boolean;
-  onToggleExpand?: () => void;
-}) {
-  const displayItems = expanded ? media : media.slice(0, 5);
-  const remainingCount = media.length - 5;
-  
-  return (
-    <View style={styles.mediaGridContainer}>
-      <View style={styles.mediaGrid}>
-        {displayItems.map((item, index) => (
-          <View key={item.id} style={styles.mediaGridItem}>
-            {item.type === 'video' ? (
-              <VideoThumbnail uri={item.uri} style={styles.mediaGridImage} />
-            ) : (
-              <Image source={{ uri: item.uri }} style={styles.mediaGridImage} />
-            )}
-            <TouchableOpacity
-              style={styles.mediaRemoveButton}
-              onPress={() => onRemove(index)}
-              activeOpacity={0.7}
-            >
-              <X size={14} color={Colors.white} strokeWidth={2} />
-            </TouchableOpacity>
-          </View>
-        ))}
-        {!expanded && remainingCount > 0 && (
-          <TouchableOpacity 
-            style={styles.mediaGridItem} 
-            onPress={onToggleExpand}
-            activeOpacity={0.7}
-          >
-            <View style={styles.moreMediaOverlay}>
-              <Text style={styles.moreMediaText}>+{remainingCount}</Text>
-            </View>
-          </TouchableOpacity>
-        )}
-      </View>
-      {expanded && media.length > 6 && (
-        <TouchableOpacity onPress={onToggleExpand} style={styles.collapseButton}>
-          <Text style={styles.collapseButtonText}>Show less</Text>
-        </TouchableOpacity>
-      )}
-    </View>
   );
 }
 
@@ -375,9 +264,9 @@ export default function ChatComposerScreen() {
   const [editingScript, setEditingScript] = useState('');
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [createdProjectId, setCreatedProjectId] = useState<string | null>(projectId || null);
-  const [mediaExpanded, setMediaExpanded] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+  const [isProcessingMedia, setIsProcessingMedia] = useState(false);
   
   // Voice preview state
   const [playingMessageId, setPlayingMessageId] = useState<string | null>(null);
@@ -484,6 +373,11 @@ export default function ChatComposerScreen() {
       return;
     }
     
+    // Set processing state BEFORE opening picker
+    // This will be hidden behind the native picker while browsing,
+    // but becomes visible when picker dismisses (during iOS media processing)
+    setIsProcessingMedia(true);
+    
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['videos', 'images'],
@@ -497,15 +391,18 @@ export default function ChatComposerScreen() {
       
       if (!result.canceled && result.assets.length > 0) {
         const baseTimestamp = Date.now();
+        // Create media items with thumbnailLoaded: false to show placeholder
+        // Videos are marked as loaded immediately since VideoView doesn't have onLoad
         const newMedia: PendingMedia[] = result.assets.map((asset, index) => ({
           uri: asset.uri,
           type: (asset.type === 'video' ? 'video' : 'image') as 'video' | 'image',
           id: `${baseTimestamp + index}`,
           assetId: asset.assetId ?? undefined,
           uploadStatus: 'pending' as const,
+          thumbnailLoaded: asset.type === 'video', // Videos show immediately
         }));
         
-        // Add media immediately to show in UI
+        // Add media immediately to show placeholders in UI
         const allMedia = [...mediaUris, ...newMedia];
         setMediaUris(allMedia);
         
@@ -514,6 +411,9 @@ export default function ChatComposerScreen() {
       }
     } catch (error) {
       console.error('Error picking media:', error);
+    } finally {
+      // Clear processing state after ImagePicker returns
+      setIsProcessingMedia(false);
     }
   };
   
@@ -580,6 +480,12 @@ export default function ChatComposerScreen() {
   
   const removeMedia = (id: string) => {
     setMediaUris(prev => prev.filter(m => m.id !== id));
+  };
+  
+  const markThumbnailLoaded = (id: string) => {
+    setMediaUris(prev => prev.map(m => 
+      m.id === id ? { ...m, thumbnailLoaded: true } : m
+    ));
   };
   
   const handleSend = async () => {
@@ -1100,25 +1006,13 @@ export default function ChatComposerScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Welcome message */}
-          {messages.length === 0 && uploadedMedia.length === 0 && (
+          {/* Welcome message - hidden when processing media or thumbnails visible */}
+          {messages.length === 0 && mediaUris.length === 0 && !isProcessingMedia && (
             <View style={styles.welcomeContainer}>
               <Text style={styles.welcomeTitle}>Hello, {user?.name || 'there'}!</Text>
               <Text style={styles.welcomeSubtitle}>
                 upload media for a video you'd like to create
               </Text>
-            </View>
-          )}
-          
-          {/* Media preview (before first message) */}
-          {uploadedMedia.length > 0 && messages.length === 0 && (
-            <View style={styles.mediaPreviewContainer}>
-              <MediaGrid
-                media={uploadedMedia}
-                onRemove={(index) => removeMedia(uploadedMedia[index]?.id)}
-                expanded={mediaExpanded}
-                onToggleExpand={() => setMediaExpanded(!mediaExpanded)}
-              />
             </View>
           )}
           
@@ -1151,16 +1045,9 @@ export default function ChatComposerScreen() {
           )}
         </ScrollView>
         
-        {/* Pending Media Bar (ChatGPT-style inline attachments) */}
-        {mediaUris.length > 0 && messages.length === 0 && (
-          <PendingMediaBar 
-            media={mediaUris}
-            onRemove={removeMedia}
-          />
-        )}
-        
-        {/* Input Area */}
-        <View style={[styles.inputArea, { paddingBottom: insets.bottom + 8 }]}>
+        {/* Unified Composer */}
+        <View style={[styles.composerContainer]}>
+          {/* Add media button - outside card */}
           <TouchableOpacity 
             style={styles.addMediaButton}
             onPress={pickMedia}
@@ -1169,18 +1056,73 @@ export default function ChatComposerScreen() {
             <Plus size={24} color={Colors.white} />
           </TouchableOpacity>
           
-          <TextInput
-            ref={inputRef}
-            style={styles.textInput}
-            placeholder={hasScript ? "Ask anything" : "Share your story, or leave it blank..."}
-            placeholderTextColor={Colors.grayLight}
-            value={inputText}
-            onChangeText={setInputText}
-            multiline
-            maxLength={500}
-            editable={!isLimitReached && !isGenerating}
-          />
+          {/* Unified card containing media + input */}
+          <View style={styles.composerCard}>
+            {/* Media thumbnails inside card - only before first message */}
+            {mediaUris.length > 0 && messages.length === 0 && (
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.composerMediaScroll}
+              >
+                {mediaUris.map((item) => (
+                  <View key={item.id} style={styles.composerMediaItem}>
+                    {/* Loading placeholder until thumbnail loads */}
+                    {!item.thumbnailLoaded && (
+                      <View style={styles.composerMediaPlaceholder}>
+                        <ActivityIndicator size="small" color={Colors.white} />
+                      </View>
+                    )}
+                    
+                    {/* Actual thumbnail - hidden until loaded */}
+                    {item.type === 'video' ? (
+                      <VideoThumbnail uri={item.uri} style={styles.composerMediaImage} />
+                    ) : (
+                      <Image 
+                        source={{ uri: item.uri }} 
+                        style={[
+                          styles.composerMediaImage,
+                          !item.thumbnailLoaded && styles.composerMediaImageHidden
+                        ]} 
+                        onLoad={() => markThumbnailLoaded(item.id)}
+                      />
+                    )}
+                    
+                    {/* Upload status overlay */}
+                    {item.uploadStatus === 'uploading' && (
+                      <View style={styles.composerMediaOverlay}>
+                        <ActivityIndicator size="small" color={Colors.white} />
+                      </View>
+                    )}
+                    
+                    {/* Remove button */}
+                    <TouchableOpacity
+                      style={styles.composerMediaRemove}
+                      onPress={() => removeMedia(item.id)}
+                      activeOpacity={0.7}
+                    >
+                      <X size={16} color={Colors.white} strokeWidth={2} />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+            
+            {/* Text input inside card */}
+            <TextInput
+              ref={inputRef}
+              style={styles.composerTextInput}
+              placeholder={hasScript ? "Ask anything" : "Share your story, or leave it blank..."}
+              placeholderTextColor={Colors.grayLight}
+              value={inputText}
+              onChangeText={setInputText}
+              multiline
+              maxLength={500}
+              editable={!isLimitReached && !isGenerating}
+            />
+          </View>
           
+          {/* Send button - outside card */}
           <TouchableOpacity
             style={[styles.sendButton, canSend && styles.sendButtonActive]}
             onPress={handleSend}
@@ -1198,6 +1140,14 @@ export default function ChatComposerScreen() {
         onSave={handleSaveEdit}
         onClose={() => setShowEditor(false)}
       />
+      
+      {/* Full-screen loading overlay while processing media */}
+      {isProcessingMedia && (
+        <View style={styles.processingOverlay}>
+          <ActivityIndicator size="large" color={Colors.white} />
+          <Text style={styles.processingOverlayText}>Loading...</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -1271,59 +1221,6 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.regular,
     color: Colors.grayLight,
     textAlign: 'center',
-  },
-  mediaPreviewContainer: {
-    marginBottom: 16,
-  },
-  mediaGridContainer: {
-    gap: 8,
-  },
-  mediaGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  mediaGridItem: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-    overflow: 'hidden',
-    backgroundColor: Colors.gray,
-  },
-  mediaGridImage: {
-    width: '100%',
-    height: '100%',
-  },
-  mediaRemoveButton: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  moreMediaOverlay: {
-    flex: 1,
-    backgroundColor: Colors.grayDark,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  moreMediaText: {
-    fontSize: 16,
-    fontFamily: Fonts.title,
-    color: Colors.white,
-  },
-  collapseButton: {
-    alignSelf: 'flex-start',
-    paddingVertical: 4,
-  },
-  collapseButtonText: {
-    fontSize: 12,
-    color: Colors.orange,
-    fontFamily: Fonts.regular,
   },
   messageBubbleContainer: {
     marginBottom: 12,
@@ -1441,15 +1338,89 @@ const styles = StyleSheet.create({
     color: Colors.orange,
     textAlign: 'center',
   },
-  inputArea: {
+  // Unified Composer styles
+  composerContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     paddingHorizontal: 16,
     paddingTop: 12,
+    paddingBottom: 15,
     backgroundColor: Colors.black,
-    borderTopWidth: 1,
-    borderTopColor: Colors.gray,
     gap: 8,
+  },
+  composerCard: {
+    flex: 1,
+    backgroundColor: 'rgba(35, 35, 35, 0.95)',
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  composerMediaScroll: {
+    flexDirection: 'row',
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 8,
+    gap: 8,
+  },
+  composerMediaItem: {
+    width: 120,
+    height: 120,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: Colors.gray,
+  },
+  composerMediaImage: {
+    width: '100%',
+    height: '100%',
+  },
+  composerMediaOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  composerMediaRemove: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  composerTextInput: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 15,
+    fontFamily: Fonts.regular,
+    color: Colors.white,
+    maxHeight: 100,
+  },
+  composerMediaPlaceholder: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.gray,
+    zIndex: 1,
+  },
+  composerMediaImageHidden: {
+    opacity: 0,
+  },
+  processingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
   },
   addMediaButton: {
     width: 40,
@@ -1459,17 +1430,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 4,
-  },
-  textInput: {
-    flex: 1,
-    backgroundColor: Colors.grayDark,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontSize: 15,
-    fontFamily: Fonts.regular,
-    color: Colors.white,
-    maxHeight: 100,
   },
   sendButton: {
     width: 40,
@@ -1519,71 +1479,5 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.regular,
     color: Colors.white,
     lineHeight: 24,
-  },
-  // Pending Media Bar (ChatGPT-style inline attachments)
-  pendingMediaBar: {
-    backgroundColor: Colors.grayDark,
-    borderTopWidth: 1,
-    borderTopColor: Colors.gray,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-  },
-  pendingMediaScroll: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  pendingMediaItem: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-    overflow: 'hidden',
-    backgroundColor: Colors.gray,
-  },
-  pendingMediaImage: {
-    width: '100%',
-    height: '100%',
-  },
-  pendingMediaOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  pendingMediaCheckmark: {
-    position: 'absolute',
-    bottom: 4,
-    right: 4,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: Colors.orange,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  pendingMediaFailed: {
-    position: 'absolute',
-    bottom: 4,
-    right: 4,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: '#ff3b30',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  pendingMediaRemove: {
-    position: 'absolute',
-    top: 2,
-    right: 2,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
 });
