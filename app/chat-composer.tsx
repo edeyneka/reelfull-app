@@ -1023,7 +1023,17 @@ export default function ChatComposerScreen() {
   
   const isLimitReached = userMessageCount >= MAX_USER_MESSAGES;
   const uploadedMedia = mediaUris.filter(m => m.storageId);
-  const canSend = (inputText.trim() || uploadedMedia.length > 0) && !isGenerating && !isLimitReached;
+  const hasNewInput = inputText.trim().length > 0;
+  
+  // Before first message: can send if we have media (even without text)
+  // After first message: can only send if we have new text input
+  const canSend = messages.length === 0 
+    ? (uploadedMedia.length > 0 && !isGenerating)  // First message: need media
+    : (hasNewInput && !isGenerating && !isLimitReached);  // Subsequent: need text
+  
+  // Determine if send button should act as "Approve & Generate"
+  // This happens when we have a script, no new text input, and not generating/submitting
+  const isApproveMode = hasScript && !hasNewInput && !isGenerating && !isSubmitting;
   
   // Find latest assistant message for edit functionality
   const latestAssistantMessageId = messages
@@ -1038,23 +1048,15 @@ export default function ChatComposerScreen() {
           <ArrowLeft size={24} color={Colors.white} />
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.infoButton}>
+        <TouchableOpacity 
+          style={styles.infoButton}
+          onPress={() => Alert.alert(
+            'How it works',
+            'The last generated script will be used for your video creation. You can edit or regenerate the script before approving.'
+          )}
+        >
           <Info size={20} color={Colors.grayLight} />
         </TouchableOpacity>
-        
-        {hasScript && (
-          <TouchableOpacity 
-            style={[styles.approveButton, isSubmitting && styles.approveButtonDisabled]}
-            onPress={handleApproveAndGenerate}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator size="small" color={Colors.white} />
-            ) : (
-              <Text style={styles.approveButtonText}>Approve & Generate</Text>
-            )}
-          </TouchableOpacity>
-        )}
       </View>
       
       {/* Chat Area */}
@@ -1176,7 +1178,7 @@ export default function ChatComposerScreen() {
             <TextInput
               ref={inputRef}
               style={styles.composerTextInput}
-              placeholder={hasScript ? "Ask anything" : "Share your story, or leave it blank..."}
+              placeholder={hasScript ? "Type to edit, or tap → to approve" : "Share your story, or leave it blank..."}
               placeholderTextColor={Colors.grayLight}
               value={inputText}
               onChangeText={setInputText}
@@ -1186,13 +1188,23 @@ export default function ChatComposerScreen() {
             />
           </View>
           
-          {/* Send button - outside card */}
+          {/* Send/Approve button - outside card */}
           <TouchableOpacity
-            style={[styles.sendButton, canSend && styles.sendButtonActive]}
-            onPress={handleSend}
-            disabled={!canSend}
+            style={[
+              styles.sendButton, 
+              (canSend || isApproveMode) && styles.sendButtonActive,
+              isSubmitting && styles.sendButtonDisabled,
+            ]}
+            onPress={isApproveMode ? handleApproveAndGenerate : handleSend}
+            disabled={isApproveMode ? isSubmitting : !canSend}
           >
-            <Send size={20} color={canSend ? Colors.white : Colors.grayLight} />
+            {isSubmitting ? (
+              <ActivityIndicator size={16} color={Colors.white} />
+            ) : (
+              <View style={isApproveMode ? styles.sendIconApprove : undefined}>
+                <Send size={20} color={(canSend || isApproveMode) ? Colors.white : Colors.grayLight} />
+              </View>
+            )}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -1241,24 +1253,6 @@ const styles = StyleSheet.create({
     height: 36,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  approveButton: {
-    flex: 1,
-    backgroundColor: Colors.grayDark,
-    borderRadius: 20,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.gray,
-  },
-  approveButtonDisabled: {
-    opacity: 0.5,
-  },
-  approveButtonText: {
-    color: Colors.white,
-    fontSize: 14,
-    fontFamily: Fonts.title,
   },
   keyboardView: {
     flex: 1,
@@ -1518,6 +1512,12 @@ const styles = StyleSheet.create({
   },
   sendButtonActive: {
     backgroundColor: Colors.orange,
+  },
+  sendButtonDisabled: {
+    opacity: 0.6,
+  },
+  sendIconApprove: {
+    transform: [{ rotate: '45deg' }],
   },
   editorOverlay: {
     position: 'absolute',
