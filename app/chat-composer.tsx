@@ -306,6 +306,11 @@ export default function ChatComposerScreen() {
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const [isProcessingMedia, setIsProcessingMedia] = useState(false);
   
+  // Track if we've forked from a completed video project
+  const [hasForkedFromVideo, setHasForkedFromVideo] = useState(false);
+  const [originalVideoProjectId] = useState<string | null>(fromVideo ? projectId : null);
+  const [isForking, setIsForking] = useState(false);
+  
   // Voice preview state
   const [playingMessageId, setPlayingMessageId] = useState<string | null>(null);
   const [generatingVoiceMessageId, setGeneratingVoiceMessageId] = useState<string | null>(null);
@@ -346,6 +351,33 @@ export default function ChatComposerScreen() {
     createdProjectId ? { projectId: createdProjectId as any } : "skip"
   );
   
+  // Helper: Fork the project if coming from a completed video (never modify original)
+  const forkProjectIfNeeded = async (): Promise<string | null> => {
+    // Only fork if we came from a video and haven't forked yet
+    if (!fromVideo || hasForkedFromVideo || !originalVideoProjectId) {
+      return createdProjectId;
+    }
+    
+    setIsForking(true);
+    try {
+      console.log('[chat-composer] Forking project from completed video:', originalVideoProjectId);
+      const newProjectId = await forkChatProject({
+        sourceProjectId: originalVideoProjectId as any,
+      });
+      
+      console.log('[chat-composer] Forked to new project:', newProjectId);
+      setCreatedProjectId(newProjectId);
+      setHasForkedFromVideo(true);
+      return newProjectId;
+    } catch (error) {
+      console.error('[chat-composer] Failed to fork project:', error);
+      Alert.alert('Error', 'Failed to create a new draft from this video. Please try again.');
+      return null;
+    } finally {
+      setIsForking(false);
+    }
+  };
+
   // Load existing project data
   useEffect(() => {
     if (existingProject && projectId && messages.length === 0) {
@@ -627,8 +659,16 @@ export default function ChatComposerScreen() {
     setMessages(prev => [...prev, loadingMessage]);
     
     try {
-      // Create project if it doesn't exist
+      // If coming from a video, fork the project first (never modify original)
       let currentProjectId = createdProjectId;
+      if (fromVideo && !hasForkedFromVideo) {
+        currentProjectId = await forkProjectIfNeeded();
+        if (!currentProjectId) {
+          setMessages(prev => prev.filter(m => !m.isLoading));
+          setIsGenerating(false);
+          return;
+        }
+      }
       
       if (!currentProjectId) {
         const uploadedMedia = mediaUris.filter(m => m.storageId);
@@ -761,7 +801,20 @@ export default function ChatComposerScreen() {
   };
   
   const handleSaveEdit = async (newScript: string) => {
-    if (!editingMessageId || !createdProjectId) return;
+    if (!editingMessageId) return;
+    
+    // If coming from a video, fork the project first (never modify original)
+    let targetProjectId = createdProjectId;
+    if (fromVideo && !hasForkedFromVideo) {
+      targetProjectId = await forkProjectIfNeeded();
+      if (!targetProjectId) {
+        setShowEditor(false);
+        setEditingMessageId(null);
+        return;
+      }
+    }
+    
+    if (!targetProjectId) return;
     
     // Update local message
     setMessages(prev => prev.map(m => 
@@ -770,8 +823,19 @@ export default function ChatComposerScreen() {
         : m
     ));
     
-    // Update in backend if it's a real message ID (not local)
-    if (!editingMessageId.startsWith('assistant-') && !editingMessageId.startsWith('user-')) {
+    // For forked projects or local messages, update project script directly
+    // (Message IDs from original project won't exist in the forked project)
+    if (hasForkedFromVideo || editingMessageId.startsWith('assistant-') || editingMessageId.startsWith('user-')) {
+      try {
+        await updateProjectScript({
+          id: targetProjectId as any,
+          script: newScript.replace(/\?(?!\?\?)/g, '???'),
+        });
+      } catch (error) {
+        console.error('Failed to update script:', error);
+      }
+    } else {
+      // Update in backend if it's a real message ID (not local) and not forked
       try {
         await updateChatMessage({
           messageId: editingMessageId as any,
@@ -779,16 +843,6 @@ export default function ChatComposerScreen() {
         });
       } catch (error) {
         console.error('Failed to update message:', error);
-      }
-    } else {
-      // Update project script directly for local messages
-      try {
-        await updateProjectScript({
-          id: createdProjectId as any,
-          script: newScript.replace(/\?(?!\?\?)/g, '???'),
-        });
-      } catch (error) {
-        console.error('Failed to update script:', error);
       }
     }
     
@@ -971,11 +1025,27 @@ export default function ChatComposerScreen() {
   }, []);
   
   const handleApproveAndGenerate = async () => {
-    if (!createdProjectId || isSubmitting) return;
+    if (isSubmitting) return;
     
     setIsSubmitting(true);
     
     try {
+      // If coming from a video, fork the project first (never modify original)
+      let targetProjectId = createdProjectId;
+      if (fromVideo && !hasForkedFromVideo) {
+        targetProjectId = await forkProjectIfNeeded();
+        if (!targetProjectId) {
+          setIsSubmitting(false);
+          return;
+        }
+      }
+      
+      if (!targetProjectId) {
+        Alert.alert('Error', 'No project to generate');
+        setIsSubmitting(false);
+        return;
+      }
+      
       // Get the latest script from messages
       const latestScript = messages
         .filter(m => m.role === 'assistant' && !m.isLoading)
@@ -989,13 +1059,13 @@ export default function ChatComposerScreen() {
       
       // Add video to context with processing status
       addVideo({
-        id: createdProjectId,
+        id: targetProjectId,
         uri: '',
         prompt: inputText || 'Chat-generated video',
         script: latestScript.replace(/\?\?\?/g, '?'),
         createdAt: Date.now(),
         status: 'processing',
-        projectId: createdProjectId,
+        projectId: targetProjectId,
         thumbnailUrl: mediaUris[0]?.uri,
       });
       
@@ -1012,7 +1082,7 @@ export default function ChatComposerScreen() {
       );
       
       // Mark project as submitted (triggers backend generation)
-      await markProjectSubmitted({ id: createdProjectId as any });
+      await markProjectSubmitted({ id: targetProjectId as any });
     } catch (error) {
       console.error('Error approving:', error);
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -1028,13 +1098,34 @@ export default function ChatComposerScreen() {
   
   const handleClose = async () => {
     // Check if this is an existing draft that was opened (projectId param was provided)
-    const isExistingDraft = !!projectId;
+    const isExistingDraft = !!projectId && !fromVideo;
     
     // Check if we created a new project during this session
     const isNewlyCreatedProject = createdProjectId && !projectId;
     
     // If opening an existing draft without changes, exit silently
-    if (isExistingDraft) {
+    if (isExistingDraft && !hasForkedFromVideo) {
+      router.back();
+      return;
+    }
+    
+    // If we came from a video and forked (made changes), show the new draft notice
+    if (fromVideo && hasForkedFromVideo) {
+      Alert.alert(
+        'Draft Created',
+        'Your changes have been saved as a new draft. The original video remains unchanged.',
+        [
+          { 
+            text: 'OK', 
+            onPress: () => router.back() 
+          }
+        ]
+      );
+      return;
+    }
+    
+    // If we came from a video but didn't make any changes, just go back
+    if (fromVideo && !hasForkedFromVideo) {
       router.back();
       return;
     }
@@ -1108,6 +1199,16 @@ export default function ChatComposerScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
+          {/* Info banner when viewing chat from a completed video */}
+          {fromVideo && !hasForkedFromVideo && (
+            <View style={styles.infoBanner}>
+              <Info size={16} color={Colors.orange} />
+              <Text style={styles.infoBannerText}>
+                Any changes will create a new draft. Original video stays unchanged.
+              </Text>
+            </View>
+          )}
+          
           {/* Welcome message - hidden when processing media or thumbnails visible */}
           {messages.length === 0 && mediaUris.length === 0 && !isProcessingMedia && (
             <View style={styles.welcomeContainer}>
@@ -1299,6 +1400,22 @@ const styles = StyleSheet.create({
   chatContent: {
     padding: 16,
     paddingBottom: 0,
+  },
+  infoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 107, 53, 0.1)',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    gap: 8,
+  },
+  infoBannerText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: Fonts.regular,
+    color: Colors.orange,
+    lineHeight: 18,
   },
   welcomeContainer: {
     alignItems: 'center',

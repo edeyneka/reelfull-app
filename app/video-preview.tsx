@@ -259,6 +259,10 @@ export default function VideoPreviewScreen() {
   const handleChatHistory = () => {
     // Navigate to chat composer with this project's chat history
     if (projectId) {
+      // Pause video before navigating to chat
+      if (videoPlayer) {
+        videoPlayer.pause();
+      }
       router.push({
         pathname: '/chat-composer',
         params: { projectId, fromVideo: 'true' },
