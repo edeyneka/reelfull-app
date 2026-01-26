@@ -1,5 +1,5 @@
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Plus, Send, X, Check, Info, Copy, MessageSquare } from 'lucide-react-native';
+import { ArrowLeft, Plus, Send, X, Check, Info, Copy, MessageSquare, Volume2, Gauge, ListOrdered, Loader2, VolumeX } from 'lucide-react-native';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Alert,
@@ -15,6 +15,8 @@ import {
   ActivityIndicator,
   Keyboard,
   Pressable,
+  Animated,
+  ActionSheetIOS,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { VideoExportPreset } from 'expo-image-picker';
@@ -23,6 +25,7 @@ import { VideoView, useVideoPlayer } from 'expo-video';
 import { useMutation, useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import * as Clipboard from 'expo-clipboard';
+import { Audio } from 'expo-av';
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
 import { uploadMediaFiles } from '@/lib/api-helpers';
@@ -30,6 +33,24 @@ import { Fonts } from '@/constants/typography';
 import { LocalChatMessage } from '@/types';
 
 const MAX_USER_MESSAGES = 10;
+
+// Voice speed options
+const VOICE_SPEED_OPTIONS = [
+  { label: 'Slow', value: 1.0 },
+  { label: 'Normal', value: 1.08 },
+  { label: 'Fast', value: 1.15 },
+  { label: 'Very Fast', value: 1.25 },
+];
+
+// Extended media type with upload status for inline attachments
+interface PendingMedia {
+  uri: string;
+  type: 'image' | 'video';
+  id: string;
+  assetId?: string;
+  uploadStatus: 'pending' | 'uploading' | 'uploaded' | 'failed';
+  storageId?: any;
+}
 
 // Video thumbnail component
 function VideoThumbnail({ uri, style }: { uri: string; style: any }) {
@@ -47,35 +68,59 @@ function VideoThumbnail({ uri, style }: { uri: string; style: any }) {
   );
 }
 
-// Overlay loader component
-function OverlayLoader({ 
-  title, 
-  subtitle, 
-  showWarning = false,
-  progress,
+// Pending media bar component (ChatGPT-style inline attachments)
+function PendingMediaBar({ 
+  media, 
+  onRemove,
 }: { 
-  title: string; 
-  subtitle?: string;
-  showWarning?: boolean;
-  progress?: { current: number; total: number };
+  media: PendingMedia[];
+  onRemove: (id: string) => void;
 }) {
-  const percent = progress ? Math.round((progress.current / progress.total) * 100) : 0;
+  if (media.length === 0) return null;
   
   return (
-    <View style={styles.overlayLoader}>
-      <View style={styles.loaderContent}>
-        <ActivityIndicator size="large" color={Colors.orange} />
-        <Text style={styles.loaderTitle}>{title}</Text>
-        {progress ? (
-          <Text style={styles.loaderProgress}>
-            {progress.current}/{progress.total} files ({percent}%)
-          </Text>
-        ) : null}
-        {subtitle && <Text style={styles.loaderSubtitle}>{subtitle}</Text>}
-        {showWarning && (
-          <Text style={styles.loaderWarning}>Please don't leave the app</Text>
-        )}
-      </View>
+    <View style={styles.pendingMediaBar}>
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.pendingMediaScroll}
+      >
+        {media.map((item) => (
+          <View key={item.id} style={styles.pendingMediaItem}>
+            {item.type === 'video' ? (
+              <VideoThumbnail uri={item.uri} style={styles.pendingMediaImage} />
+            ) : (
+              <Image source={{ uri: item.uri }} style={styles.pendingMediaImage} />
+            )}
+            
+            {/* Upload status overlay */}
+            {item.uploadStatus === 'uploading' && (
+              <View style={styles.pendingMediaOverlay}>
+                <ActivityIndicator size="small" color={Colors.white} />
+              </View>
+            )}
+            {item.uploadStatus === 'uploaded' && (
+              <View style={styles.pendingMediaCheckmark}>
+                <Check size={12} color={Colors.white} strokeWidth={3} />
+              </View>
+            )}
+            {item.uploadStatus === 'failed' && (
+              <View style={styles.pendingMediaFailed}>
+                <X size={12} color={Colors.white} strokeWidth={3} />
+              </View>
+            )}
+            
+            {/* Remove button */}
+            <TouchableOpacity
+              style={styles.pendingMediaRemove}
+              onPress={() => onRemove(item.id)}
+              activeOpacity={0.7}
+            >
+              <X size={14} color={Colors.white} strokeWidth={2} />
+            </TouchableOpacity>
+          </View>
+        ))}
+      </ScrollView>
     </View>
   );
 }
@@ -141,14 +186,36 @@ function ChatBubble({
   onEditTap, 
   onCopy,
   isLatestAssistant,
+  isCopied,
+  onPlayVoice,
+  isPlayingVoice,
+  isGeneratingVoice,
+  voiceSpeed,
+  onChangeSpeed,
+  keepOrder,
+  onToggleKeepOrder,
 }: { 
   message: LocalChatMessage;
   onEditTap?: () => void;
   onCopy?: () => void;
   isLatestAssistant: boolean;
+  isCopied?: boolean;
+  onPlayVoice?: () => void;
+  isPlayingVoice?: boolean;
+  isGeneratingVoice?: boolean;
+  voiceSpeed?: number;
+  onChangeSpeed?: () => void;
+  keepOrder?: boolean;
+  onToggleKeepOrder?: () => void;
 }) {
   const isUser = message.role === 'user';
   const isAssistant = message.role === 'assistant';
+  
+  // Get speed label for display
+  const getSpeedLabel = () => {
+    const option = VOICE_SPEED_OPTIONS.find(o => o.value === voiceSpeed);
+    return option?.label || 'Normal';
+  };
   
   return (
     <View style={[styles.messageBubbleContainer, isUser && styles.messageBubbleContainerUser]}>
@@ -179,9 +246,9 @@ function ChatBubble({
           onLongPress={isAssistant ? onCopy : undefined}
         >
           {message.isLoading ? (
-            <View style={styles.loadingContainer}>
+            <View style={styles.scriptLoadingContainer}>
               <ActivityIndicator size="small" color={Colors.orange} />
-              <Text style={styles.loadingText}>Generating your script...</Text>
+              <Text style={styles.scriptLoadingText}>Generating script...</Text>
             </View>
           ) : (
             <>
@@ -196,11 +263,47 @@ function ChatBubble({
         </Pressable>
       )}
       
-      {/* Copy hint for assistant messages */}
+      {/* Action buttons for assistant messages */}
       {isAssistant && !message.isLoading && (
         <View style={styles.messageActions}>
-          <TouchableOpacity onPress={onCopy} style={styles.copyButton}>
-            <Copy size={14} color={Colors.grayLight} />
+          {/* Copy button */}
+          {isCopied ? (
+            <View style={styles.copiedFeedback}>
+              <Check size={14} color={Colors.orange} strokeWidth={2.5} />
+              <Text style={styles.copiedText}>Script copied</Text>
+            </View>
+          ) : (
+            <TouchableOpacity onPress={onCopy} style={styles.actionButton}>
+              <Copy size={14} color={Colors.grayLight} />
+            </TouchableOpacity>
+          )}
+          
+          {/* Voice preview button */}
+          <TouchableOpacity 
+            onPress={onPlayVoice} 
+            style={styles.actionButton}
+            disabled={isGeneratingVoice}
+          >
+            {isGeneratingVoice ? (
+              <ActivityIndicator size={14} color={Colors.orange} />
+            ) : isPlayingVoice ? (
+              <VolumeX size={14} color={Colors.orange} />
+            ) : (
+              <Volume2 size={14} color={Colors.grayLight} />
+            )}
+          </TouchableOpacity>
+          
+          {/* Speed selector button */}
+          <TouchableOpacity onPress={onChangeSpeed} style={styles.actionButton}>
+            <Gauge size={14} color={Colors.grayLight} />
+          </TouchableOpacity>
+          
+          {/* Keep order toggle */}
+          <TouchableOpacity 
+            onPress={onToggleKeepOrder} 
+            style={[styles.actionButton, keepOrder && styles.actionButtonActive]}
+          >
+            <ListOrdered size={14} color={keepOrder ? Colors.orange : Colors.grayLight} />
           </TouchableOpacity>
         </View>
       )}
@@ -264,16 +367,7 @@ export default function ChatComposerScreen() {
   // State
   const [messages, setMessages] = useState<LocalChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
-  const [mediaUris, setMediaUris] = useState<Array<{ 
-    uri: string; 
-    type: 'image' | 'video'; 
-    id: string;
-    assetId?: string;
-    storageId?: any;
-  }>>([]);
-  const [isPickingMedia, setIsPickingMedia] = useState(false);
-  const [showUploadOverlay, setShowUploadOverlay] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
+  const [mediaUris, setMediaUris] = useState<PendingMedia[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [hasScript, setHasScript] = useState(false);
   const [userMessageCount, setUserMessageCount] = useState(0);
@@ -283,6 +377,17 @@ export default function ChatComposerScreen() {
   const [createdProjectId, setCreatedProjectId] = useState<string | null>(projectId || null);
   const [mediaExpanded, setMediaExpanded] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+  
+  // Voice preview state
+  const [playingMessageId, setPlayingMessageId] = useState<string | null>(null);
+  const [generatingVoiceMessageId, setGeneratingVoiceMessageId] = useState<string | null>(null);
+  const soundRef = useRef<Audio.Sound | null>(null);
+  const audioCache = useRef<Map<string, string>>(new Map()); // messageId -> audioUrl
+  
+  // Project settings state
+  const [voiceSpeed, setVoiceSpeed] = useState<number>(1.08); // Default: Normal
+  const [keepOrder, setKeepOrder] = useState<boolean>(false);
   
   const hasAutoOpenedPicker = useRef(false);
   const scrollViewRef = useRef<ScrollView>(null);
@@ -298,6 +403,9 @@ export default function ChatComposerScreen() {
   const generateChatScript = useAction(api.aiServices.generateChatScript);
   const markProjectSubmitted = useMutation(api.tasks.markProjectSubmitted);
   const updateProjectScript = useMutation(api.tasks.updateProjectScript);
+  const generateScriptPreviewAudio = useAction(api.aiServices.generateScriptPreviewAudio);
+  const updateProjectVoiceSpeed = useMutation(api.tasks.updateProjectVoiceSpeed);
+  const updateProjectKeepOrder = useMutation(api.tasks.updateProjectKeepOrder);
   
   // Fetch existing project data if projectId is provided
   const existingProject = useQuery(
@@ -376,8 +484,6 @@ export default function ChatComposerScreen() {
       return;
     }
     
-    const loadingTimeout = setTimeout(() => setIsPickingMedia(true), 2000);
-    
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['videos', 'images'],
@@ -385,87 +491,77 @@ export default function ChatComposerScreen() {
         quality: 1,
         videoExportPreset: VideoExportPreset.H264_1920x1080,
         preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
+        // Show as half-screen sheet on iOS so "Hello, [user]!" header is visible
+        presentationStyle: ImagePicker.UIImagePickerPresentationStyle.FORM_SHEET,
       });
       
-      clearTimeout(loadingTimeout);
-      setIsPickingMedia(false);
-      
       if (!result.canceled && result.assets.length > 0) {
-        setShowUploadOverlay(true);
-        
         const baseTimestamp = Date.now();
-        const newMedia = result.assets.map((asset, index) => ({
+        const newMedia: PendingMedia[] = result.assets.map((asset, index) => ({
           uri: asset.uri,
           type: (asset.type === 'video' ? 'video' : 'image') as 'video' | 'image',
           id: `${baseTimestamp + index}`,
           assetId: asset.assetId ?? undefined,
+          uploadStatus: 'pending' as const,
         }));
         
+        // Add media immediately to show in UI
         const allMedia = [...mediaUris, ...newMedia];
         setMediaUris(allMedia);
         
-        await uploadMedia(allMedia, newMedia);
+        // Start uploading in background (no overlay)
+        uploadMediaInBackground(allMedia, newMedia);
       }
     } catch (error) {
-      clearTimeout(loadingTimeout);
-      setIsPickingMedia(false);
-      setShowUploadOverlay(false);
       console.error('Error picking media:', error);
     }
   };
   
-  const uploadMedia = async (allMedia: typeof mediaUris, newMediaOnly: typeof mediaUris) => {
+  const uploadMediaInBackground = async (allMedia: PendingMedia[], newMediaOnly: PendingMedia[]) => {
     const filesToUpload = newMediaOnly.filter(m => !m.storageId);
     
     if (filesToUpload.length === 0) {
-      setShowUploadOverlay(false);
       inputRef.current?.focus();
       return;
     }
     
-    setUploadProgress({ current: 0, total: filesToUpload.length });
+    // Mark all as uploading
+    setMediaUris(prev => prev.map(m => 
+      filesToUpload.some(f => f.id === m.id) 
+        ? { ...m, uploadStatus: 'uploading' as const }
+        : m
+    ));
     
-    try {
-      const updatedMedia = [...allMedia];
-      
-      for (let i = 0; i < filesToUpload.length; i++) {
-        const item = filesToUpload[i];
-        setUploadProgress({ current: i, total: filesToUpload.length });
+    for (const item of filesToUpload) {
+      try {
+        const uploadResult = await uploadMediaFiles(
+          generateUploadUrl,
+          [{ uri: item.uri, type: item.type, assetId: item.assetId }]
+        );
         
-        try {
-          const uploadResult = await uploadMediaFiles(
-            generateUploadUrl,
-            [{ uri: item.uri, type: item.type, assetId: item.assetId }]
-          );
-          
-          const mediaIndex = updatedMedia.findIndex(m => m.id === item.id);
-          if (mediaIndex !== -1 && uploadResult[0]) {
-            updatedMedia[mediaIndex] = {
-              ...updatedMedia[mediaIndex],
-              storageId: uploadResult[0].storageId,
-            };
-          }
-        } catch (error) {
-          console.error('Failed to upload file', i, error);
-          throw error;
-        }
+        // Update individual item status
+        setMediaUris(prev => prev.map(m => 
+          m.id === item.id 
+            ? { ...m, uploadStatus: 'uploaded' as const, storageId: uploadResult[0]?.storageId }
+            : m
+        ));
+      } catch (error) {
+        console.error('Failed to upload file', item.id, error);
+        // Mark as failed but don't block other uploads
+        setMediaUris(prev => prev.map(m => 
+          m.id === item.id 
+            ? { ...m, uploadStatus: 'failed' as const }
+            : m
+        ));
       }
-      
-      setUploadProgress({ current: filesToUpload.length, total: filesToUpload.length });
-      setMediaUris(updatedMedia);
-      setShowUploadOverlay(false);
-      
-      // Focus input after upload
-      setTimeout(() => inputRef.current?.focus(), 100);
-      
-      // If we already have messages and added new media, trigger script regeneration
-      if (messages.length > 0 && hasScript) {
-        await handleNewMediaAdded(newMediaOnly.length);
-      }
-    } catch (error) {
-      setShowUploadOverlay(false);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      Alert.alert('Upload Failed', errorMessage);
+    }
+    
+    // Focus input after all uploads
+    setTimeout(() => inputRef.current?.focus(), 100);
+    
+    // If we already have messages and added new media, trigger script regeneration
+    if (messages.length > 0 && hasScript) {
+      await handleNewMediaAdded(newMediaOnly.length);
     }
   };
   
@@ -482,8 +578,8 @@ export default function ChatComposerScreen() {
     await generateScript(`Added ${newMediaCount} new media`, true, newMediaCount);
   };
   
-  const removeMedia = (index: number) => {
-    setMediaUris(prev => prev.filter((_, i) => i !== index));
+  const removeMedia = (id: string) => {
+    setMediaUris(prev => prev.filter(m => m.id !== id));
   };
   
   const handleSend = async () => {
@@ -699,13 +795,179 @@ export default function ChatComposerScreen() {
     setEditingMessageId(null);
   };
   
-  const handleCopy = async (content: string) => {
+  const handleCopy = async (messageId: string, content: string) => {
     try {
       await Clipboard.setStringAsync(content.replace(/\?\?\?/g, '?'));
+      setCopiedMessageId(messageId);
+      setTimeout(() => setCopiedMessageId(null), 2000);
     } catch (error) {
       console.error('Copy error:', error);
     }
   };
+  
+  // Voice preview handlers
+  const handlePlayVoice = async (messageId: string, content: string) => {
+    // If already playing this message, stop it
+    if (playingMessageId === messageId) {
+      if (soundRef.current) {
+        await soundRef.current.stopAsync();
+        await soundRef.current.unloadAsync();
+        soundRef.current = null;
+      }
+      setPlayingMessageId(null);
+      return;
+    }
+    
+    // Stop any currently playing audio
+    if (soundRef.current) {
+      await soundRef.current.stopAsync();
+      await soundRef.current.unloadAsync();
+      soundRef.current = null;
+    }
+    setPlayingMessageId(null);
+    
+    // Check if we have cached audio for this message
+    const cachedUrl = audioCache.current.get(messageId);
+    
+    if (cachedUrl) {
+      // Use cached audio - instant playback!
+      try {
+        const { sound } = await Audio.Sound.createAsync(
+          { uri: cachedUrl },
+          { shouldPlay: true }
+          // Speed is NOT applied here - preview plays at natural speed
+          // Speed setting is for final video only (FFmpeg handles it better)
+        );
+        soundRef.current = sound;
+        setPlayingMessageId(messageId);
+        
+        sound.setOnPlaybackStatusUpdate((status) => {
+          if (status.isLoaded && status.didJustFinish) {
+            setPlayingMessageId(null);
+            sound.unloadAsync();
+            soundRef.current = null;
+          }
+        });
+        return;
+      } catch (error) {
+        console.log('Cached audio failed, regenerating:', error);
+        audioCache.current.delete(messageId); // Clear invalid cache
+      }
+    }
+    
+    // Generate new audio (ElevenLabs always generates at 1.2x speed)
+    setGeneratingVoiceMessageId(messageId);
+    
+    try {
+      const result = await generateScriptPreviewAudio({
+        messageId: messageId, // Can be local ID or Convex ID
+        script: content,
+      });
+      
+      if (result.success && result.audioUrl) {
+        // Cache the audio URL for future plays
+        audioCache.current.set(messageId, result.audioUrl);
+        
+        // Play the audio at natural speed
+        // Speed setting is for final video only (FFmpeg handles it better)
+        const { sound } = await Audio.Sound.createAsync(
+          { uri: result.audioUrl },
+          { shouldPlay: true }
+        );
+        soundRef.current = sound;
+        setPlayingMessageId(messageId);
+        
+        // Handle playback finished
+        sound.setOnPlaybackStatusUpdate((status) => {
+          if (status.isLoaded && status.didJustFinish) {
+            setPlayingMessageId(null);
+            sound.unloadAsync();
+            soundRef.current = null;
+          }
+        });
+      } else {
+        Alert.alert('Error', result.error || 'Failed to generate voice preview');
+      }
+    } catch (error) {
+      console.error('Voice preview error:', error);
+      Alert.alert('Error', 'Failed to generate voice preview');
+    } finally {
+      setGeneratingVoiceMessageId(null);
+    }
+  };
+  
+  // Speed change handler - sets speed for final video (FFmpeg)
+  // Preview always plays at natural speed for best quality
+  const handleChangeSpeed = () => {
+    const applySpeed = async (newSpeed: number) => {
+      setVoiceSpeed(newSpeed);
+      
+      // Save to backend for FFmpeg to use in final video
+      if (createdProjectId) {
+        try {
+          await updateProjectVoiceSpeed({
+            id: createdProjectId as any,
+            voiceSpeed: newSpeed,
+          });
+        } catch (error) {
+          console.error('Failed to save voice speed:', error);
+        }
+      }
+    };
+    
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: [...VOICE_SPEED_OPTIONS.map(o => o.label), 'Cancel'],
+          cancelButtonIndex: VOICE_SPEED_OPTIONS.length,
+          title: 'Voiceover Speed (Final Video)',
+          message: 'Preview plays at normal speed',
+        },
+        async (buttonIndex) => {
+          if (buttonIndex < VOICE_SPEED_OPTIONS.length) {
+            await applySpeed(VOICE_SPEED_OPTIONS[buttonIndex].value);
+          }
+        }
+      );
+    } else {
+      // Android: Use simple Alert with options
+      Alert.alert(
+        'Voiceover Speed',
+        'Select speed for the final video (preview plays at normal speed)',
+        VOICE_SPEED_OPTIONS.map(option => ({
+          text: option.label,
+          onPress: () => applySpeed(option.value),
+        }))
+      );
+    }
+  };
+  
+  // Keep order toggle handler
+  const handleToggleKeepOrder = async () => {
+    const newValue = !keepOrder;
+    setKeepOrder(newValue);
+    
+    // Save to backend if we have a project
+    if (createdProjectId) {
+      try {
+        await updateProjectKeepOrder({
+          id: createdProjectId as any,
+          keepOrder: newValue,
+        });
+      } catch (error) {
+        console.error('Failed to save keep order:', error);
+      }
+    }
+  };
+  
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      if (soundRef.current) {
+        soundRef.current.unloadAsync();
+      }
+    };
+  }, []);
   
   const handleApproveAndGenerate = async () => {
     if (!createdProjectId || isSubmitting) return;
@@ -763,8 +1025,30 @@ export default function ChatComposerScreen() {
     }
   };
   
-  const handleClose = () => {
-    router.back();
+  const handleClose = async () => {
+    const hasContent = mediaUris.length > 0 || messages.length > 0 || inputText.trim();
+    
+    // If no content, just exit silently
+    if (!hasContent) {
+      router.back();
+      return;
+    }
+    
+    // If we have a project and there's content, show the save notice
+    if (createdProjectId || hasContent) {
+      Alert.alert(
+        'Draft Saved',
+        'Your draft will be saved in the Drafts tab. You can continue later.',
+        [
+          { 
+            text: 'OK', 
+            onPress: () => router.back() 
+          }
+        ]
+      );
+    } else {
+      router.back();
+    }
   };
   
   const isLimitReached = userMessageCount >= MAX_USER_MESSAGES;
@@ -831,7 +1115,7 @@ export default function ChatComposerScreen() {
             <View style={styles.mediaPreviewContainer}>
               <MediaGrid
                 media={uploadedMedia}
-                onRemove={removeMedia}
+                onRemove={(index) => removeMedia(uploadedMedia[index]?.id)}
                 expanded={mediaExpanded}
                 onToggleExpand={() => setMediaExpanded(!mediaExpanded)}
               />
@@ -844,8 +1128,16 @@ export default function ChatComposerScreen() {
               key={message.id}
               message={message}
               onEditTap={() => handleEditScript(message.id, message.content)}
-              onCopy={() => handleCopy(message.content)}
+              onCopy={() => handleCopy(message.id, message.content)}
               isLatestAssistant={message.id === latestAssistantMessageId}
+              isCopied={copiedMessageId === message.id}
+              onPlayVoice={() => handlePlayVoice(message.id, message.content)}
+              isPlayingVoice={playingMessageId === message.id}
+              isGeneratingVoice={generatingVoiceMessageId === message.id}
+              voiceSpeed={voiceSpeed}
+              onChangeSpeed={handleChangeSpeed}
+              keepOrder={keepOrder}
+              onToggleKeepOrder={handleToggleKeepOrder}
             />
           ))}
           
@@ -858,6 +1150,14 @@ export default function ChatComposerScreen() {
             </View>
           )}
         </ScrollView>
+        
+        {/* Pending Media Bar (ChatGPT-style inline attachments) */}
+        {mediaUris.length > 0 && messages.length === 0 && (
+          <PendingMediaBar 
+            media={mediaUris}
+            onRemove={removeMedia}
+          />
+        )}
         
         {/* Input Area */}
         <View style={[styles.inputArea, { paddingBottom: insets.bottom + 8 }]}>
@@ -898,15 +1198,6 @@ export default function ChatComposerScreen() {
         onSave={handleSaveEdit}
         onClose={() => setShowEditor(false)}
       />
-      
-      {/* Upload Overlay */}
-      {(isPickingMedia || showUploadOverlay) && (
-        <OverlayLoader
-          title="Uploading..."
-          progress={showUploadOverlay ? uploadProgress : undefined}
-          showWarning={true}
-        />
-      )}
     </View>
   );
 }
@@ -1093,6 +1384,16 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.regular,
     color: Colors.grayLight,
   },
+  scriptLoadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  scriptLoadingText: {
+    fontSize: 14,
+    fontFamily: Fonts.regular,
+    color: Colors.orange,
+  },
   editedLabel: {
     fontSize: 11,
     fontFamily: Fonts.regular,
@@ -1102,11 +1403,31 @@ const styles = StyleSheet.create({
   },
   messageActions: {
     flexDirection: 'row',
+    alignItems: 'center',
     marginTop: 4,
-    paddingLeft: 8,
+    paddingLeft: 4,
+    gap: 2,
   },
   copyButton: {
     padding: 4,
+  },
+  actionButton: {
+    padding: 6,
+    borderRadius: 4,
+  },
+  actionButtonActive: {
+    backgroundColor: 'rgba(255, 107, 53, 0.15)',
+  },
+  copiedFeedback: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    padding: 4,
+  },
+  copiedText: {
+    fontSize: 12,
+    fontFamily: Fonts.regular,
+    color: Colors.orange,
   },
   limitWarning: {
     backgroundColor: 'rgba(255, 107, 53, 0.1)',
@@ -1199,43 +1520,70 @@ const styles = StyleSheet.create({
     color: Colors.white,
     lineHeight: 24,
   },
-  overlayLoader: {
+  // Pending Media Bar (ChatGPT-style inline attachments)
+  pendingMediaBar: {
+    backgroundColor: Colors.grayDark,
+    borderTopWidth: 1,
+    borderTopColor: Colors.gray,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  pendingMediaScroll: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  pendingMediaItem: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: Colors.gray,
+  },
+  pendingMediaImage: {
+    width: '100%',
+    height: '100%',
+  },
+  pendingMediaOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: Colors.black,
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 100,
   },
-  loaderContent: {
+  pendingMediaCheckmark: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: Colors.orange,
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 24,
   },
-  loaderTitle: {
-    fontSize: 20,
-    fontFamily: Fonts.title,
-    color: Colors.white,
-    marginTop: 20,
+  pendingMediaFailed: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#ff3b30',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  loaderProgress: {
-    fontSize: 16,
-    fontFamily: Fonts.regular,
-    color: Colors.grayLight,
-    marginTop: 8,
-  },
-  loaderSubtitle: {
-    fontSize: 14,
-    fontFamily: Fonts.regular,
-    color: Colors.grayLight,
-    marginTop: 8,
-  },
-  loaderWarning: {
-    fontSize: 14,
-    fontFamily: Fonts.regular,
-    color: Colors.orange,
-    marginTop: 16,
+  pendingMediaRemove: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
