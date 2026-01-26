@@ -338,6 +338,10 @@ export default function ChatComposerScreen() {
   const generateScriptPreviewAudio = useAction(api.aiServices.generateScriptPreviewAudio);
   const updateProjectVoiceSpeed = useMutation(api.tasks.updateProjectVoiceSpeed);
   const updateProjectKeepOrder = useMutation(api.tasks.updateProjectKeepOrder);
+  const refreshProjectR2Urls = useAction(api.tasks.refreshProjectR2Urls);
+  
+  // Track if we've already tried to refresh R2 URLs for this project
+  const hasAttemptedR2Refresh = useRef(false);
   
   // Fetch existing project data if projectId is provided
   const existingProject = useQuery(
@@ -443,6 +447,93 @@ export default function ChatComposerScreen() {
       }
     }
   }, [existingProject, existingMessages, projectId]);
+  
+  // Refresh R2 URLs for old projects where Convex storage has been deleted
+  // This regenerates presigned URLs from R2 keys stored in fileMetadata
+  useEffect(() => {
+    if (!existingProject || !projectId || hasAttemptedR2Refresh.current) return;
+    
+    // Check if we have fileMetadata with R2 keys but some/all fileUrls are null
+    const hasR2Keys = existingProject.fileMetadata?.some((meta: any) => meta.r2Key);
+    const hasMissingUrls = existingProject.fileUrls?.some((url: string | null) => !url);
+    
+    if (hasR2Keys && hasMissingUrls && existingProject.fileMetadata && existingProject.fileMetadata.length > 0) {
+      console.log('[chat-composer] Detected missing file URLs with R2 keys available, refreshing R2 URLs...');
+      hasAttemptedR2Refresh.current = true;
+      
+      refreshProjectR2Urls({ projectId })
+        .then((result) => {
+          console.log('[chat-composer] R2 URL refresh result:', result);
+        })
+        .catch((error) => {
+          console.error('[chat-composer] Failed to refresh R2 URLs:', error);
+        });
+    }
+  }, [existingProject, projectId, refreshProjectR2Urls]);
+  
+  // Refresh media URLs when queries return fresh data (URLs expire after 1 hour)
+  // This runs even after initial load to ensure URLs stay fresh
+  useEffect(() => {
+    if (!existingProject || !projectId) return;
+    
+    // Update project media URLs if they've changed (fresh from query)
+    if (existingProject.fileUrls && existingProject.fileMetadata && mediaUris.length > 0) {
+      const freshMediaUris = mediaUris.map((media, index) => {
+        // Only update existing media items that came from the project
+        if (media.id.startsWith('existing-')) {
+          const existingIndex = parseInt(media.id.replace('existing-', ''));
+          const freshUrl = existingProject.fileUrls?.[existingIndex];
+          if (freshUrl && freshUrl !== media.uri) {
+            console.log(`[chat-composer] Refreshing expired URL for media ${existingIndex}`);
+            return { ...media, uri: freshUrl };
+          }
+        }
+        return media;
+      });
+      
+      // Only update state if URLs actually changed
+      const urlsChanged = freshMediaUris.some((m, i) => m.uri !== mediaUris[i].uri);
+      if (urlsChanged) {
+        setMediaUris(freshMediaUris);
+      }
+    }
+  }, [existingProject?.fileUrls, projectId]);
+  
+  // Refresh message media URLs when existingMessages query returns fresh data
+  useEffect(() => {
+    if (!existingMessages || messages.length === 0) return;
+    
+    // Create a map of fresh URLs from the query
+    const freshUrlsMap = new Map<string, (string | null)[]>();
+    existingMessages.forEach((msg: any) => {
+      if (msg.mediaUrls) {
+        freshUrlsMap.set(msg._id, msg.mediaUrls);
+      }
+    });
+    
+    // Update messages with fresh URLs
+    let hasChanges = false;
+    const updatedMessages = messages.map(msg => {
+      const freshUrls = freshUrlsMap.get(msg.id);
+      if (freshUrls && msg.mediaUris) {
+        const updatedMediaUris = msg.mediaUris.map((media, index) => {
+          const freshUrl = freshUrls[index];
+          if (freshUrl && freshUrl !== media.uri) {
+            hasChanges = true;
+            console.log(`[chat-composer] Refreshing expired URL for message ${msg.id} media ${index}`);
+            return { ...media, uri: freshUrl };
+          }
+          return media;
+        });
+        return { ...msg, mediaUris: updatedMediaUris };
+      }
+      return msg;
+    });
+    
+    if (hasChanges) {
+      setMessages(updatedMessages);
+    }
+  }, [existingMessages]);
   
   // Auto-open media picker for new projects
   useEffect(() => {
@@ -1671,6 +1762,7 @@ const styles = StyleSheet.create({
   },
   sendIconApprove: {
     transform: [{ rotate: '45deg' }],
+    right: 2,
   },
   editorOverlay: {
     position: 'absolute',

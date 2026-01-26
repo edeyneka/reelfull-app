@@ -297,9 +297,7 @@ function VideoThumbnail({
       Alert.alert('Generation Failed', item.error || 'Video generation failed. Please try again.');
       return;
     }
-    if (item.status === 'pending' || item.status === 'processing' || item.status === 'preparing') {
-      return;
-    }
+    // Allow tapping on processing/pending videos to view generation progress
     onPress();
   };
 
@@ -504,10 +502,22 @@ export default function FeedTab() {
             });
           } else if (item.status === 'ready' && (!item.uri || item.uri.length === 0)) {
             Alert.alert('Error', 'Video is not available. Please try again or contact support.');
-          } else if (item.status === 'pending' || item.status === 'processing') {
-            Alert.alert('Video Processing', 'Your video is still being generated. You\'ll receive a notification when it\'s ready!');
-          } else if (item.status === 'preparing') {
-            Alert.alert('Almost Ready', 'Your video is ready and preparing for playback. It will be available in a moment!');
+          } else if (item.status === 'pending' || item.status === 'processing' || item.status === 'preparing') {
+            // Navigate to video-preview in generating mode to show progress
+            if (item.projectId) {
+              router.push({
+                pathname: '/video-preview',
+                params: {
+                  videoId: item.id,
+                  videoUri: '', // No video yet
+                  prompt: item.prompt,
+                  script: item.script || '',
+                  projectId: item.projectId,
+                  thumbnailUrl: item.thumbnailUrl || '',
+                  isGenerating: 'true',
+                },
+              });
+            }
           }
         }}
         onLongPress={(position) => {

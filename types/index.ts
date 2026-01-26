@@ -3,6 +3,14 @@ export type StylePreference = 'Playful' | 'Professional' | 'Dreamy';
 // Backend style mapping
 export type BackendStyle = 'playful' | 'professional' | 'travel';
 
+// Video generation phases for progress UI
+export type GenerationPhase = 
+  | 'preparing_media'  // FAL animations, TTS, music generation
+  | 'video_agent'      // Claude editing the sequence
+  | 'composing'        // FFMPEG/Remotion rendering
+  | 'finalizing'       // Uploading to R2, getting URL
+  | null;              // Not generating
+
 export interface UserProfile {
   name: string;
   style: StylePreference;
