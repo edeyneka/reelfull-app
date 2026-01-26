@@ -155,7 +155,7 @@ function ChatBubble({
             message.isLoading && styles.messageBubbleLoading,
           ]}
           onPress={isAssistant && isLatestAssistant ? onEditTap : undefined}
-          onLongPress={isAssistant ? onCopy : undefined}
+          onLongPress={message.content ? onCopy : undefined}
         >
           {message.isLoading ? (
             <View style={styles.scriptLoadingContainer}>
@@ -174,6 +174,22 @@ function ChatBubble({
         </Pressable>
       )}
       
+      {/* Action buttons for user messages */}
+      {isUser && !message.isLoading && message.content && (
+        <View style={[styles.messageActions, styles.messageActionsUser]}>
+          {isCopied ? (
+            <View style={styles.copiedFeedback}>
+              <Check size={14} color={Colors.orange} strokeWidth={2.5} />
+              <Text style={styles.copiedText}>Copied</Text>
+            </View>
+          ) : (
+            <TouchableOpacity onPress={onCopy} style={styles.actionButton}>
+              <Copy size={14} color={Colors.grayLight} />
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+      
       {/* Action buttons for assistant messages */}
       {isAssistant && !message.isLoading && (
         <View style={styles.messageActions}>
@@ -181,7 +197,7 @@ function ChatBubble({
           {isCopied ? (
             <View style={styles.copiedFeedback}>
               <Check size={14} color={Colors.orange} strokeWidth={2.5} />
-              <Text style={styles.copiedText}>Script copied</Text>
+              <Text style={styles.copiedText}>Copied</Text>
             </View>
           ) : (
             <TouchableOpacity onPress={onCopy} style={styles.actionButton}>
@@ -1353,6 +1369,11 @@ const styles = StyleSheet.create({
     marginTop: 4,
     paddingLeft: 4,
     gap: 2,
+  },
+  messageActionsUser: {
+    alignSelf: 'flex-end',
+    paddingLeft: 0,
+    paddingRight: 0,
   },
   copyButton: {
     padding: 4,
