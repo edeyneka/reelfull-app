@@ -136,7 +136,7 @@ export default function OnboardingScreen() {
       });
       
       console.log('[onboarding] Onboarding complete!');
-      router.replace('/feed');
+      router.replace('/(tabs)');
     } catch (error) {
       console.error('[onboarding] Error completing onboarding:', error);
       Alert.alert('Error', 'Failed to save your profile. Please try again.');
@@ -163,7 +163,7 @@ export default function OnboardingScreen() {
       await saveUser({ name: name.trim(), style: selectedStyle });
       
       console.log('[onboarding] Onboarding complete!');
-      router.replace('/feed');
+      router.replace('/(tabs)');
     } catch (error) {
       console.error('[onboarding] Error completing onboarding:', error);
       Alert.alert('Error', 'Failed to save your profile. Please try again.');

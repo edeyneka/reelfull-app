@@ -14,6 +14,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
   const [isLoading, setIsLoading] = useState(true);
   const [syncedFromBackend, setSyncedFromBackend] = useState(false);
   const [backendUser, setBackendUser] = useState<any>(null);
+  const [recentlyDeletedIds, setRecentlyDeletedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadData();
@@ -105,11 +106,13 @@ export const [AppProvider, useApp] = createContextHook(() => {
           id: project._id,
           uri: project.renderedVideoUrl || '',
           prompt: project.prompt,
+          name: project.name, // AI-generated project name
           script: transformScript(project.script),
           createdAt: project.createdAt,
           status: 'ready' as const,
           projectId: project._id,
           thumbnailUrl: project.thumbnailUrl, // Include thumbnail URL for grid display
+          duration: project.duration, // Video duration in seconds
         }));
 
       // Add draft videos (not yet approved by user)
@@ -119,6 +122,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
           id: project._id,
           uri: '',
           prompt: project.prompt,
+          name: project.name, // AI-generated project name
           script: transformScript(project.script),
           createdAt: project.createdAt,
           status: 'draft' as const,
@@ -136,6 +140,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
           id: project._id,
           uri: '',
           prompt: project.prompt,
+          name: project.name, // AI-generated project name
           script: transformScript(project.script),
           createdAt: project.createdAt,
           status: project.status === 'rendering' ? 'processing' as const : 'pending' as const,
@@ -150,6 +155,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
           id: project._id,
           uri: '',
           prompt: project.prompt,
+          name: project.name, // AI-generated project name
           script: transformScript(project.script),
           createdAt: project.createdAt,
           status: 'failed' as const,
@@ -158,15 +164,19 @@ export const [AppProvider, useApp] = createContextHook(() => {
           thumbnailUrl: project.thumbnailUrl, // Include thumbnail URL even for failed videos
         }));
 
-      const backendVideoList = [...backendVideos, ...draftVideos, ...processingVideos, ...failedVideos];
+      // Filter out recently deleted videos to prevent them from reappearing during sync
+      const backendVideoList = [...backendVideos, ...draftVideos, ...processingVideos, ...failedVideos]
+        .filter(v => !recentlyDeletedIds.has(v.id));
       
       // Merge with existing local videos (in case there are any new ones not in backend yet)
       setVideos(currentVideos => {
         // Create a map of backend videos by ID for quick lookup
         const backendVideoMap = new Map(backendVideoList.map(v => [v.id, v]));
         
-        // Keep local videos that aren't in the backend yet
-        const localOnlyVideos = currentVideos.filter(v => !backendVideoMap.has(v.id));
+        // Keep local videos that aren't in the backend yet (and not recently deleted)
+        const localOnlyVideos = currentVideos.filter(v => 
+          !backendVideoMap.has(v.id) && !recentlyDeletedIds.has(v.id)
+        );
         
         // Merge: backend videos take precedence, then add local-only videos
         const mergedVideos = [...backendVideoList, ...localOnlyVideos];
@@ -185,7 +195,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
     } catch (error) {
       console.error('[sync] Error syncing videos from backend:', error);
     }
-  }, []);
+  }, [recentlyDeletedIds]);
 
   const saveUser = useCallback(async (profile: UserProfile) => {
     try {
@@ -270,6 +280,10 @@ export const [AppProvider, useApp] = createContextHook(() => {
 
   const deleteVideo = useCallback(async (videoId: string) => {
     try {
+      // Add to recently deleted set to prevent sync from re-adding it
+      setRecentlyDeletedIds(prev => new Set(prev).add(videoId));
+      
+      // Remove from local state
       setVideos((prevVideos) => {
         const updatedVideos = prevVideos.filter(video => video.id !== videoId);
         AsyncStorage.setItem(VIDEOS_KEY, JSON.stringify(updatedVideos)).catch((err) => {
@@ -277,6 +291,15 @@ export const [AppProvider, useApp] = createContextHook(() => {
         });
         return updatedVideos;
       });
+      
+      // Clear from recently deleted after delay (allows backend sync to complete)
+      setTimeout(() => {
+        setRecentlyDeletedIds(prev => {
+          const next = new Set(prev);
+          next.delete(videoId);
+          return next;
+        });
+      }, 5000);
     } catch (error) {
       console.error('Error deleting video:', error);
     }
