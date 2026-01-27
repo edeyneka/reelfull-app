@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { X, Download, Copy, Check, RefreshCw, Mic, MicOff, Music, Music2, Subtitles, MessageSquare, Loader2 } from 'lucide-react-native';
+import { X, Download, Mic, MicOff, Music, Music2, Subtitles, MessageSquare, Loader2 } from 'lucide-react-native';
 import { useState, useEffect, useRef } from 'react';
 import {
   Alert,
@@ -13,13 +13,12 @@ import {
   Animated,
   Image,
 } from 'react-native';
-import * as Clipboard from 'expo-clipboard';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as MediaLibrary from 'expo-media-library';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAction, useMutation, useQuery } from "convex/react";
+import { useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
@@ -108,7 +107,7 @@ export default function VideoPreviewScreen() {
     isGenerating?: string;
   }>();
   
-  const { addVideo, updateVideoStatus } = useApp();
+  const { updateVideoStatus } = useApp();
   
   // Parse params
   const videoId = params.videoId;
@@ -174,8 +173,6 @@ export default function VideoPreviewScreen() {
   // Local state
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
-  const [isCopied, setIsCopied] = useState(false);
-  const [isRegenerating, setIsRegenerating] = useState(false);
   
   // Video option toggles
   const [voiceoverEnabled, setVoiceoverEnabled] = useState(true);
@@ -185,8 +182,6 @@ export default function VideoPreviewScreen() {
   // Convex hooks
   const getFreshVideoUrl = useAction(api.tasks.getFreshProjectVideoUrl);
   const getVideoVariant = useAction(api.tasks.getVideoVariant);
-  const deleteProjectMutation = useMutation(api.tasks.deleteProject);
-  const regenerateProjectEditing = useMutation(api.tasks.regenerateProjectEditing);
 
   // Video player
   const videoPlayer = useVideoPlayer(
@@ -320,66 +315,6 @@ export default function VideoPreviewScreen() {
     }
   };
 
-  const handleCopyScript = async () => {
-    const textToCopy = script || prompt;
-    if (!textToCopy) return;
-
-    try {
-      const transformedText = textToCopy.replace(/\?\?\?/g, '?');
-      await Clipboard.setStringAsync(transformedText);
-      setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2000);
-    } catch (error) {
-      console.error('Copy error:', error);
-      Alert.alert('Error', 'Failed to copy text. Please try again.');
-    }
-  };
-
-  const handleRegenerate = async () => {
-    if (!projectId || isRegenerating) return;
-
-    setIsRegenerating(true);
-    try {
-      console.log('[video-preview] Regenerating project editing for:', projectId);
-      
-      const result = await regenerateProjectEditing({
-        sourceProjectId: projectId,
-      });
-
-      if (result.success && result.newProjectId) {
-        console.log('[video-preview] New project created:', result.newProjectId);
-        
-        const transformedScript = script?.replace(/\?\?\?/g, '?');
-        addVideo({
-          id: result.newProjectId,
-          uri: '',
-          prompt: prompt,
-          script: transformedScript,
-          createdAt: Date.now(),
-          status: 'processing',
-          projectId: result.newProjectId,
-          thumbnailUrl: thumbnailUrl,
-        });
-
-        router.replace('/(tabs)');
-      } else {
-        throw new Error('Failed to create regenerated project');
-      }
-    } catch (error) {
-      console.error('[video-preview] Regenerate error:', error);
-      
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      
-      if (errorMessage.includes('FREE_TIER_LIMIT_REACHED') || errorMessage.includes('NO_CREDITS_AVAILABLE')) {
-        router.push('/paywall');
-      } else {
-        Alert.alert('Error', 'Failed to regenerate video. Please try again.');
-      }
-    } finally {
-      setIsRegenerating(false);
-    }
-  };
-
   const handleChatHistory = () => {
     // Navigate to chat composer with this project's chat history
     if (projectId) {
@@ -451,14 +386,13 @@ export default function VideoPreviewScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.titleSection}>
-          <Text style={styles.title}>
-            {isGenerating ? phaseText.title : 'Ready to share!'}
-          </Text>
-          {isGenerating && (
+        {/* Title section - only visible when generating */}
+        {isGenerating && (
+          <View style={styles.titleSection}>
+            <Text style={styles.title}>{phaseText.title}</Text>
             <Text style={styles.subtitle}>{phaseText.subtitle}</Text>
-          )}
-        </View>
+          </View>
+        )}
 
         <View testID="videoPreviewContainer" style={styles.videoPreviewContainer}>
           {isGenerating ? (
@@ -489,24 +423,6 @@ export default function VideoPreviewScreen() {
               nativeControls={true}
             />
           )}
-        </View>
-
-        <View style={styles.promptSection}>
-          <TouchableOpacity
-            style={styles.copyIconButton}
-            onPress={handleCopyScript}
-            activeOpacity={0.8}
-            disabled={!script && !prompt}
-          >
-            {isCopied ? (
-              <Check size={18} color={Colors.orange} strokeWidth={2.5} />
-            ) : (
-              <Copy size={18} color={Colors.white} strokeWidth={2.5} />
-            )}
-          </TouchableOpacity>
-          <Text style={styles.promptText} numberOfLines={2} ellipsizeMode="tail">
-            {script || prompt}
-          </Text>
         </View>
 
         <View style={styles.actions}>
@@ -601,30 +517,6 @@ export default function VideoPreviewScreen() {
             </LinearGradient>
           </TouchableOpacity>
 
-          {/* Regenerate button - disabled when generating */}
-          <TouchableOpacity
-            style={[styles.downloadButton, isGenerating && styles.disabledButton]}
-            onPress={handleRegenerate}
-            activeOpacity={isGenerating ? 1 : 0.8}
-            disabled={isRegenerating || isGenerating}
-          >
-            <LinearGradient
-              colors={isGenerating ? [Colors.grayDark, Colors.gray] : [Colors.orangeLight, Colors.orange]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.downloadGradient}
-            >
-              {isRegenerating ? (
-                <ActivityIndicator size="small" color={Colors.white} />
-              ) : (
-                <>
-                  <RefreshCw size={20} color={isGenerating ? Colors.grayLight : Colors.white} strokeWidth={2.5} />
-                  <Text style={[styles.downloadButtonText, isGenerating && styles.disabledButtonText]}>Regenerate</Text>
-                </>
-              )}
-            </LinearGradient>
-          </TouchableOpacity>
-
           {downloadSuccess && (
             <Text style={styles.downloadSuccessText}>
               This video was saved to your camera roll.
@@ -646,7 +538,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 24,
-    paddingBottom: 16,
+    paddingBottom: 8,
     backgroundColor: Colors.black,
   },
   closeButton: {
@@ -667,6 +559,7 @@ const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
     paddingHorizontal: 24,
+    paddingTop: 0,
     paddingBottom: 40,
   },
   titleSection: {
@@ -687,14 +580,15 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   videoPreviewContainer: {
-    justifyContent: 'center',
+    flex: 1,
+    justifyContent: 'flex-start',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 0,
   },
   videoPreview: {
-    width: '65%',
+    width: '100%',
     aspectRatio: 9 / 16,
-    maxHeight: 380,
+    maxHeight: 560,
     borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: Colors.grayDark,
@@ -725,39 +619,16 @@ const styles = StyleSheet.create({
     color: Colors.orange,
     textAlign: 'center',
   },
-  promptSection: {
-    marginBottom: 24,
-    paddingHorizontal: 24,
-    alignItems: 'center',
-  },
-  promptText: {
-    fontSize: 13,
-    fontStyle: 'italic',
-    color: Colors.white,
-    lineHeight: 20,
-    textAlign: 'center',
-    paddingRight: 40,
-  },
-  copyIconButton: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    width: 36,
-    height: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 10,
-  },
   actions: {
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
   },
   videoOptionsRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     gap: 12,
-    marginBottom: 4,
+    marginBottom: 10,
   },
   videoOptionToggle: {
     width: 60,

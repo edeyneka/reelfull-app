@@ -305,6 +305,7 @@ export default function ChatComposerScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const [isProcessingMedia, setIsProcessingMedia] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
   
   // Track if we've forked from a completed video project
   const [hasForkedFromVideo, setHasForkedFromVideo] = useState(false);
@@ -339,6 +340,7 @@ export default function ChatComposerScreen() {
   const updateProjectVoiceSpeed = useMutation(api.tasks.updateProjectVoiceSpeed);
   const updateProjectKeepOrder = useMutation(api.tasks.updateProjectKeepOrder);
   const refreshProjectR2Urls = useAction(api.tasks.refreshProjectR2Urls);
+  const regenerateProjectEditing = useMutation(api.tasks.regenerateProjectEditing);
   
   // Track if we've already tried to refresh R2 URLs for this project
   const hasAttemptedR2Refresh = useRef(false);
@@ -1115,6 +1117,56 @@ export default function ChatComposerScreen() {
     };
   }, []);
   
+  // Handle regenerate when coming from video without modifications
+  const handleRegenerateFromVideo = async () => {
+    if (!originalVideoProjectId || isRegenerating) return;
+
+    setIsRegenerating(true);
+    try {
+      console.log('[chat-composer] Regenerating project editing for:', originalVideoProjectId);
+      
+      const result = await regenerateProjectEditing({
+        sourceProjectId: originalVideoProjectId as any,
+      });
+
+      if (result.success && result.newProjectId) {
+        console.log('[chat-composer] New project created:', result.newProjectId);
+        
+        // Get the latest script from messages
+        const latestScript = messages
+          .filter(m => m.role === 'assistant' && !m.isLoading)
+          .sort((a, b) => b.createdAt - a.createdAt)[0]?.content;
+        
+        addVideo({
+          id: result.newProjectId,
+          uri: '',
+          prompt: existingProject?.prompt || 'Regenerated video',
+          script: latestScript?.replace(/\?\?\?/g, '?'),
+          createdAt: Date.now(),
+          status: 'processing',
+          projectId: result.newProjectId,
+          thumbnailUrl: existingProject?.thumbnailUrl || mediaUris[0]?.uri,
+        });
+
+        router.replace('/(tabs)');
+      } else {
+        throw new Error('Failed to create regenerated project');
+      }
+    } catch (error) {
+      console.error('[chat-composer] Regenerate error:', error);
+      
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      if (errorMessage.includes('FREE_TIER_LIMIT_REACHED') || errorMessage.includes('NO_CREDITS_AVAILABLE')) {
+        router.push('/paywall');
+      } else {
+        Alert.alert('Error', 'Failed to regenerate video. Please try again.');
+      }
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
+  
   const handleApproveAndGenerate = async () => {
     if (isSubmitting) return;
     
@@ -1249,9 +1301,13 @@ export default function ChatComposerScreen() {
     ? (uploadedMedia.length > 0 && !isGenerating)  // First message: need media
     : (hasNewInput && !isGenerating && !isLimitReached);  // Subsequent: need text
   
+  // Determine if send button should act as "Regenerate" 
+  // This happens when coming from video without any modifications
+  const isRegenerateMode = fromVideo && !hasForkedFromVideo && hasScript && !hasNewInput && !isGenerating && !isRegenerating;
+  
   // Determine if send button should act as "Approve & Generate"
-  // This happens when we have a script, no new text input, and not generating/submitting
-  const isApproveMode = hasScript && !hasNewInput && !isGenerating && !isSubmitting;
+  // This happens when we have a script, no new text input, and not generating/submitting (but not regenerate mode)
+  const isApproveMode = !isRegenerateMode && hasScript && !hasNewInput && !isGenerating && !isSubmitting;
   
   // Find latest assistant message for edit functionality
   const latestAssistantMessageId = messages
@@ -1416,21 +1472,21 @@ export default function ChatComposerScreen() {
             />
           </View>
           
-          {/* Send/Approve button - outside card */}
+          {/* Send/Approve/Regenerate button - outside card */}
           <TouchableOpacity
             style={[
               styles.sendButton, 
-              (canSend || isApproveMode) && styles.sendButtonActive,
-              isSubmitting && styles.sendButtonDisabled,
+              (canSend || isApproveMode || isRegenerateMode) && styles.sendButtonActive,
+              (isSubmitting || isRegenerating) && styles.sendButtonDisabled,
             ]}
-            onPress={isApproveMode ? handleApproveAndGenerate : handleSend}
-            disabled={isApproveMode ? isSubmitting : !canSend}
+            onPress={isRegenerateMode ? handleRegenerateFromVideo : (isApproveMode ? handleApproveAndGenerate : handleSend)}
+            disabled={isRegenerateMode ? isRegenerating : (isApproveMode ? isSubmitting : !canSend)}
           >
-            {isSubmitting ? (
+            {(isSubmitting || isRegenerating) ? (
               <ActivityIndicator size={16} color={Colors.white} />
             ) : (
-              <View style={isApproveMode ? styles.sendIconApprove : undefined}>
-                <Send size={20} color={(canSend || isApproveMode) ? Colors.white : Colors.grayLight} />
+              <View style={(isApproveMode || isRegenerateMode) ? styles.sendIconApprove : undefined}>
+                <Send size={20} color={(canSend || isApproveMode || isRegenerateMode) ? Colors.white : Colors.grayLight} />
               </View>
             )}
           </TouchableOpacity>
