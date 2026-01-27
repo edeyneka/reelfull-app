@@ -41,3 +41,4 @@ yarn-error.*
 .maestro/
 constants/testData.ts
 assets/test-video.mp4
+redesign-instruction.md

@@ -179,7 +179,7 @@ function ChatBubble({
         <View style={[styles.messageActions, styles.messageActionsUser]}>
           {isCopied ? (
             <View style={styles.copiedFeedback}>
-              <Check size={14} color={Colors.orange} strokeWidth={2.5} />
+              <Check size={14} color={Colors.accent} strokeWidth={2.5} />
               <Text style={styles.copiedText}>Copied</Text>
             </View>
           ) : (
@@ -196,7 +196,7 @@ function ChatBubble({
           {/* Copy button */}
           {isCopied ? (
             <View style={styles.copiedFeedback}>
-              <Check size={14} color={Colors.orange} strokeWidth={2.5} />
+              <Check size={14} color={Colors.accent} strokeWidth={2.5} />
               <Text style={styles.copiedText}>Copied</Text>
             </View>
           ) : (
@@ -212,9 +212,9 @@ function ChatBubble({
             disabled={isGeneratingVoice}
           >
             {isGeneratingVoice ? (
-              <ActivityIndicator size={14} color={Colors.orange} />
+              <ActivityIndicator size={14} color={Colors.accent} />
             ) : isPlayingVoice ? (
-              <VolumeX size={14} color={Colors.orange} />
+              <VolumeX size={14} color={Colors.accent} />
             ) : (
               <Volume2 size={14} color={Colors.grayLight} />
             )}
@@ -230,7 +230,7 @@ function ChatBubble({
             onPress={onToggleKeepOrder} 
             style={[styles.actionButton, keepOrder && styles.actionButtonActive]}
           >
-            <ListOrdered size={14} color={keepOrder ? Colors.orange : Colors.grayLight} />
+            <ListOrdered size={14} color={keepOrder ? Colors.accent : Colors.grayLight} />
           </TouchableOpacity>
         </View>
       )}
@@ -267,7 +267,7 @@ function ScriptEditor({
         </TouchableOpacity>
         <Text style={styles.editorTitle}>Edit Script</Text>
         <TouchableOpacity onPress={() => onSave(editedScript)} style={styles.editorSaveButton}>
-          <Check size={24} color={Colors.orange} />
+          <Check size={24} color={Colors.accent} />
         </TouchableOpacity>
       </View>
       <TextInput
@@ -1349,7 +1349,7 @@ export default function ChatComposerScreen() {
           {/* Info banner when viewing chat from a completed video */}
           {fromVideo && !hasForkedFromVideo && (
             <View style={styles.infoBanner}>
-              <Info size={16} color={Colors.orange} />
+              <Info size={16} color={Colors.accent} />
               <Text style={styles.infoBannerText}>
                 Any changes will create a new draft. Original video stays unchanged.
               </Text>
@@ -1515,7 +1515,7 @@ export default function ChatComposerScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.black,
+    backgroundColor: Colors.dark,
   },
   header: {
     flexDirection: 'row',
@@ -1551,7 +1551,7 @@ const styles = StyleSheet.create({
   infoBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 107, 53, 0.1)',
+    backgroundColor: 'rgba(232, 144, 106, 0.1)',
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
@@ -1561,7 +1561,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     fontFamily: Fonts.regular,
-    color: Colors.orange,
+    color: Colors.accent,
     lineHeight: 18,
   },
   welcomeContainer: {
@@ -1570,14 +1570,14 @@ const styles = StyleSheet.create({
   },
   welcomeTitle: {
     fontSize: 28,
-    fontFamily: Fonts.title,
-    color: Colors.white,
+    fontFamily: Fonts.medium,
+    color: Colors.cream,
     marginBottom: 8,
   },
   welcomeSubtitle: {
     fontSize: 16,
     fontFamily: Fonts.regular,
-    color: Colors.grayLight,
+    color: Colors.textSecondaryDark,
     textAlign: 'center',
   },
   messageBubbleContainer: {
@@ -1610,11 +1610,11 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   messageBubbleUser: {
-    backgroundColor: Colors.orange,
+    backgroundColor: Colors.accent,
     borderBottomRightRadius: 4,
   },
   messageBubbleAssistant: {
-    backgroundColor: Colors.grayDark,
+    backgroundColor: Colors.darkSurface,
     borderBottomLeftRadius: 4,
   },
   messageBubbleLoading: {
@@ -1623,7 +1623,7 @@ const styles = StyleSheet.create({
   messageText: {
     fontSize: 15,
     fontFamily: Fonts.regular,
-    color: Colors.white,
+    color: Colors.cream,
     lineHeight: 22,
   },
   messageTextUser: {
@@ -1648,7 +1648,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: Fonts.regular,
     fontStyle: 'italic',
-    color: Colors.orange,
+    color: Colors.accent,
   },
   editedLabel: {
     fontSize: 11,
@@ -1688,10 +1688,10 @@ const styles = StyleSheet.create({
   copiedText: {
     fontSize: 12,
     fontFamily: Fonts.regular,
-    color: Colors.orange,
+    color: Colors.accent,
   },
   limitWarning: {
-    backgroundColor: 'rgba(255, 107, 53, 0.1)',
+    backgroundColor: 'rgba(232, 144, 106, 0.1)',
     borderRadius: 8,
     padding: 12,
     marginTop: 8,
@@ -1699,7 +1699,7 @@ const styles = StyleSheet.create({
   limitWarningText: {
     fontSize: 13,
     fontFamily: Fonts.regular,
-    color: Colors.orange,
+    color: Colors.accent,
     textAlign: 'center',
   },
   // Unified Composer styles
@@ -1709,12 +1709,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 15,
-    backgroundColor: Colors.black,
+    backgroundColor: Colors.dark,
     gap: 8,
   },
   composerCard: {
     flex: 1,
-    backgroundColor: 'rgba(35, 35, 35, 0.95)',
+    backgroundColor: Colors.darkSurface,
     borderRadius: 20,
     overflow: 'hidden',
   },
@@ -1762,7 +1762,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 15,
     fontFamily: Fonts.regular,
-    color: Colors.white,
+    color: Colors.cream,
     maxHeight: 100,
   },
   composerMediaPlaceholder: {
@@ -1789,7 +1789,7 @@ const styles = StyleSheet.create({
   processingOverlayText: {
     fontSize: 16,
     fontFamily: Fonts.regular,
-    color: Colors.white,
+    color: Colors.cream,
     marginTop: 12,
   },
   addMediaButton: {
@@ -1811,7 +1811,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   sendButtonActive: {
-    backgroundColor: Colors.orange,
+    backgroundColor: Colors.accent,
   },
   sendButtonDisabled: {
     opacity: 0.6,
@@ -1826,7 +1826,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: Colors.black,
+    backgroundColor: Colors.dark,
     zIndex: 100,
   },
   editorHeader: {
@@ -1843,8 +1843,8 @@ const styles = StyleSheet.create({
   },
   editorTitle: {
     fontSize: 18,
-    fontFamily: Fonts.title,
-    color: Colors.white,
+    fontFamily: Fonts.medium,
+    color: Colors.cream,
   },
   editorSaveButton: {
     padding: 8,
@@ -1854,7 +1854,7 @@ const styles = StyleSheet.create({
     padding: 16,
     fontSize: 16,
     fontFamily: Fonts.regular,
-    color: Colors.white,
+    color: Colors.cream,
     lineHeight: 24,
   },
 });

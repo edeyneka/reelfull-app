@@ -339,7 +339,7 @@ export default function VideoPreviewScreen() {
           onPress={handleClose}
           activeOpacity={0.7}
         >
-          <X size={24} color={Colors.white} strokeWidth={2} />
+          <X size={24} color={Colors.cream} strokeWidth={2} />
         </TouchableOpacity>
         <View style={styles.placeholder} />
         <View style={styles.placeholder} />
@@ -367,7 +367,7 @@ export default function VideoPreviewScreen() {
           onPress={handleClose}
           activeOpacity={0.7}
         >
-          <X size={24} color={Colors.white} strokeWidth={2} />
+          <X size={24} color={Colors.cream} strokeWidth={2} />
         </TouchableOpacity>
         <View style={styles.placeholder} />
         {projectId && !isTestMode && (
@@ -376,7 +376,7 @@ export default function VideoPreviewScreen() {
             onPress={handleChatHistory}
             activeOpacity={0.7}
           >
-            <MessageSquare size={22} color={Colors.white} strokeWidth={2} />
+            <MessageSquare size={22} color={Colors.cream} strokeWidth={2} />
           </TouchableOpacity>
         )}
         {(!projectId || isTestMode) && <View style={styles.placeholder} />}
@@ -409,7 +409,7 @@ export default function VideoPreviewScreen() {
               )}
               <View style={styles.generatingOverlay}>
                 <Animated.View style={{ transform: [{ rotate: spin }] }}>
-                  <Loader2 size={48} color={Colors.orange} strokeWidth={2} />
+                  <Loader2 size={48} color={Colors.accent} strokeWidth={2} />
                 </Animated.View>
                 <Text style={styles.generatingPhaseText}>{phaseText.title}</Text>
               </View>
@@ -496,7 +496,7 @@ export default function VideoPreviewScreen() {
             disabled={isDownloading || isGenerating}
           >
             <LinearGradient
-              colors={isGenerating ? [Colors.grayDark, Colors.gray] : [Colors.orangeLight, Colors.orange]}
+              colors={isGenerating ? [Colors.darkElevated, Colors.darkSurface] : ['#F0A080', Colors.accent, '#D07850']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.downloadGradient}
@@ -531,7 +531,7 @@ export default function VideoPreviewScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.black,
+    backgroundColor: Colors.dark,
   },
   header: {
     flexDirection: 'row',
@@ -539,7 +539,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 24,
     paddingBottom: 8,
-    backgroundColor: Colors.black,
+    backgroundColor: Colors.dark,
   },
   closeButton: {
     width: 40,
@@ -568,14 +568,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontFamily: Fonts.regular,
-    color: Colors.white,
+    fontFamily: Fonts.medium,
+    color: Colors.cream,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 14,
     fontFamily: Fonts.regular,
-    color: Colors.grayLight,
+    color: Colors.textSecondaryDark,
     textAlign: 'center',
     marginTop: 8,
   },
@@ -589,9 +589,9 @@ const styles = StyleSheet.create({
     width: '100%',
     aspectRatio: 9 / 16,
     maxHeight: 560,
-    borderRadius: 12,
+    borderRadius: 16,
     overflow: 'hidden',
-    backgroundColor: Colors.grayDark,
+    backgroundColor: Colors.darkElevated,
   },
   generatingThumbnail: {
     width: '100%',
@@ -600,7 +600,7 @@ const styles = StyleSheet.create({
   generatingPlaceholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: Colors.grayDark,
+    backgroundColor: Colors.darkElevated,
   },
   generatingOverlay: {
     position: 'absolute',
@@ -615,8 +615,8 @@ const styles = StyleSheet.create({
   },
   generatingPhaseText: {
     fontSize: 14,
-    fontFamily: Fonts.title,
-    color: Colors.orange,
+    fontFamily: Fonts.medium,
+    color: Colors.accent,
     textAlign: 'center',
   },
   actions: {
@@ -633,8 +633,8 @@ const styles = StyleSheet.create({
   videoOptionToggle: {
     width: 60,
     height: 60,
-    borderRadius: 10,
-    backgroundColor: Colors.grayDark,
+    borderRadius: 12,
+    backgroundColor: Colors.darkElevated,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
@@ -642,13 +642,13 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   videoOptionToggleActive: {
-    backgroundColor: 'rgba(255, 107, 53, 0.2)',
-    borderColor: Colors.orange,
+    backgroundColor: 'rgba(232, 144, 106, 0.2)',
+    borderColor: Colors.accent,
   },
   videoOptionLabel: {
     fontSize: 10,
     fontFamily: Fonts.regular,
-    color: Colors.white,
+    color: Colors.cream,
   },
   videoOptionLabelInactive: {
     color: Colors.grayLight,
@@ -656,7 +656,7 @@ const styles = StyleSheet.create({
   videoOptionToggleDisabled: {
     opacity: 0.5,
     borderColor: 'transparent',
-    backgroundColor: Colors.grayDark,
+    backgroundColor: Colors.darkElevated,
   },
   disabledSection: {
     opacity: 0.6,
@@ -669,7 +669,7 @@ const styles = StyleSheet.create({
   },
   downloadButton: {
     width: '100%',
-    borderRadius: 12,
+    borderRadius: 100,
     overflow: 'hidden',
   },
   downloadGradient: {
@@ -681,13 +681,13 @@ const styles = StyleSheet.create({
   },
   downloadButtonText: {
     fontSize: 16,
-    fontFamily: Fonts.title,
-    color: Colors.white,
+    fontFamily: Fonts.medium,
+    color: Colors.cream,
   },
   downloadSuccessText: {
     fontSize: 14,
     fontFamily: Fonts.regular,
-    color: Colors.white,
+    color: Colors.cream,
     textAlign: 'center',
     opacity: 0.8,
   },
@@ -702,15 +702,15 @@ const styles = StyleSheet.create({
     color: Colors.grayLight,
   },
   errorButton: {
-    backgroundColor: Colors.orange,
-    borderRadius: 12,
+    backgroundColor: Colors.accent,
+    borderRadius: 100,
     paddingHorizontal: 24,
-    paddingVertical: 12,
+    paddingVertical: 14,
   },
   errorButtonText: {
     fontSize: 16,
-    fontFamily: Fonts.title,
-    color: Colors.white,
+    fontFamily: Fonts.medium,
+    color: Colors.cream,
   },
 });
 

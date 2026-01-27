@@ -187,7 +187,7 @@ export default function LoaderScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={[Colors.black, Colors.grayDark, Colors.black]}
+        colors={[Colors.dark, Colors.darkElevated, Colors.dark]}
         style={styles.gradient}
       >
         <Animated.View
@@ -198,7 +198,7 @@ export default function LoaderScreen() {
             },
           ]}
         >
-          <Sparkles size={60} color={Colors.orange} strokeWidth={2} />
+          <Sparkles size={60} color={Colors.accent} strokeWidth={2} />
         </Animated.View>
 
         <Text style={styles.title}>Creating your reel</Text>
@@ -251,7 +251,7 @@ export default function LoaderScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.black,
+    backgroundColor: Colors.dark,
   },
   gradient: {
     flex: 1,
@@ -263,18 +263,19 @@ const styles = StyleSheet.create({
     marginBottom: 32,
     padding: 24,
     borderRadius: 100,
-    backgroundColor: 'rgba(255, 107, 53, 0.1)',
+    backgroundColor: 'rgba(232, 144, 106, 0.1)',
   },
   title: {
     fontSize: 24,
-    fontFamily: Fonts.regular,
-    color: Colors.white,
+    fontFamily: Fonts.medium,
+    color: Colors.cream,
     marginBottom: 8,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
-    color: Colors.grayLight,
+    fontFamily: Fonts.regular,
+    color: Colors.textSecondaryDark,
     marginBottom: 48,
     textAlign: 'center',
   },
@@ -290,8 +291,8 @@ const styles = StyleSheet.create({
   },
   timerText: {
     fontSize: 48,
-    fontFamily: Fonts.title,
-    color: Colors.orange,
+    fontFamily: Fonts.medium,
+    color: Colors.accent,
     fontVariant: ['tabular-nums'],
   },
   progressText: {
@@ -302,7 +303,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 16,
-    color: Colors.white,
+    color: Colors.cream,
   },
   errorContainer: {
     marginTop: 32,
@@ -316,7 +317,7 @@ const styles = StyleSheet.create({
   },
   errorTitle: {
     fontSize: 18,
-    fontFamily: Fonts.title,
+    fontFamily: Fonts.medium,
     color: '#EF4444',
     marginBottom: 8,
   },
@@ -327,14 +328,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   retryButton: {
-    backgroundColor: Colors.orange,
-    borderRadius: 12,
+    backgroundColor: Colors.accent,
+    borderRadius: 100,
     paddingHorizontal: 24,
-    paddingVertical: 12,
+    paddingVertical: 14,
   },
   retryButtonText: {
     fontSize: 16,
-    fontFamily: Fonts.title,
-    color: Colors.white,
+    fontFamily: Fonts.medium,
+    color: Colors.cream,
   },
 });

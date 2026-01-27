@@ -29,7 +29,7 @@ type PlanType = 'monthly' | 'annual';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const CONFETTI_COUNT = 150;
-const CONFETTI_COLORS = ['#FF6B35', '#FF8C42', '#FFB347', '#FFA500', '#FF7F50', '#FFFFFF', '#FFD700', '#FF4500'];
+const CONFETTI_COLORS = ['#F0A080', '#E8906A', '#D07850', '#F3EBE3', '#D4A574', '#C9B8A8', '#E0C4B0'];
 
 // Confetti particle component
 function ConfettiParticle({ delay, startX }: { delay: number; startX: number }) {
@@ -423,7 +423,7 @@ export default function PaywallScreen() {
     return (
       <View style={styles.modalWrapper}>
         <View style={[styles.container, { paddingTop: insets.top }]}>
-          <ActivityIndicator size="large" color={Colors.orange} />
+          <ActivityIndicator size="large" color={Colors.accent} />
         </View>
       </View>
     );
@@ -463,7 +463,7 @@ export default function PaywallScreen() {
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             activeOpacity={0.7}
           >
-            <X size={24} color={Colors.white} strokeWidth={2} />
+            <X size={24} color={Colors.cream} strokeWidth={2} />
           </TouchableOpacity>
 
           <ScrollView
@@ -480,10 +480,10 @@ export default function PaywallScreen() {
             {/* Hero Section */}
             <View style={showCreditsView ? styles.heroSectionCompact : styles.heroSection}>
           <LinearGradient
-            colors={['#FF6B35', '#FF8C42', '#FFB347']}
+            colors={['#F0A080', Colors.accent, '#D07850']}
             style={showCreditsView ? styles.iconContainerCompact : styles.iconContainer}
           >
-            {showCreditsView ? <Gift size={30} color={Colors.white} /> : <Crown size={30} color={Colors.white} />}
+            {showCreditsView ? <Gift size={30} color={Colors.cream} /> : <Crown size={30} color={Colors.cream} />}
           </LinearGradient>
           <Text style={showCreditsView ? styles.titleCompact : styles.title}>
             {showCreditsView ? 'Buy More Credits' : 'Unlock Reelful Pro'}
@@ -591,13 +591,13 @@ export default function PaywallScreen() {
           <View style={styles.creditFeaturesSection}>
             <View style={styles.featureRowCompact}>
               <View style={styles.featureIconCompact}>
-                <Check size={16} color={Colors.orange} />
+                <Check size={16} color={Colors.accent} />
               </View>
               <Text style={styles.featureTextCompact}>Credits never expire</Text>
             </View>
             <View style={styles.featureRowCompact}>
               <View style={styles.featureIconCompact}>
-                <Check size={16} color={Colors.orange} />
+                <Check size={16} color={Colors.accent} />
               </View>
               <Text style={styles.featureTextCompact}>Stack with subscription credits</Text>
             </View>
@@ -612,7 +612,7 @@ export default function PaywallScreen() {
               activeOpacity={0.8}
             >
               <LinearGradient
-                colors={['#FF6B35', '#FF8C42']}
+                colors={['#F0A080', Colors.accent, '#D07850']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.subscribeGradientCompact}
@@ -639,7 +639,7 @@ export default function PaywallScreen() {
             {features.map((feature, index) => (
               <View key={index} style={styles.featureRow}>
                 <View style={styles.featureIcon}>
-                  <feature.icon size={18} color={Colors.orange} />
+                  <feature.icon size={18} color={Colors.accent} />
                 </View>
                 <Text style={styles.featureText}>{feature.text}</Text>
               </View>
@@ -777,7 +777,7 @@ export default function PaywallScreen() {
               activeOpacity={0.8}
             >
               <LinearGradient
-                colors={['#FF6B35', '#FF8C42']}
+                colors={['#F0A080', Colors.accent, '#D07850']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.subscribeGradient}
@@ -824,7 +824,7 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#000000',
+    backgroundColor: Colors.dark,
   },
   keyboardAvoidingView: {
     flex: 1,
@@ -879,17 +879,17 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 26,
-    fontFamily: Fonts.title,
+    fontFamily: Fonts.medium,
     fontWeight: '700' as const,
-    color: Colors.white,
+    color: Colors.cream,
     marginBottom: 6,
     textAlign: 'center',
   },
   titleCompact: {
     fontSize: 26,
-    fontFamily: Fonts.title,
+    fontFamily: Fonts.medium,
     fontWeight: '700' as const,
-    color: Colors.white,
+    color: Colors.cream,
     marginBottom: 6,
     textAlign: 'center',
   },
@@ -921,7 +921,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: 'rgba(255, 107, 53, 0.15)',
+    backgroundColor: 'rgba(232, 144, 106, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -929,7 +929,7 @@ const styles = StyleSheet.create({
   featureText: {
     fontSize: 15,
     fontFamily: Fonts.regular,
-    color: Colors.white,
+    color: Colors.cream,
     flex: 1,
   },
   // Compact feature row for credits view
@@ -942,7 +942,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 9,
-    backgroundColor: 'rgba(255, 107, 53, 0.15)',
+    backgroundColor: 'rgba(232, 144, 106, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -950,7 +950,7 @@ const styles = StyleSheet.create({
   featureTextCompact: {
     fontSize: 15,
     fontFamily: Fonts.regular,
-    color: Colors.white,
+    color: Colors.cream,
     flex: 1,
   },
   plansSection: {
@@ -966,23 +966,23 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   planCardSelected: {
-    borderColor: Colors.orange,
-    backgroundColor: 'rgba(255, 107, 53, 0.1)',
+    borderColor: Colors.accent,
+    backgroundColor: 'rgba(232, 144, 106, 0.1)',
   },
   saveBadge: {
     position: 'absolute',
     top: 10,
     right: 10,
-    backgroundColor: Colors.orange,
+    backgroundColor: Colors.accent,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
   },
   saveBadgeText: {
     fontSize: 10,
-    fontFamily: Fonts.title,
+    fontFamily: Fonts.medium,
     fontWeight: '700' as const,
-    color: Colors.white,
+    color: Colors.cream,
     letterSpacing: 0.5,
   },
   // Compact save badge for credits view
@@ -990,16 +990,16 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 10,
     right: 10,
-    backgroundColor: Colors.orange,
+    backgroundColor: Colors.accent,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
   },
   saveBadgeTextCompact: {
     fontSize: 10,
-    fontFamily: Fonts.title,
+    fontFamily: Fonts.medium,
     fontWeight: '700' as const,
-    color: Colors.white,
+    color: Colors.cream,
     letterSpacing: 0.5,
   },
   planHeader: {
@@ -1017,13 +1017,13 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   radioButtonSelected: {
-    borderColor: Colors.orange,
+    borderColor: Colors.accent,
   },
   radioButtonInner: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: Colors.orange,
+    backgroundColor: Colors.accent,
   },
   // Compact radio button for credits view
   radioButtonCompact: {
@@ -1040,23 +1040,23 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: Colors.orange,
+    backgroundColor: Colors.accent,
   },
   planInfo: {
     flex: 1,
   },
   planName: {
     fontSize: 16,
-    fontFamily: Fonts.title,
+    fontFamily: Fonts.medium,
     fontWeight: '600' as const,
-    color: Colors.white,
+    color: Colors.cream,
     marginBottom: 1,
   },
   planPrice: {
     fontSize: 18,
-    fontFamily: Fonts.title,
+    fontFamily: Fonts.medium,
     fontWeight: '700' as const,
-    color: Colors.white,
+    color: Colors.cream,
   },
   planPeriod: {
     fontSize: 13,
@@ -1084,29 +1084,29 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   subscribeGradient: {
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingVertical: 16,
+    borderRadius: 100,
     alignItems: 'center',
     justifyContent: 'center',
   },
   subscribeGradientCompact: {
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingVertical: 16,
+    borderRadius: 100,
     alignItems: 'center',
     justifyContent: 'center',
   },
   subscribeText: {
     fontSize: 16,
-    fontFamily: Fonts.title,
+    fontFamily: Fonts.medium,
     fontWeight: '600' as const,
-    color: Colors.white,
+    color: Colors.cream,
     letterSpacing: 0.3,
   },
   subscribeTextCompact: {
     fontSize: 16,
-    fontFamily: Fonts.title,
+    fontFamily: Fonts.medium,
     fontWeight: '600' as const,
-    color: Colors.white,
+    color: Colors.cream,
     letterSpacing: 0.3,
   },
   restoreButton: {
@@ -1180,32 +1180,32 @@ const styles = StyleSheet.create({
   },
   promoInput: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: 10,
+    backgroundColor: Colors.darkSurface,
+    borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
     fontFamily: Fonts.regular,
-    color: Colors.white,
+    color: Colors.cream,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   promoApplyButton: {
-    backgroundColor: Colors.orange,
-    borderRadius: 10,
+    backgroundColor: Colors.accent,
+    borderRadius: 100,
     paddingHorizontal: 20,
     justifyContent: 'center',
     alignItems: 'center',
     minWidth: 70,
   },
   promoApplyButtonDisabled: {
-    backgroundColor: 'rgba(255, 107, 53, 0.4)',
+    backgroundColor: 'rgba(232, 144, 106, 0.4)',
   },
   promoApplyText: {
     fontSize: 14,
-    fontFamily: Fonts.title,
+    fontFamily: Fonts.medium,
     fontWeight: '600' as const,
-    color: Colors.white,
+    color: Colors.cream,
   },
   promoErrorText: {
     fontSize: 12,
@@ -1231,8 +1231,8 @@ const styles = StyleSheet.create({
     marginTop: 10,
     paddingVertical: 8,
     paddingHorizontal: 16,
-    backgroundColor: 'rgba(255, 107, 53, 0.15)',
-    borderRadius: 10,
+    backgroundColor: 'rgba(232, 144, 106, 0.15)',
+    borderRadius: 12,
   },
   currentCreditsLabelInline: {
     fontSize: 15,
@@ -1241,9 +1241,9 @@ const styles = StyleSheet.create({
   },
   currentCreditsValueInline: {
     fontSize: 20,
-    fontFamily: Fonts.title,
+    fontFamily: Fonts.medium,
     fontWeight: '700' as const,
-    color: Colors.orange,
+    color: Colors.accent,
   },
   // Credit Packs
   creditPacksSection: {
@@ -1251,9 +1251,9 @@ const styles = StyleSheet.create({
   },
   creditPacksTitle: {
     fontSize: 16,
-    fontFamily: Fonts.title,
+    fontFamily: Fonts.medium,
     fontWeight: '600' as const,
-    color: Colors.white,
+    color: Colors.cream,
     marginBottom: 10,
     textAlign: 'center',
   },
@@ -1268,8 +1268,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   creditPackCardSelected: {
-    borderColor: Colors.orange,
-    backgroundColor: 'rgba(255, 107, 53, 0.1)',
+    borderColor: Colors.accent,
+    backgroundColor: 'rgba(232, 144, 106, 0.1)',
   },
   creditPackHeader: {
     flexDirection: 'row',
@@ -1283,15 +1283,15 @@ const styles = StyleSheet.create({
   },
   creditPackCredits: {
     fontSize: 16,
-    fontFamily: Fonts.title,
+    fontFamily: Fonts.medium,
     fontWeight: '600' as const,
-    color: Colors.white,
+    color: Colors.cream,
   },
   creditPackPrice: {
     fontSize: 18,
-    fontFamily: Fonts.title,
+    fontFamily: Fonts.medium,
     fontWeight: '700' as const,
-    color: Colors.white,
+    color: Colors.cream,
   },
   creditPackSubtext: {
     fontSize: 12,

@@ -367,7 +367,7 @@ export default function ScriptReviewScreen() {
             onPress={() => router.back()}
             activeOpacity={0.7}
           >
-            <ArrowLeft size={24} color={Colors.white} strokeWidth={2} />
+            <ArrowLeft size={24} color={Colors.cream} strokeWidth={2} />
           </TouchableOpacity>
           {/* <Text style={styles.headerTitle}>Script Review</Text> */}
           {/* <View style={styles.placeholder} /> */}
@@ -388,13 +388,13 @@ export default function ScriptReviewScreen() {
             onPress={() => router.back()}
             activeOpacity={0.7}
           >
-            <ArrowLeft size={24} color={Colors.white} strokeWidth={2} />
+            <ArrowLeft size={24} color={Colors.cream} strokeWidth={2} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Script Review</Text>
           <View style={styles.placeholder} />
         </View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.orange} />
+          <ActivityIndicator size="large" color={Colors.accent} />
         </View>
       </View>
     );
@@ -413,7 +413,7 @@ export default function ScriptReviewScreen() {
           onPress={handleBackToComposer}
           activeOpacity={0.7}
         >
-          <ArrowLeft size={24} color={Colors.white} strokeWidth={2} />
+          <ArrowLeft size={24} color={Colors.cream} strokeWidth={2} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Review Script</Text>
         <View style={styles.placeholder} />
@@ -421,7 +421,7 @@ export default function ScriptReviewScreen() {
 
       {ENABLE_TEST_RUN_MODE && isTestRun && (
         <View style={styles.testModeBadge}>
-          <TestTube size={14} color={Colors.orange} />
+          <TestTube size={14} color={Colors.accent} />
           <Text style={styles.testModeText}>Test Run Mode</Text>
         </View>
       )}
@@ -432,7 +432,7 @@ export default function ScriptReviewScreen() {
       >
         {isLoadingScript ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={Colors.orange} />
+            <ActivityIndicator size="large" color={Colors.accent} />
             <Text style={styles.loadingText}>Generating script...</Text>
           </View>
         ) : hasScript ? (
@@ -447,7 +447,7 @@ export default function ScriptReviewScreen() {
                       onPress={() => setIsEditing(true)}
                       activeOpacity={0.7}
                     >
-                      <Edit2 size={18} color={Colors.orange} strokeWidth={2} />
+                      <Edit2 size={18} color={Colors.accent} strokeWidth={2} />
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.iconButton}
@@ -456,9 +456,9 @@ export default function ScriptReviewScreen() {
                       disabled={isRegenerating}
                     >
                       {isRegenerating ? (
-                        <ActivityIndicator size="small" color={Colors.orange} />
+                        <ActivityIndicator size="small" color={Colors.accent} />
                       ) : (
-                        <RotateCcw size={18} color={Colors.orange} strokeWidth={2} />
+                        <RotateCcw size={18} color={Colors.accent} strokeWidth={2} />
                       )}
                     </TouchableOpacity>
                   </View>
@@ -483,7 +483,7 @@ export default function ScriptReviewScreen() {
                       onPress={handleSaveEdit}
                       activeOpacity={0.7}
                     >
-                      <Check size={18} color={Colors.white} strokeWidth={2} />
+                      <Check size={18} color={Colors.cream} strokeWidth={2} />
                       <Text style={styles.editButtonText}>Save</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -542,7 +542,7 @@ export default function ScriptReviewScreen() {
                 activeOpacity={0.7}
               >
                 <View style={[styles.checkbox, includeMusic && styles.checkboxChecked]}>
-                  {includeMusic && <Check size={14} color={Colors.white} strokeWidth={3} />}
+                  {includeMusic && <Check size={14} color={Colors.cream} strokeWidth={3} />}
                 </View>
                 <Text style={styles.checkboxLabel}>Add Music</Text>
               </TouchableOpacity>
@@ -553,7 +553,7 @@ export default function ScriptReviewScreen() {
                 activeOpacity={0.7}
               >
                 <View style={[styles.checkbox, includeCaptions && styles.checkboxChecked]}>
-                  {includeCaptions && <Check size={14} color={Colors.white} strokeWidth={3} />}
+                  {includeCaptions && <Check size={14} color={Colors.cream} strokeWidth={3} />}
                 </View>
                 <Text style={styles.checkboxLabel}>Add Captions</Text>
               </TouchableOpacity>
@@ -567,7 +567,7 @@ export default function ScriptReviewScreen() {
                 activeOpacity={0.7}
               >
                 <View style={[styles.checkbox, keepOrder && styles.checkboxChecked]}>
-                  {keepOrder && <Check size={14} color={Colors.white} strokeWidth={3} />}
+                  {keepOrder && <Check size={14} color={Colors.cream} strokeWidth={3} />}
                 </View>
                 <Text style={styles.checkboxLabel}>Keep Order</Text>
               </TouchableOpacity>
@@ -622,8 +622,8 @@ export default function ScriptReviewScreen() {
               <LinearGradient
                 colors={
                   isSubmitting
-                    ? [Colors.gray, Colors.grayLight]
-                    : [Colors.orange, Colors.orangeLight]
+                    ? [Colors.darkElevated, Colors.darkSurface]
+                    : ['#F0A080', Colors.accent, '#D07850']
                 }
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
@@ -636,7 +636,7 @@ export default function ScriptReviewScreen() {
                   </>
                 ) : (
                   <>
-                    <Play size={20} color={Colors.white} strokeWidth={2.5} />
+                    <Play size={20} color={Colors.cream} strokeWidth={2.5} />
                     <Text style={styles.approveButtonText}>Approve & Generate Reel</Text>
                   </>
                 )}
@@ -663,7 +663,7 @@ export default function ScriptReviewScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.black,
+    backgroundColor: Colors.dark,
   },
   header: {
     flexDirection: 'row',
@@ -671,20 +671,20 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 24,
     paddingBottom: 16,
-    backgroundColor: Colors.black,
+    backgroundColor: Colors.dark,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: Colors.gray,
+    backgroundColor: Colors.darkElevated,
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
     fontSize: 20,
-    fontFamily: Fonts.title,
-    color: Colors.white,
+    fontFamily: Fonts.medium,
+    color: Colors.cream,
   },
   placeholder: {
     width: 40,
@@ -713,8 +713,8 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontFamily: Fonts.title,
-    color: Colors.white,
+    fontFamily: Fonts.medium,
+    color: Colors.cream,
   },
   actions: {
     flexDirection: 'row',
@@ -724,33 +724,33 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: Colors.gray,
+    backgroundColor: Colors.darkElevated,
     justifyContent: 'center',
     alignItems: 'center',
   },
   scriptContainer: {
-    backgroundColor: Colors.grayDark,
-    borderRadius: 12,
+    backgroundColor: Colors.darkElevated,
+    borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: Colors.gray,
+    borderColor: Colors.darkSurface,
   },
   scriptText: {
     fontSize: 16,
     lineHeight: 24,
-    color: Colors.white,
+    color: Colors.cream,
   },
   editingContainer: {
     gap: 12,
   },
   scriptInput: {
-    backgroundColor: Colors.grayDark,
-    borderRadius: 12,
+    backgroundColor: Colors.darkElevated,
+    borderRadius: 16,
     padding: 16,
     fontSize: 16,
-    color: Colors.white,
+    color: Colors.cream,
     borderWidth: 2,
-    borderColor: Colors.orange,
+    borderColor: Colors.accent,
     minHeight: 200,
     textAlignVertical: 'top',
   },
@@ -764,14 +764,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: Colors.orange,
-    borderRadius: 12,
+    backgroundColor: Colors.accent,
+    borderRadius: 100,
     padding: 16,
   },
   editButtonText: {
     fontSize: 16,
-    fontFamily: Fonts.title,
-    color: Colors.white,
+    fontFamily: Fonts.medium,
+    color: Colors.cream,
   },
   cancelButton: {
     flex: 1,
@@ -779,14 +779,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: Colors.gray,
-    borderRadius: 12,
+    backgroundColor: Colors.darkElevated,
+    borderRadius: 100,
     padding: 16,
   },
   cancelButtonText: {
     fontSize: 16,
-    fontFamily: Fonts.title,
-    color: Colors.grayLight,
+    fontFamily: Fonts.medium,
+    color: Colors.textSecondaryDark,
   },
   voiceSpeedContainer: {
     marginTop: 2,
@@ -804,8 +804,8 @@ const styles = StyleSheet.create({
   },
   voiceSpeedOption: {
     flex: 1,
-    backgroundColor: Colors.grayDark,
-    borderRadius: 10,
+    backgroundColor: Colors.darkElevated,
+    borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 8,
     borderWidth: 2,
@@ -814,17 +814,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   voiceSpeedOptionActive: {
-    borderColor: Colors.orange,
-    backgroundColor: 'rgba(255, 107, 53, 0.1)',
+    borderColor: Colors.accent,
+    backgroundColor: 'rgba(232, 144, 106, 0.1)',
   },
   voiceSpeedText: {
     fontSize: 13,
     fontFamily: Fonts.regular,
-    color: Colors.white,
+    color: Colors.cream,
     textAlign: 'center',
   },
   voiceSpeedTextActive: {
-    color: Colors.orange,
+    color: Colors.accent,
     fontWeight: '600',
   },
   audioOptionsContainer: {
@@ -846,18 +846,18 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 2,
     borderColor: Colors.grayLight,
-    backgroundColor: Colors.grayDark,
+    backgroundColor: Colors.darkElevated,
     justifyContent: 'center',
     alignItems: 'center',
   },
   checkboxChecked: {
-    backgroundColor: Colors.orange,
-    borderColor: Colors.orange,
+    backgroundColor: Colors.accent,
+    borderColor: Colors.accent,
   },
   checkboxLabel: {
     fontSize: 15,
     fontFamily: Fonts.regular,
-    color: Colors.white,
+    color: Colors.cream,
   },
   renderModeContainer: {
     marginTop: 24,
@@ -875,7 +875,7 @@ const styles = StyleSheet.create({
   },
   renderModeOption: {
     flex: 1,
-    backgroundColor: Colors.grayDark,
+    backgroundColor: Colors.darkElevated,
     borderRadius: 12,
     padding: 16,
     borderWidth: 2,
@@ -883,18 +883,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   renderModeOptionActive: {
-    borderColor: Colors.orange,
-    backgroundColor: 'rgba(255, 107, 53, 0.1)',
+    borderColor: Colors.accent,
+    backgroundColor: 'rgba(232, 144, 106, 0.1)',
   },
   renderModeText: {
     fontSize: 16,
     fontFamily: Fonts.regular,
-    color: Colors.white,
+    color: Colors.cream,
     fontWeight: '600',
     marginBottom: 4,
   },
   renderModeTextActive: {
-    color: Colors.orange,
+    color: Colors.accent,
   },
   renderModeDesc: {
     fontSize: 12,
@@ -902,7 +902,7 @@ const styles = StyleSheet.create({
     color: Colors.grayLight,
   },
   approveButton: {
-    borderRadius: 12,
+    borderRadius: 100,
     overflow: 'hidden',
     marginTop: 24,
   },
@@ -918,8 +918,8 @@ const styles = StyleSheet.create({
   },
   approveButtonText: {
     fontSize: 18,
-    fontFamily: Fonts.title,
-    color: Colors.white,
+    fontFamily: Fonts.medium,
+    color: Colors.cream,
   },
   errorContainer: {
     alignItems: 'center',
@@ -931,34 +931,34 @@ const styles = StyleSheet.create({
     color: Colors.grayLight,
   },
   retryButton: {
-    backgroundColor: Colors.orange,
-    borderRadius: 12,
+    backgroundColor: Colors.accent,
+    borderRadius: 100,
     paddingHorizontal: 24,
-    paddingVertical: 12,
+    paddingVertical: 14,
   },
   retryButtonText: {
     fontSize: 16,
-    fontFamily: Fonts.title,
-    color: Colors.white,
+    fontFamily: Fonts.medium,
+    color: Colors.cream,
   },
   testModeBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: 'rgba(255, 107, 53, 0.15)',
+    backgroundColor: 'rgba(232, 144, 106, 0.15)',
     paddingVertical: 8,
     paddingHorizontal: 16,
     marginHorizontal: 24,
     marginTop: 8,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255, 107, 53, 0.3)',
+    borderColor: 'rgba(232, 144, 106, 0.3)',
   },
   testModeText: {
     fontSize: 13,
     fontFamily: Fonts.regular,
-    color: Colors.orange,
+    color: Colors.accent,
   },
 });
 

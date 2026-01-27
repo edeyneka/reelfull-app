@@ -299,7 +299,7 @@ export default function OnboardingScreen() {
             onPress={handleBack}
             activeOpacity={0.7}
           >
-            <ChevronLeft size={28} color={Colors.white} strokeWidth={2} />
+            <ChevronLeft size={28} color={Colors.cream} strokeWidth={2} />
           </TouchableOpacity>
         )}
 
@@ -317,9 +317,9 @@ export default function OnboardingScreen() {
             <View style={styles.header}>
               <View style={styles.iconContainer}>
                 {isVoiceStep ? (
-                  <Mic size={40} color={Colors.orange} strokeWidth={2} />
+                  <Mic size={40} color={Colors.accent} strokeWidth={2} />
                 ) : (
-                  <Sparkles size={40} color={Colors.orange} strokeWidth={2} />
+                  <Sparkles size={40} color={Colors.accent} strokeWidth={2} />
                 )}
               </View>
               <Text style={styles.title}>
@@ -361,7 +361,7 @@ export default function OnboardingScreen() {
                     <LinearGradient
                       colors={
                         isStep1Valid
-                          ? [Colors.orange, Colors.orangeLight]
+                          ? ['#F0A080', Colors.accent, '#D07850']
                           : [Colors.gray, Colors.grayLight]
                       }
                       start={{ x: 0, y: 0 }}
@@ -369,7 +369,7 @@ export default function OnboardingScreen() {
                       style={styles.buttonGradient}
                     >
                       <Text style={styles.buttonText}>Next</Text>
-                      <ArrowRight size={20} color={Colors.white} strokeWidth={2.5} />
+                      <ArrowRight size={20} color={Colors.cream} strokeWidth={2.5} />
                     </LinearGradient>
                   </TouchableOpacity>
                 </>
@@ -410,7 +410,7 @@ export default function OnboardingScreen() {
                     <LinearGradient
                       colors={
                         isStep2Valid
-                          ? [Colors.orange, Colors.orangeLight]
+                          ? ['#F0A080', Colors.accent, '#D07850']
                           : [Colors.gray, Colors.grayLight]
                       }
                       start={{ x: 0, y: 0 }}
@@ -418,7 +418,7 @@ export default function OnboardingScreen() {
                       style={styles.buttonGradient}
                     >
                       <Text style={styles.buttonText}>Next</Text>
-                      <ArrowRight size={20} color={Colors.white} strokeWidth={2.5} />
+                      <ArrowRight size={20} color={Colors.cream} strokeWidth={2.5} />
                     </LinearGradient>
                   </TouchableOpacity>
                 </>
@@ -460,7 +460,7 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.black,
+    backgroundColor: Colors.dark,
   },
   videoContainer: {
     position: 'absolute',
@@ -505,18 +505,19 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     padding: 16,
     borderRadius: 50,
-    backgroundColor: 'rgba(255, 107, 53, 0.2)',
+    backgroundColor: 'rgba(232, 144, 106, 0.2)',
   },
   title: {
     fontSize: 24,
-    fontFamily: Fonts.regular,
-    color: Colors.white,
+    fontFamily: Fonts.medium,
+    color: Colors.cream,
     marginBottom: 8,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
-    color: Colors.grayLight,
+    fontFamily: Fonts.regular,
+    color: Colors.textSecondaryDark,
     textAlign: 'center',
   },
   form: {
@@ -528,15 +529,16 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 18,
     fontFamily: Fonts.regular,
-    color: Colors.white,
+    color: Colors.cream,
     marginBottom: 12,
   },
   input: {
-    backgroundColor: 'rgba(50, 50, 50, 0.8)',
+    backgroundColor: Colors.darkSurface,
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    color: Colors.white,
+    fontFamily: Fonts.regular,
+    color: Colors.cream,
     borderWidth: 2,
     borderColor: 'rgba(255, 255, 255, 0.1)',
     letterSpacing: 0,
@@ -545,57 +547,58 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   option: {
-    backgroundColor: 'rgba(50, 50, 50, 0.8)',
+    backgroundColor: Colors.darkSurface,
     borderRadius: 12,
     padding: 16,
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   optionSelected: {
-    borderColor: Colors.orange,
-    backgroundColor: 'rgba(255, 107, 53, 0.2)',
+    borderColor: Colors.accent,
+    backgroundColor: 'rgba(232, 144, 106, 0.15)',
   },
   optionText: {
     fontSize: 16,
     fontFamily: Fonts.regular,
-    color: Colors.white,
+    color: Colors.cream,
     textAlign: 'center',
   },
   optionTextSelected: {
-    color: Colors.orange,
+    color: Colors.accent,
   },
   button: {
     marginTop: 24,
-    borderRadius: 12,
+    borderRadius: 100,
     overflow: 'hidden',
+    height: 64,
   },
   buttonDisabled: {
     opacity: 0.5,
   },
   buttonGradient: {
     flexDirection: 'row',
-    padding: 18,
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
   },
   buttonText: {
     fontSize: 18,
-    fontFamily: Fonts.title,
-    color: Colors.white,
+    fontFamily: Fonts.medium,
+    color: Colors.cream,
   },
   voiceNoteContainer: {
-    backgroundColor: 'rgba(255, 107, 53, 0.1)',
+    backgroundColor: 'rgba(232, 144, 106, 0.1)',
     borderRadius: 12,
     padding: 14,
     marginTop: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 107, 53, 0.3)',
+    borderColor: 'rgba(232, 144, 106, 0.3)',
   },
   voiceNoteText: {
     fontSize: 13,
     lineHeight: 19,
-    color: Colors.grayLight,
+    color: Colors.textSecondaryDark,
     textAlign: 'center',
     fontFamily: Fonts.regular,
   },
@@ -607,7 +610,7 @@ const styles = StyleSheet.create({
   skipButtonText: {
     fontSize: 16,
     fontFamily: Fonts.regular,
-    color: Colors.grayLight,
+    color: Colors.textSecondaryDark,
     textDecorationLine: 'underline',
   },
 });

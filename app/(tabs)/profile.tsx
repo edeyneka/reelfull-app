@@ -386,7 +386,7 @@ export default function ProfileTab() {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.orange} />
+          <ActivityIndicator size="large" color={Colors.accent} />
         </View>
       </View>
     );
@@ -419,7 +419,7 @@ export default function ProfileTab() {
                 {videoGenerationStatus?.isPremium ? (
                   <Gift size={22} color="#4CAF50" strokeWidth={2} />
                 ) : (
-                  <Crown size={22} color={Colors.orange} strokeWidth={2} />
+                  <Crown size={22} color={Colors.accent} strokeWidth={2} />
                 )}
               </View>
               <View>
@@ -445,7 +445,7 @@ export default function ProfileTab() {
           >
             <View style={styles.menuItemLeft}>
               <View style={styles.menuIconContainer}>
-                <User size={22} color={Colors.white} strokeWidth={2} />
+                <User size={22} color={Colors.cream} strokeWidth={2} />
               </View>
               <Text style={styles.menuItemText}>Account</Text>
             </View>
@@ -460,7 +460,7 @@ export default function ProfileTab() {
             >
               <View style={styles.menuItemLeft}>
                 <View style={styles.menuIconContainer}>
-                  <Palette size={22} color={Colors.white} strokeWidth={2} />
+                  <Palette size={22} color={Colors.cream} strokeWidth={2} />
                 </View>
                 <Text style={styles.menuItemText}>Content Preferences</Text>
               </View>
@@ -476,7 +476,7 @@ export default function ProfileTab() {
           >
             <View style={styles.menuItemLeft}>
               <View style={styles.menuIconContainer}>
-                <Headphones size={22} color={Colors.white} strokeWidth={2} />
+                <Headphones size={22} color={Colors.cream} strokeWidth={2} />
               </View>
               <Text style={styles.menuItemText}>Voice Settings</Text>
             </View>
@@ -491,7 +491,7 @@ export default function ProfileTab() {
           >
             <View style={styles.menuItemLeft}>
               <View style={styles.menuIconContainer}>
-                <Mic size={22} color={Colors.white} strokeWidth={2} />
+                <Mic size={22} color={Colors.cream} strokeWidth={2} />
               </View>
               <Text style={styles.menuItemText}>Voice Clone</Text>
             </View>
@@ -506,7 +506,7 @@ export default function ProfileTab() {
           >
             <View style={styles.menuItemLeft}>
               <View style={styles.menuIconContainer}>
-                <Info size={22} color={Colors.white} strokeWidth={2} />
+                <Info size={22} color={Colors.cream} strokeWidth={2} />
               </View>
               <Text style={styles.menuItemText}>About</Text>
             </View>
@@ -549,7 +549,7 @@ export default function ProfileTab() {
                 activeOpacity={0.7}
                 disabled={isLoading}
               >
-                <X size={24} color={Colors.white} strokeWidth={2} />
+                <X size={24} color={Colors.cream} strokeWidth={2} />
               </TouchableOpacity>
             </View>
             <TextInput
@@ -569,8 +569,8 @@ export default function ProfileTab() {
               <LinearGradient
                 colors={
                   !isLoading
-                    ? [Colors.orange, Colors.orangeLight]
-                    : [Colors.gray, Colors.grayLight]
+                    ? ['#F0A080', Colors.accent, '#D07850']
+                    : [Colors.darkElevated, Colors.darkSurface]
                 }
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
@@ -598,7 +598,7 @@ export default function ProfileTab() {
                 activeOpacity={0.7}
                 disabled={isLoading}
               >
-                <X size={24} color={Colors.white} strokeWidth={2} />
+                <X size={24} color={Colors.cream} strokeWidth={2} />
               </TouchableOpacity>
             </View>
             <View style={styles.styleOptions}>
@@ -631,8 +631,8 @@ export default function ProfileTab() {
               <LinearGradient
                 colors={
                   !isLoading
-                    ? [Colors.orange, Colors.orangeLight]
-                    : [Colors.gray, Colors.grayLight]
+                    ? ['#F0A080', Colors.accent, '#D07850']
+                    : [Colors.darkElevated, Colors.darkSurface]
                 }
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
@@ -661,7 +661,7 @@ export default function ProfileTab() {
                 activeOpacity={0.7}
                 disabled={isLoading}
               >
-                <X size={24} color={Colors.white} strokeWidth={2} />
+                <X size={24} color={Colors.cream} strokeWidth={2} />
               </TouchableOpacity>
             </View>
             <Text style={styles.modalDescription}>
@@ -688,7 +688,7 @@ export default function ProfileTab() {
                 onPress={() => setIsSelectingVoice(false)}
                 activeOpacity={0.7}
               >
-                <X size={24} color={Colors.white} strokeWidth={2} />
+                <X size={24} color={Colors.cream} strokeWidth={2} />
               </TouchableOpacity>
             </View>
 
@@ -704,7 +704,7 @@ export default function ProfileTab() {
                   activeOpacity={0.7}
                 >
                   <View style={styles.voiceOptionContent}>
-                    <Headphones size={24} color={Colors.orange} strokeWidth={2} />
+                    <Headphones size={24} color={Colors.accent} strokeWidth={2} />
                     <View style={styles.voiceOptionText}>
                       <Text style={styles.voiceOptionName}>
                         {user.name ? `${user.name}'s Voice` : 'Your Voice'}
@@ -720,9 +720,9 @@ export default function ProfileTab() {
                       disabled={playingPreviewId === user.elevenlabsVoiceId && !previewUrl}
                     >
                       {playingPreviewId === user.elevenlabsVoiceId && !previewUrl ? (
-                        <ActivityIndicator size="small" color={Colors.orange} />
+                        <ActivityIndicator size="small" color={Colors.accent} />
                       ) : (
-                        <Volume2 size={18} color={Colors.orange} strokeWidth={2} />
+                        <Volume2 size={18} color={Colors.accent} strokeWidth={2} />
                       )}
                     </TouchableOpacity>
                   )}
@@ -741,7 +741,7 @@ export default function ProfileTab() {
                   activeOpacity={0.7}
                 >
                   <View style={styles.voiceOptionContent}>
-                    <Volume2 size={24} color={Colors.orange} strokeWidth={2} />
+                    <Volume2 size={24} color={Colors.accent} strokeWidth={2} />
                     <View style={styles.voiceOptionTextContainer}>
                       <Text style={styles.voiceOptionName}>{voice.name}</Text>
                       <Text style={styles.voiceOptionDesc}>
@@ -757,9 +757,9 @@ export default function ProfileTab() {
                       disabled={playingPreviewId === voice.voiceId && !previewUrl}
                     >
                       {playingPreviewId === voice.voiceId && !previewUrl ? (
-                        <ActivityIndicator size="small" color={Colors.orange} />
+                        <ActivityIndicator size="small" color={Colors.accent} />
                       ) : (
-                        <Volume2 size={18} color={Colors.orange} strokeWidth={2} />
+                        <Volume2 size={18} color={Colors.accent} strokeWidth={2} />
                       )}
                     </TouchableOpacity>
                   )}
@@ -781,7 +781,7 @@ export default function ProfileTab() {
                 onPress={() => setIsAboutOpen(false)}
                 activeOpacity={0.7}
               >
-                <X size={24} color={Colors.white} strokeWidth={2} />
+                <X size={24} color={Colors.cream} strokeWidth={2} />
               </TouchableOpacity>
             </View>
             <View style={styles.aboutContent}>
@@ -806,7 +806,7 @@ export default function ProfileTab() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.black,
+    backgroundColor: Colors.dark,
   },
   content: {
     paddingTop: 24,
@@ -831,8 +831,8 @@ const styles = StyleSheet.create({
   },
   profileName: {
     fontSize: 24,
-    fontFamily: Fonts.regular,
-    color: Colors.white,
+    fontFamily: Fonts.medium,
+    color: Colors.cream,
     fontWeight: '600',
   },
   // Divider
@@ -867,7 +867,7 @@ const styles = StyleSheet.create({
   },
   menuItemText: {
     fontSize: 16,
-    color: Colors.white,
+    color: Colors.cream,
     fontFamily: Fonts.regular,
   },
   menuItemSubtext: {
@@ -877,7 +877,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   proIconContainer: {
-    backgroundColor: 'rgba(255, 107, 53, 0.15)',
+    backgroundColor: 'rgba(232, 144, 106, 0.15)',
     borderRadius: 8,
   },
   creditsIconContainer: {
@@ -928,7 +928,7 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   editModalContent: {
-    backgroundColor: '#1c1c1e',
+    backgroundColor: Colors.darkElevated,
     borderRadius: 16,
     padding: 24,
     width: '85%',
@@ -942,22 +942,22 @@ const styles = StyleSheet.create({
   },
   editModalTitle: {
     fontSize: 20,
-    fontFamily: Fonts.title,
-    color: Colors.white,
+    fontFamily: Fonts.medium,
+    color: Colors.cream,
     fontWeight: '600',
   },
   editInput: {
-    backgroundColor: '#2c2c2e',
+    backgroundColor: Colors.darkSurface,
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    color: Colors.white,
+    color: Colors.cream,
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: '#3a3a3c',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   saveButton: {
-    borderRadius: 12,
+    borderRadius: 100,
     padding: 16,
     alignItems: 'center',
     justifyContent: 'center',
@@ -965,8 +965,8 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     fontSize: 16,
-    fontFamily: Fonts.regular,
-    color: Colors.white,
+    fontFamily: Fonts.medium,
+    color: Colors.cream,
     fontWeight: '600',
   },
   // Style Options
@@ -975,29 +975,29 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   styleOption: {
-    backgroundColor: '#2c2c2e',
+    backgroundColor: Colors.darkSurface,
     borderRadius: 12,
     padding: 16,
     borderWidth: 2,
     borderColor: 'transparent',
   },
   styleOptionSelected: {
-    borderColor: Colors.orange,
-    backgroundColor: 'rgba(255, 107, 53, 0.1)',
+    borderColor: Colors.accent,
+    backgroundColor: 'rgba(232, 144, 106, 0.1)',
   },
   styleOptionText: {
     fontSize: 16,
     fontFamily: Fonts.regular,
-    color: Colors.white,
+    color: Colors.cream,
     textAlign: 'center',
   },
   styleOptionTextSelected: {
-    color: Colors.orange,
+    color: Colors.accent,
     fontWeight: '600',
   },
   // Voice Modal
   voiceModalContent: {
-    backgroundColor: '#1c1c1e',
+    backgroundColor: Colors.darkElevated,
     borderRadius: 16,
     paddingHorizontal: 20,
     paddingTop: 20,
@@ -1006,7 +1006,7 @@ const styles = StyleSheet.create({
     maxHeight: '92%',
   },
   voiceCloneModalContent: {
-    backgroundColor: '#1c1c1e',
+    backgroundColor: Colors.darkElevated,
     borderRadius: 16,
     paddingHorizontal: 20,
     paddingTop: 20,
@@ -1033,7 +1033,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#2c2c2e',
+    backgroundColor: Colors.darkSurface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -1041,8 +1041,8 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   voiceOptionSelected: {
-    borderColor: Colors.orange,
-    backgroundColor: 'rgba(255, 107, 53, 0.1)',
+    borderColor: Colors.accent,
+    backgroundColor: 'rgba(232, 144, 106, 0.1)',
   },
   voiceOptionContent: {
     flexDirection: 'row',
@@ -1059,7 +1059,7 @@ const styles = StyleSheet.create({
   voiceOptionName: {
     fontSize: 16,
     fontFamily: Fonts.regular,
-    color: Colors.white,
+    color: Colors.cream,
     marginBottom: 4,
   },
   voiceOptionDesc: {
@@ -1071,7 +1071,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#3a3a3c',
+    backgroundColor: Colors.darkSurface,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1082,7 +1082,7 @@ const styles = StyleSheet.create({
   aboutDescription: {
     fontSize: 16,
     fontFamily: Fonts.regular,
-    color: Colors.white,
+    color: Colors.cream,
     lineHeight: 24,
     marginBottom: 16,
   },

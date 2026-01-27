@@ -498,7 +498,7 @@ export default function SettingsScreen() {
               onPress={closeModal}
               activeOpacity={0.7}
             >
-              <X size={24} color={Colors.white} strokeWidth={2} />
+              <X size={24} color={Colors.cream} strokeWidth={2} />
             </TouchableOpacity>
           </View>
           <View style={styles.loadingContainer}>
@@ -530,11 +530,11 @@ export default function SettingsScreen() {
               onPress={closeModal}
               activeOpacity={0.7}
             >
-              <X size={24} color={Colors.white} strokeWidth={2} />
+              <X size={24} color={Colors.cream} strokeWidth={2} />
             </TouchableOpacity>
           </View>
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={Colors.orange} />
+            <ActivityIndicator size="large" color={Colors.accent} />
           </View>
         </View>
       </Animated.View>
@@ -573,7 +573,7 @@ export default function SettingsScreen() {
               onPress={closeModal}
               activeOpacity={0.7}
             >
-              <X size={24} color={Colors.white} strokeWidth={2} />
+              <X size={24} color={Colors.cream} strokeWidth={2} />
             </TouchableOpacity>
           </View>
 
@@ -602,7 +602,7 @@ export default function SettingsScreen() {
                     {videoGenerationStatus?.isPremium ? (
                       <Gift size={22} color="#4CAF50" strokeWidth={2} />
                     ) : (
-                      <Crown size={22} color={Colors.orange} strokeWidth={2} />
+                      <Crown size={22} color={Colors.accent} strokeWidth={2} />
                     )}
                   </View>
                   <View>
@@ -628,7 +628,7 @@ export default function SettingsScreen() {
               >
                 <View style={styles.menuItemLeft}>
                   <View style={styles.menuIconContainer}>
-                    <User size={22} color={Colors.white} strokeWidth={2} />
+                    <User size={22} color={Colors.cream} strokeWidth={2} />
                   </View>
                   <Text style={styles.menuItemText}>Account</Text>
                 </View>
@@ -643,7 +643,7 @@ export default function SettingsScreen() {
                 >
                   <View style={styles.menuItemLeft}>
                     <View style={styles.menuIconContainer}>
-                      <Palette size={22} color={Colors.white} strokeWidth={2} />
+                      <Palette size={22} color={Colors.cream} strokeWidth={2} />
                     </View>
                     <Text style={styles.menuItemText}>Content Preferences</Text>
                   </View>
@@ -659,7 +659,7 @@ export default function SettingsScreen() {
               >
                 <View style={styles.menuItemLeft}>
                   <View style={styles.menuIconContainer}>
-                    <Headphones size={22} color={Colors.white} strokeWidth={2} />
+                    <Headphones size={22} color={Colors.cream} strokeWidth={2} />
                   </View>
                   <Text style={styles.menuItemText}>Voice Settings</Text>
                 </View>
@@ -674,7 +674,7 @@ export default function SettingsScreen() {
               >
                 <View style={styles.menuItemLeft}>
                   <View style={styles.menuIconContainer}>
-                    <Mic size={22} color={Colors.white} strokeWidth={2} />
+                    <Mic size={22} color={Colors.cream} strokeWidth={2} />
                   </View>
                   <Text style={styles.menuItemText}>Voice Clone</Text>
                 </View>
@@ -689,7 +689,7 @@ export default function SettingsScreen() {
               >
                 <View style={styles.menuItemLeft}>
                   <View style={styles.menuIconContainer}>
-                    <Info size={22} color={Colors.white} strokeWidth={2} />
+                    <Info size={22} color={Colors.cream} strokeWidth={2} />
                   </View>
                   <Text style={styles.menuItemText}>About</Text>
                 </View>
@@ -732,7 +732,7 @@ export default function SettingsScreen() {
                     activeOpacity={0.7}
                     disabled={isLoading}
                   >
-                    <X size={24} color={Colors.white} strokeWidth={2} />
+                    <X size={24} color={Colors.cream} strokeWidth={2} />
                   </TouchableOpacity>
                 </View>
                 <TextInput
@@ -752,7 +752,7 @@ export default function SettingsScreen() {
                   <LinearGradient
                     colors={
                       !isLoading
-                        ? [Colors.orange, Colors.orangeLight]
+                        ? ['#F0A080', Colors.accent, '#D07850']
                         : [Colors.gray, Colors.grayLight]
                     }
                     start={{ x: 0, y: 0 }}
@@ -781,7 +781,7 @@ export default function SettingsScreen() {
                     activeOpacity={0.7}
                     disabled={isLoading}
                   >
-                    <X size={24} color={Colors.white} strokeWidth={2} />
+                    <X size={24} color={Colors.cream} strokeWidth={2} />
                   </TouchableOpacity>
                 </View>
                 <View style={styles.styleOptions}>
@@ -814,7 +814,7 @@ export default function SettingsScreen() {
                   <LinearGradient
                     colors={
                       !isLoading
-                        ? [Colors.orange, Colors.orangeLight]
+                        ? ['#F0A080', Colors.accent, '#D07850']
                         : [Colors.gray, Colors.grayLight]
                     }
                     start={{ x: 0, y: 0 }}
@@ -844,7 +844,7 @@ export default function SettingsScreen() {
                     activeOpacity={0.7}
                     disabled={isLoading}
                   >
-                    <X size={24} color={Colors.white} strokeWidth={2} />
+                    <X size={24} color={Colors.cream} strokeWidth={2} />
                   </TouchableOpacity>
                 </View>
                 <Text style={styles.modalDescription}>
@@ -871,7 +871,7 @@ export default function SettingsScreen() {
                     onPress={() => setIsSelectingVoice(false)}
                     activeOpacity={0.7}
                   >
-                    <X size={24} color={Colors.white} strokeWidth={2} />
+                    <X size={24} color={Colors.cream} strokeWidth={2} />
                   </TouchableOpacity>
                 </View>
 
@@ -887,7 +887,7 @@ export default function SettingsScreen() {
                       activeOpacity={0.7}
                     >
                       <View style={styles.voiceOptionContent}>
-                        <Headphones size={24} color={Colors.orange} strokeWidth={2} />
+                        <Headphones size={24} color={Colors.accent} strokeWidth={2} />
                         <View style={styles.voiceOptionText}>
                           <Text style={styles.voiceOptionName}>
                             {user.name ? `${user.name}'s Voice` : 'Your Voice'}
@@ -903,9 +903,9 @@ export default function SettingsScreen() {
                           disabled={playingPreviewId === user.elevenlabsVoiceId && !previewUrl}
                         >
                           {playingPreviewId === user.elevenlabsVoiceId && !previewUrl ? (
-                            <ActivityIndicator size="small" color={Colors.orange} />
+                            <ActivityIndicator size="small" color={Colors.accent} />
                           ) : (
-                            <Volume2 size={18} color={Colors.orange} strokeWidth={2} />
+                            <Volume2 size={18} color={Colors.accent} strokeWidth={2} />
                           )}
                         </TouchableOpacity>
                       )}
@@ -924,7 +924,7 @@ export default function SettingsScreen() {
                       activeOpacity={0.7}
                     >
                       <View style={styles.voiceOptionContent}>
-                        <Volume2 size={24} color={Colors.orange} strokeWidth={2} />
+                        <Volume2 size={24} color={Colors.accent} strokeWidth={2} />
                         <View style={styles.voiceOptionTextContainer}>
                           <Text style={styles.voiceOptionName}>{voice.name}</Text>
                           <Text style={styles.voiceOptionDesc}>
@@ -940,9 +940,9 @@ export default function SettingsScreen() {
                           disabled={playingPreviewId === voice.voiceId && !previewUrl}
                         >
                           {playingPreviewId === voice.voiceId && !previewUrl ? (
-                            <ActivityIndicator size="small" color={Colors.orange} />
+                            <ActivityIndicator size="small" color={Colors.accent} />
                           ) : (
-                            <Volume2 size={18} color={Colors.orange} strokeWidth={2} />
+                            <Volume2 size={18} color={Colors.accent} strokeWidth={2} />
                           )}
                         </TouchableOpacity>
                       )}
@@ -964,7 +964,7 @@ export default function SettingsScreen() {
                     onPress={() => setIsAboutOpen(false)}
                     activeOpacity={0.7}
                   >
-                    <X size={24} color={Colors.white} strokeWidth={2} />
+                    <X size={24} color={Colors.cream} strokeWidth={2} />
                   </TouchableOpacity>
                 </View>
                 <View style={styles.aboutContent}>
@@ -1002,11 +1002,11 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   modalContainer: {
-    backgroundColor: '#000000',
+    backgroundColor: Colors.dark,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     height: '94%',
-    shadowColor: Colors.black,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -1044,7 +1044,7 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 16,
     fontFamily: Fonts.regular,
-    color: Colors.grayLight,
+    color: Colors.textSecondaryDark,
   },
   // Profile Section
   profileSection: {
@@ -1055,8 +1055,8 @@ const styles = StyleSheet.create({
   },
   profileName: {
     fontSize: 24,
-    fontFamily: Fonts.regular,
-    color: Colors.white,
+    fontFamily: Fonts.medium,
+    color: Colors.cream,
     fontWeight: '600',
   },
   // Divider
@@ -1091,17 +1091,17 @@ const styles = StyleSheet.create({
   },
   menuItemText: {
     fontSize: 16,
-    color: Colors.white,
+    color: Colors.cream,
     fontFamily: Fonts.regular,
   },
   menuItemSubtext: {
     fontSize: 12,
-    color: Colors.grayLight,
+    color: Colors.textSecondaryDark,
     fontFamily: Fonts.regular,
     marginTop: 2,
   },
   proIconContainer: {
-    backgroundColor: 'rgba(255, 107, 53, 0.15)',
+    backgroundColor: 'rgba(232, 144, 106, 0.15)',
     borderRadius: 8,
   },
   // Logout
@@ -1148,7 +1148,7 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   editModalContent: {
-    backgroundColor: '#1c1c1e',
+    backgroundColor: Colors.darkElevated,
     borderRadius: 16,
     padding: 24,
     width: '85%',
@@ -1162,26 +1162,27 @@ const styles = StyleSheet.create({
   },
   editModalTitle: {
     fontSize: 20,
-    fontFamily: Fonts.title,
-    color: Colors.white,
+    fontFamily: Fonts.medium,
+    color: Colors.cream,
     fontWeight: '600',
   },
   editInput: {
-    backgroundColor: '#2c2c2e',
+    backgroundColor: Colors.darkSurface,
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    color: Colors.white,
+    fontFamily: Fonts.regular,
+    color: Colors.cream,
     marginBottom: 24,
-    borderWidth: 1,
-    borderColor: '#3a3a3c',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   saveButton: {
-    borderRadius: 12,
+    borderRadius: 100,
     padding: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 54,
+    minHeight: 64,
   },
   saveButtonText: {
     fontSize: 16,
@@ -1195,29 +1196,29 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   styleOption: {
-    backgroundColor: '#2c2c2e',
+    backgroundColor: Colors.darkSurface,
     borderRadius: 12,
     padding: 16,
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   styleOptionSelected: {
-    borderColor: Colors.orange,
-    backgroundColor: 'rgba(255, 107, 53, 0.1)',
+    borderColor: Colors.accent,
+    backgroundColor: 'rgba(232, 144, 106, 0.15)',
   },
   styleOptionText: {
     fontSize: 16,
     fontFamily: Fonts.regular,
-    color: Colors.white,
+    color: Colors.cream,
     textAlign: 'center',
   },
   styleOptionTextSelected: {
-    color: Colors.orange,
+    color: Colors.accent,
     fontWeight: '600',
   },
   // Voice Modal
   voiceModalContent: {
-    backgroundColor: '#1c1c1e',
+    backgroundColor: Colors.darkElevated,
     borderRadius: 16,
     paddingHorizontal: 20,
     paddingTop: 20,
@@ -1226,7 +1227,7 @@ const styles = StyleSheet.create({
     maxHeight: '92%',
   },
   voiceCloneModalContent: {
-    backgroundColor: '#1c1c1e',
+    backgroundColor: Colors.darkElevated,
     borderRadius: 16,
     paddingHorizontal: 20,
     paddingTop: 20,
@@ -1253,16 +1254,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#2c2c2e',
+    backgroundColor: Colors.darkSurface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   voiceOptionSelected: {
-    borderColor: Colors.orange,
-    backgroundColor: 'rgba(255, 107, 53, 0.1)',
+    borderColor: Colors.accent,
+    backgroundColor: 'rgba(232, 144, 106, 0.1)',
   },
   voiceOptionContent: {
     flexDirection: 'row',
@@ -1279,13 +1280,13 @@ const styles = StyleSheet.create({
   voiceOptionName: {
     fontSize: 16,
     fontFamily: Fonts.regular,
-    color: Colors.white,
+    color: Colors.cream,
     marginBottom: 4,
   },
   voiceOptionDesc: {
     fontSize: 13,
     fontFamily: Fonts.regular,
-    color: '#8e8e93',
+    color: Colors.textSecondaryDark,
   },
   previewButton: {
     width: 36,
@@ -1302,7 +1303,7 @@ const styles = StyleSheet.create({
   aboutDescription: {
     fontSize: 16,
     fontFamily: Fonts.regular,
-    color: Colors.white,
+    color: Colors.cream,
     lineHeight: 24,
     marginBottom: 16,
   },

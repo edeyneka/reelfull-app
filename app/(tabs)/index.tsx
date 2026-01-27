@@ -216,7 +216,7 @@ function VideoThumbnail({
             />
             <View style={styles.processingOverlay}>
               <Animated.View style={{ transform: [{ rotate: spin }] }}>
-                <Loader2 size={32} color={Colors.orange} strokeWidth={2} />
+                <Loader2 size={32} color={Colors.accent} strokeWidth={2} />
               </Animated.View>
               <Text style={styles.processingText}>{statusText}</Text>
             </View>
@@ -226,7 +226,7 @@ function VideoThumbnail({
       return (
         <View style={styles.processingThumbnail}>
           <Animated.View style={{ transform: [{ rotate: spin }] }}>
-            <Loader2 size={32} color={Colors.orange} strokeWidth={2} />
+            <Loader2 size={32} color={Colors.accent} strokeWidth={2} />
           </Animated.View>
           <Text style={styles.processingText}>{statusText}</Text>
         </View>
@@ -592,13 +592,7 @@ export default function FeedTab() {
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <View style={styles.headerContent}>
-          <View style={styles.titleContainer}>
-            <Text style={styles.headerTitle}>Reelful</Text>
-            <Image 
-              source={require('../../assets/images/icon-no-bg.png')}
-              style={styles.headerIcon}
-            />
-          </View>
+          <Text style={styles.headerTitle}>Gallery</Text>
           <View style={styles.headerRight}>
             {creditsDisplay && (
               <TouchableOpacity
@@ -606,7 +600,7 @@ export default function FeedTab() {
                 onPress={() => router.push('/paywall')}
                 activeOpacity={0.8}
               >
-                <Zap size={14} color={Colors.orange} strokeWidth={2.5} />
+                <Zap size={14} color={Colors.accent} strokeWidth={2.5} />
                 <Text style={styles.creditsCounterText}>
                   {creditsDisplay.count}
                 </Text>
@@ -673,8 +667,8 @@ export default function FeedTab() {
                 <RefreshControl
                   refreshing={isRefreshing}
                   onRefresh={handleRefresh}
-                  tintColor={Colors.orange}
-                  colors={[Colors.orange]}
+                  tintColor={Colors.accent}
+                  colors={[Colors.accent]}
                 />
               }
             />
@@ -693,8 +687,8 @@ export default function FeedTab() {
                 <RefreshControl
                   refreshing={isRefreshing}
                   onRefresh={handleRefresh}
-                  tintColor={Colors.orange}
-                  colors={[Colors.orange]}
+                  tintColor={Colors.accent}
+                  colors={[Colors.accent]}
                 />
               }
             />
@@ -774,33 +768,23 @@ export default function FeedTab() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.black,
+    backgroundColor: Colors.dark,
   },
   header: {
     paddingLeft: 24,
     paddingRight: ITEM_SPACING,
     paddingBottom: 10,
-    backgroundColor: Colors.black,
+    backgroundColor: Colors.dark,
   },
   headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerIcon: {
-    width: 32,
-    height: 32,
-    resizeMode: 'contain',
-    marginLeft: 6,
-  },
   headerTitle: {
     fontSize: 32,
-    fontFamily: Fonts.regular,
-    color: Colors.white,
+    fontFamily: Fonts.medium,
+    color: Colors.cream,
   },
   headerRight: {
     flexDirection: 'row',
@@ -810,7 +794,7 @@ const styles = StyleSheet.create({
   creditsCounter: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 107, 53, 0.15)',
+    backgroundColor: 'rgba(232, 144, 106, 0.15)',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 16,
@@ -818,9 +802,9 @@ const styles = StyleSheet.create({
   },
   creditsCounterText: {
     fontSize: 14,
-    fontFamily: Fonts.title,
+    fontFamily: Fonts.medium,
     fontWeight: '600',
-    color: Colors.orange,
+    color: Colors.accent,
   },
   grid: {
     padding: ITEM_SPACING,
@@ -875,11 +859,11 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: 16,
     fontFamily: Fonts.regular,
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: 'rgba(243, 235, 227, 0.5)',
   },
   tabTextActive: {
-    color: Colors.white,
-    fontFamily: Fonts.title,
+    color: Colors.cream,
+    fontFamily: Fonts.medium,
     fontWeight: '500',
   },
   row: {
@@ -891,8 +875,8 @@ const styles = StyleSheet.create({
   cardContainer: {
     width: ITEM_WIDTH,
     height: CARD_HEIGHT,
-    backgroundColor: Colors.grayDark,
-    borderRadius: 14,
+    backgroundColor: Colors.darkElevated,
+    borderRadius: 24,
     padding: 8,
   },
   cardTouchable: {
@@ -916,9 +900,9 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 15,
-    fontFamily: Fonts.title,
+    fontFamily: Fonts.medium,
     fontWeight: '600',
-    color: Colors.white,
+    color: Colors.cream,
     marginBottom: 4,
   },
   metadataRow: {
@@ -934,7 +918,7 @@ const styles = StyleSheet.create({
   metadataText: {
     fontSize: 12,
     fontFamily: Fonts.regular,
-    color: Colors.grayLight,
+    color: Colors.textSecondaryDark,
   },
   // Legacy styles (kept for compatibility)
   thumbnailContainer: {
@@ -961,7 +945,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.grayDark,
+    backgroundColor: Colors.darkElevated,
     gap: 12,
   },
   processingOverlay: {
@@ -978,13 +962,13 @@ const styles = StyleSheet.create({
   processingText: {
     fontSize: 13,
     fontFamily: Fonts.regular,
-    color: Colors.orange,
+    color: Colors.accent,
   },
   draftThumbnail: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.grayDark,
+    backgroundColor: Colors.darkElevated,
     gap: 12,
   },
   draftOverlay: {
@@ -1001,7 +985,7 @@ const styles = StyleSheet.create({
   draftText: {
     fontSize: 13,
     fontFamily: Fonts.regular,
-    color: Colors.white,
+    color: Colors.cream,
   },
   errorOverlay: {
     position: 'absolute',
@@ -1016,12 +1000,12 @@ const styles = StyleSheet.create({
   },
   noThumbnailContainer: {
     flex: 1,
-    backgroundColor: Colors.grayDark,
+    backgroundColor: Colors.darkElevated,
     justifyContent: 'center',
     alignItems: 'center',
   },
   noThumbnailText: {
-    color: Colors.grayLight,
+    color: Colors.textSecondaryDark,
     fontFamily: Fonts.regular,
     fontSize: 12,
   },
@@ -1033,23 +1017,26 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 24,
-    fontFamily: Fonts.regular,
-    color: Colors.white,
+    fontFamily: Fonts.medium,
+    color: Colors.cream,
     marginBottom: 12,
   },
   emptySubtitle: {
     fontSize: 16,
     fontFamily: Fonts.regular,
-    color: Colors.grayLight,
+    color: Colors.textSecondaryDark,
     textAlign: 'center',
   },
   startCreatingButton: {
     marginTop: 32,
-    backgroundColor: Colors.orange,
+    backgroundColor: Colors.accent,
     paddingHorizontal: 48,
-    paddingVertical: 16,
-    borderRadius: 16,
-    shadowColor: Colors.orange,
+    paddingVertical: 18,
+    borderRadius: 100,
+    height: 64,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: Colors.accent,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 8,
@@ -1057,7 +1044,7 @@ const styles = StyleSheet.create({
   },
   startCreatingText: {
     fontSize: 18,
-    fontFamily: Fonts.title,
+    fontFamily: Fonts.medium,
     fontWeight: '600',
     color: Colors.white,
     textAlign: 'center',
@@ -1114,7 +1101,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     borderWidth: 3,
-    borderColor: Colors.orange,
+    borderColor: Colors.accent,
     borderRadius: 14,
     pointerEvents: 'none',
   },

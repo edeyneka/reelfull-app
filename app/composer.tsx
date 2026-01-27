@@ -64,7 +64,7 @@ function OverlayLoader({
   return (
     <View style={styles.overlayLoader}>
       <View style={styles.loaderContent}>
-        <ActivityIndicator size="large" color={Colors.orange} />
+        <ActivityIndicator size="large" color={Colors.accent} />
         <Text style={styles.loaderTitle}>{title}</Text>
         {preparing ? (
           <Text style={styles.loaderProgress}>Preparing... (0%)</Text>
@@ -514,7 +514,7 @@ export default function ComposerScreen() {
                       onPress={() => removeMedia(index)}
                       activeOpacity={0.7}
                     >
-                      <X size={16} color={Colors.white} strokeWidth={2} />
+                      <X size={16} color={Colors.cream} strokeWidth={2} />
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -533,7 +533,7 @@ export default function ComposerScreen() {
               activeOpacity={0.7}
               disabled={isPickingMedia}
             >
-              <Camera size={20} color={Colors.white} strokeWidth={2} />
+              <Camera size={20} color={Colors.cream} strokeWidth={2} />
               <Text style={styles.addMediaButtonText}>Add More Media</Text>
             </TouchableOpacity>
 
@@ -582,7 +582,7 @@ export default function ComposerScreen() {
                         onPress={() => removeMedia(mediaUris.indexOf(media))}
                         activeOpacity={0.7}
                       >
-                        <X size={14} color={Colors.white} strokeWidth={2} />
+                        <X size={14} color={Colors.cream} strokeWidth={2} />
                       </TouchableOpacity>
                     </View>
                   ))}
@@ -595,7 +595,7 @@ export default function ComposerScreen() {
                 onPress={handleAddMoreMedia}
                 activeOpacity={0.7}
               >
-                <Camera size={20} color={Colors.white} strokeWidth={2} />
+                <Camera size={20} color={Colors.cream} strokeWidth={2} />
                 <Text style={styles.addMediaButtonText}>Add More Media</Text>
               </TouchableOpacity>
 
@@ -623,7 +623,7 @@ export default function ComposerScreen() {
               {/* Example Story */}
               <View style={styles.exampleContainer}>
                 <View style={styles.exampleHeader}>
-                  <Camera size={14} color={Colors.orange} strokeWidth={2} />
+                  <Camera size={14} color={Colors.accent} strokeWidth={2} />
                   <Text style={styles.exampleTitle}>Example Story</Text>
                 </View>
                 <Text style={styles.exampleText}>
@@ -659,7 +659,7 @@ export default function ComposerScreen() {
           onPress={handleClose}
           activeOpacity={0.7}
         >
-          <X size={24} color={Colors.white} strokeWidth={2} />
+          <X size={24} color={Colors.cream} strokeWidth={2} />
         </TouchableOpacity>
         
         <View style={styles.placeholder} />
@@ -676,7 +676,7 @@ export default function ComposerScreen() {
             }}
             activeOpacity={0.7}
           >
-            <ArrowRight size={24} color={Colors.white} strokeWidth={2} />
+            <ArrowRight size={24} color={Colors.cream} strokeWidth={2} />
           </TouchableOpacity>
         ) : (
           <View style={styles.placeholder} />
@@ -710,7 +710,7 @@ export default function ComposerScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.black,
+    backgroundColor: Colors.dark,
   },
   header: {
     flexDirection: 'row',
@@ -718,7 +718,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 24,
     paddingBottom: 8,
-    backgroundColor: Colors.black,
+    backgroundColor: Colors.dark,
   },
   closeButton: {
     width: 40,
@@ -730,7 +730,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: Colors.gray,
+    backgroundColor: Colors.darkElevated,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -755,8 +755,8 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontFamily: Fonts.regular,
-    color: Colors.white,
+    fontFamily: Fonts.medium,
+    color: Colors.cream,
     lineHeight: 32,
     textAlign: 'center',
     marginBottom: 24,
@@ -782,7 +782,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     width: 100,
     height: 100,
-    backgroundColor: Colors.gray,
+    backgroundColor: Colors.darkElevated,
     position: 'relative',
   },
   mediaThumbnail: {
@@ -803,12 +803,12 @@ const styles = StyleSheet.create({
   emptyMediaGrid: {
     height: 100,
     borderRadius: 12,
-    backgroundColor: Colors.gray,
+    backgroundColor: Colors.darkElevated,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
     borderWidth: 2,
-    borderColor: Colors.grayLight,
+    borderColor: Colors.darkSurface,
     borderStyle: 'dashed',
   },
   emptyMediaText: {
@@ -817,8 +817,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.regular,
   },
   addMediaButton: {
-    backgroundColor: Colors.orange,
-    borderRadius: 12,
+    backgroundColor: Colors.accent,
+    borderRadius: 100,
     paddingVertical: 16,
     paddingHorizontal: 20,
     flexDirection: 'row',
@@ -829,8 +829,8 @@ const styles = StyleSheet.create({
   },
   addMediaButtonText: {
     fontSize: 16,
-    color: Colors.white,
-    fontFamily: Fonts.title,
+    color: Colors.cream,
+    fontFamily: Fonts.medium,
   },
   icloudWarning: {
     fontSize: 12,
@@ -849,7 +849,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     width: 80,
     height: 80,
-    backgroundColor: Colors.gray,
+    backgroundColor: Colors.darkElevated,
     marginRight: 10,
     position: 'relative',
   },
@@ -865,16 +865,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   generateButton: {
-    backgroundColor: Colors.orange,
-    borderRadius: 12,
+    backgroundColor: Colors.accent,
+    borderRadius: 100,
     paddingVertical: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
   generateButtonText: {
     fontSize: 17,
-    color: Colors.white,
-    fontFamily: Fonts.title,
+    color: Colors.cream,
+    fontFamily: Fonts.medium,
   },
 
   // Full Screen Loader
@@ -885,7 +885,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: Colors.black, // Fully opaque to show empty state behind
+    backgroundColor: Colors.dark,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 100,
@@ -896,8 +896,8 @@ const styles = StyleSheet.create({
   },
   loaderTitle: {
     fontSize: 20,
-    fontFamily: Fonts.title,
-    color: Colors.white,
+    fontFamily: Fonts.medium,
+    color: Colors.cream,
     marginTop: 20,
   },
   loaderProgress: {
@@ -915,7 +915,7 @@ const styles = StyleSheet.create({
   loaderWarning: {
     fontSize: 14,
     fontFamily: Fonts.regular,
-    color: Colors.orange,
+    color: Colors.accent,
     marginTop: 16,
   },
   
@@ -928,23 +928,23 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   input: {
-    backgroundColor: Colors.gray,
+    backgroundColor: Colors.darkSurface,
     borderRadius: 12,
     padding: 14,
     fontSize: 15,
-    color: Colors.white,
+    color: Colors.cream,
     borderWidth: 2,
     borderColor: 'transparent',
     minHeight: 100,
     fontFamily: Fonts.regular,
   },
   exampleContainer: {
-    backgroundColor: 'rgba(255, 107, 53, 0.1)',
-    borderRadius: 10,
+    backgroundColor: 'rgba(232, 144, 106, 0.1)',
+    borderRadius: 12,
     padding: 12,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 107, 53, 0.3)',
+    borderColor: 'rgba(232, 144, 106, 0.3)',
   },
   exampleHeader: {
     flexDirection: 'row',
@@ -955,7 +955,7 @@ const styles = StyleSheet.create({
   exampleTitle: {
     fontSize: 12,
     fontFamily: Fonts.regular,
-    color: Colors.orange,
+    color: Colors.accent,
   },
   exampleText: {
     fontSize: 11,

@@ -3,6 +3,7 @@ import { View, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Home, Plus, User } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import Colors from '@/constants/colors';
 
 type TabBarProps = {
@@ -16,7 +17,8 @@ function CustomTabBar({ state, descriptors, navigation }: TabBarProps) {
   const router = useRouter();
 
   const getIcon = (routeName: string, isFocused: boolean) => {
-    const color = isFocused ? Colors.white : 'rgba(255, 255, 255, 0.5)';
+    // Use cream for active, gray with opacity for inactive
+    const color = isFocused ? Colors.cream : 'rgba(243, 235, 227, 0.5)';
     const size = 26;
     const strokeWidth = isFocused ? 2.5 : 2;
 
@@ -57,15 +59,18 @@ function CustomTabBar({ state, descriptors, navigation }: TabBarProps) {
             {getIcon('index', state.index === 0)}
           </TouchableOpacity>
 
-          {/* Center Create Button */}
+          {/* Center Create Button with accent gradient */}
           <TouchableOpacity
             style={styles.createButton}
             onPress={handleCreatePress}
             activeOpacity={0.8}
           >
-            <View style={styles.createButtonInner}>
+            <LinearGradient
+              colors={['#F0A080', Colors.accent, '#D07850']}
+              style={styles.createButtonInner}
+            >
               <Plus size={26} color={Colors.white} strokeWidth={2.5} />
-            </View>
+            </LinearGradient>
           </TouchableOpacity>
 
           {/* Profile Tab */}
@@ -130,17 +135,18 @@ const styles = StyleSheet.create({
   },
   blurBackground: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(164, 164, 164, 0.08)',
+    // Dark gradient background per design spec
+    backgroundColor: 'rgba(45, 45, 42, 0.95)',
   },
   androidBackground: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(40, 40, 40, 0.85)',
+    backgroundColor: 'rgba(35, 35, 33, 0.98)',
   },
   glassBorder: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: 32,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   tabBarContent: {
     flex: 1,
@@ -165,10 +171,9 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: Colors.orange,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: Colors.orange,
+    shadowColor: Colors.accent,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 8,
