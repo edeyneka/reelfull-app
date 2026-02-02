@@ -193,8 +193,8 @@ function VideoThumbnail({
       }
       return (
         <View style={styles.draftThumbnail}>
-          <FileText size={28} color={Colors.white} strokeWidth={2} />
-          <Text style={styles.draftText}>Draft</Text>
+          <FileText size={28} color={Colors.ink} strokeWidth={2} />
+          <Text style={styles.draftTextPlaceholder}>Draft</Text>
         </View>
       );
     }
@@ -216,7 +216,7 @@ function VideoThumbnail({
             />
             <View style={styles.processingOverlay}>
               <Animated.View style={{ transform: [{ rotate: spin }] }}>
-                <Loader2 size={32} color={Colors.accent} strokeWidth={2} />
+                <Loader2 size={32} color={Colors.ember} strokeWidth={2} />
               </Animated.View>
               <Text style={styles.processingText}>{statusText}</Text>
             </View>
@@ -226,7 +226,7 @@ function VideoThumbnail({
       return (
         <View style={styles.processingThumbnail}>
           <Animated.View style={{ transform: [{ rotate: spin }] }}>
-            <Loader2 size={32} color={Colors.accent} strokeWidth={2} />
+            <Loader2 size={32} color={Colors.ember} strokeWidth={2} />
           </Animated.View>
           <Text style={styles.processingText}>{statusText}</Text>
         </View>
@@ -251,7 +251,7 @@ function VideoThumbnail({
       }
       return (
         <View style={styles.errorThumbnail}>
-          <AlertCircle size={28} color={Colors.white} strokeWidth={2} />
+          <AlertCircle size={28} color={Colors.error} strokeWidth={2} />
           <Text style={styles.errorText}>Failed</Text>
         </View>
       );
@@ -334,12 +334,12 @@ function VideoThumbnail({
           <View style={styles.metadataRow}>
             {formattedDuration && (
               <View style={styles.metadataItem}>
-                <Clock size={12} color={Colors.grayLight} strokeWidth={2} />
+                <Clock size={12} color={Colors.textSecondary} strokeWidth={2} />
                 <Text style={styles.metadataText}>{formattedDuration}</Text>
               </View>
             )}
             <View style={styles.metadataItem}>
-              <Calendar size={12} color={Colors.grayLight} strokeWidth={2} />
+              <Calendar size={12} color={Colors.textSecondary} strokeWidth={2} />
               <Text style={styles.metadataText}>{formattedDate}</Text>
             </View>
           </View>
@@ -600,7 +600,7 @@ export default function FeedTab() {
                 onPress={() => router.push('/paywall')}
                 activeOpacity={0.8}
               >
-                <Zap size={14} color={Colors.accent} strokeWidth={2.5} />
+                <Zap size={14} color={Colors.ember} strokeWidth={2.5} />
                 <Text style={styles.creditsCounterText}>
                   {creditsDisplay.count}
                 </Text>
@@ -614,7 +614,7 @@ export default function FeedTab() {
       <View style={styles.contentArea}>
         {/* Floating Oval Segmented Tab Control */}
         <View style={styles.tabContainer}>
-          <BlurView intensity={60} tint="dark" style={styles.tabBackground}>
+          <BlurView intensity={80} tint="light" style={styles.tabBackground}>
             <Animated.View
               style={[
                 styles.tabIndicator,
@@ -667,8 +667,8 @@ export default function FeedTab() {
                 <RefreshControl
                   refreshing={isRefreshing}
                   onRefresh={handleRefresh}
-                  tintColor={Colors.accent}
-                  colors={[Colors.accent]}
+                  tintColor={Colors.ember}
+                  colors={[Colors.ember]}
                 />
               }
             />
@@ -687,8 +687,8 @@ export default function FeedTab() {
                 <RefreshControl
                   refreshing={isRefreshing}
                   onRefresh={handleRefresh}
-                  tintColor={Colors.accent}
-                  colors={[Colors.accent]}
+                  tintColor={Colors.ember}
+                  colors={[Colors.ember]}
                 />
               }
             />
@@ -754,7 +754,7 @@ export default function FeedTab() {
               activeOpacity={0.7}
             >
               <View style={styles.actionSheetOptionContent}>
-                <Trash2 size={18} color="#ff3b30" strokeWidth={2} />
+                <Trash2 size={18} color={Colors.error} strokeWidth={2} />
                 <Text style={styles.actionSheetOptionTextDelete}>Delete</Text>
               </View>
             </TouchableOpacity>
@@ -768,13 +768,13 @@ export default function FeedTab() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.dark,
+    backgroundColor: Colors.cream,
   },
   header: {
     paddingLeft: 24,
     paddingRight: ITEM_SPACING,
     paddingBottom: 10,
-    backgroundColor: Colors.dark,
+    backgroundColor: Colors.cream,
   },
   headerContent: {
     flexDirection: 'row',
@@ -784,7 +784,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 32,
     fontFamily: Fonts.medium,
-    color: Colors.cream,
+    color: Colors.ink,
   },
   headerRight: {
     flexDirection: 'row',
@@ -794,7 +794,7 @@ const styles = StyleSheet.create({
   creditsCounter: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(232, 144, 106, 0.15)',
+    backgroundColor: 'rgba(243, 106, 63, 0.12)',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 16,
@@ -804,7 +804,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: Fonts.medium,
     fontWeight: '600',
-    color: Colors.accent,
+    color: Colors.ember,
   },
   grid: {
     padding: ITEM_SPACING,
@@ -834,19 +834,26 @@ const styles = StyleSheet.create({
   },
   tabBackground: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(164, 164, 164, 0.08)',
+    backgroundColor: 'rgba(250, 249, 245, 0.85)',
     borderRadius: 28,
     padding: 4,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(38, 38, 38, 0.08)',
   },
   tabIndicator: {
     position: 'absolute',
     height: '100%',
-    backgroundColor: 'rgba(58, 58, 60, 0.9)',
+    backgroundColor: Colors.white,
     borderRadius: 24,
     top: 4,
     left: 4,
     width: (SCREEN_WIDTH - 80 - 8) / 2,
+    shadowColor: Colors.ink,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   tabButton: {
     flex: 1,
@@ -859,10 +866,10 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: 16,
     fontFamily: Fonts.regular,
-    color: 'rgba(243, 235, 227, 0.5)',
+    color: 'rgba(38, 38, 38, 0.5)',
   },
   tabTextActive: {
-    color: Colors.cream,
+    color: Colors.ink,
     fontFamily: Fonts.medium,
     fontWeight: '500',
   },
@@ -875,9 +882,14 @@ const styles = StyleSheet.create({
   cardContainer: {
     width: ITEM_WIDTH,
     height: CARD_HEIGHT,
-    backgroundColor: Colors.darkElevated,
+    backgroundColor: Colors.white,
     borderRadius: 24,
     padding: 8,
+    shadowColor: Colors.ink,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
   },
   cardTouchable: {
     flex: 1,
@@ -887,7 +899,7 @@ const styles = StyleSheet.create({
     height: THUMBNAIL_HEIGHT - 16, // Account for padding
     borderRadius: 14,
     overflow: 'hidden',
-    backgroundColor: Colors.gray,
+    backgroundColor: Colors.creamDark,
   },
   thumbnail: {
     width: '100%',
@@ -902,7 +914,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: Fonts.medium,
     fontWeight: '600',
-    color: Colors.cream,
+    color: Colors.ink,
     marginBottom: 4,
   },
   metadataRow: {
@@ -918,7 +930,7 @@ const styles = StyleSheet.create({
   metadataText: {
     fontSize: 12,
     fontFamily: Fonts.regular,
-    color: Colors.textSecondaryDark,
+    color: Colors.textSecondary,
   },
   // Legacy styles (kept for compatibility)
   thumbnailContainer: {
@@ -926,18 +938,18 @@ const styles = StyleSheet.create({
     height: ITEM_WIDTH * 1.5,
     borderRadius: 12,
     overflow: 'hidden',
-    backgroundColor: Colors.gray,
+    backgroundColor: Colors.creamDark,
   },
   errorThumbnail: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.gray,
+    backgroundColor: Colors.creamDark,
   },
   errorText: {
     fontSize: 12,
     fontFamily: Fonts.regular,
-    color: Colors.grayLight,
+    color: Colors.error,
     marginTop: 8,
     textAlign: 'center',
   },
@@ -945,7 +957,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.darkElevated,
+    backgroundColor: Colors.creamMedium,
     gap: 12,
   },
   processingOverlay: {
@@ -954,7 +966,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
     gap: 12,
@@ -962,13 +974,13 @@ const styles = StyleSheet.create({
   processingText: {
     fontSize: 13,
     fontFamily: Fonts.regular,
-    color: Colors.accent,
+    color: Colors.ember,
   },
   draftThumbnail: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.darkElevated,
+    backgroundColor: Colors.creamMedium,
     gap: 12,
   },
   draftOverlay: {
@@ -977,7 +989,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
     gap: 12,
@@ -985,7 +997,12 @@ const styles = StyleSheet.create({
   draftText: {
     fontSize: 13,
     fontFamily: Fonts.regular,
-    color: Colors.cream,
+    color: Colors.white,
+  },
+  draftTextPlaceholder: {
+    fontSize: 13,
+    fontFamily: Fonts.regular,
+    color: Colors.ink,
   },
   errorOverlay: {
     position: 'absolute',
@@ -993,19 +1010,19 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
     gap: 8,
   },
   noThumbnailContainer: {
     flex: 1,
-    backgroundColor: Colors.darkElevated,
+    backgroundColor: Colors.creamMedium,
     justifyContent: 'center',
     alignItems: 'center',
   },
   noThumbnailText: {
-    color: Colors.textSecondaryDark,
+    color: Colors.textSecondary,
     fontFamily: Fonts.regular,
     fontSize: 12,
   },
@@ -1018,27 +1035,27 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 24,
     fontFamily: Fonts.medium,
-    color: Colors.cream,
+    color: Colors.ink,
     marginBottom: 12,
   },
   emptySubtitle: {
     fontSize: 16,
     fontFamily: Fonts.regular,
-    color: Colors.textSecondaryDark,
+    color: Colors.textSecondary,
     textAlign: 'center',
   },
   startCreatingButton: {
     marginTop: 32,
-    backgroundColor: Colors.accent,
+    backgroundColor: Colors.ember,
     paddingHorizontal: 48,
     paddingVertical: 18,
     borderRadius: 100,
     height: 64,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: Colors.accent,
+    shadowColor: Colors.ember,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
   },
@@ -1062,15 +1079,15 @@ const styles = StyleSheet.create({
   },
   actionSheetBackdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
   },
   actionSheetContainer: {
     width: 100,
-    backgroundColor: 'rgba(255, 255, 255, 0.98)',
+    backgroundColor: Colors.white,
     borderRadius: 10,
-    shadowColor: '#000',
+    shadowColor: Colors.ink,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 10,
   },
@@ -1087,7 +1104,7 @@ const styles = StyleSheet.create({
   actionSheetOptionTextDelete: {
     fontSize: 14,
     fontFamily: Fonts.regular,
-    color: '#ff3b30',
+    color: Colors.error,
     fontWeight: '600',
   },
   thumbnailTouchable: {
@@ -1101,7 +1118,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     borderWidth: 3,
-    borderColor: Colors.accent,
+    borderColor: Colors.ember,
     borderRadius: 14,
     pointerEvents: 'none',
   },

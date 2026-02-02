@@ -43,7 +43,7 @@ export default function CountrySelector({ selectedCountry, onSelectCountry }: Co
       >
         <Text style={styles.flag}>{selectedCountry.flag}</Text>
         <Text style={styles.dialCode}>{selectedCountry.dialCode}</Text>
-        <ChevronDown size={16} color={Colors.grayLight} />
+        <ChevronDown size={16} color={Colors.textSecondary} />
       </TouchableOpacity>
 
       <Modal
@@ -60,16 +60,16 @@ export default function CountrySelector({ selectedCountry, onSelectCountry }: Co
               onPress={() => setModalVisible(false)}
               activeOpacity={0.7}
             >
-              <X size={24} color={Colors.white} />
+              <X size={24} color={Colors.ink} />
             </TouchableOpacity>
           </View>
 
           <View style={styles.searchContainer}>
-            <Search size={20} color={Colors.grayLight} style={styles.searchIcon} />
+            <Search size={20} color={Colors.textSecondary} style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
               placeholder="Search countries..."
-              placeholderTextColor={Colors.grayLight}
+              placeholderTextColor={Colors.gray400}
               value={searchQuery}
               onChangeText={setSearchQuery}
               autoCorrect={false}
@@ -120,11 +120,11 @@ const styles = StyleSheet.create({
   dialCode: {
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.white,
+    color: Colors.ink,
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: Colors.black,
+    backgroundColor: Colors.cream,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -133,12 +133,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.gray,
+    borderBottomColor: Colors.creamDark,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: Colors.white,
+    color: Colors.ink,
   },
   closeButton: {
     position: 'absolute',
@@ -148,7 +148,7 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.gray,
+    backgroundColor: Colors.creamMedium,
     marginHorizontal: 20,
     marginVertical: 16,
     borderRadius: 12,
@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     fontSize: 16,
-    color: Colors.white,
+    color: Colors.ink,
   },
   listContent: {
     paddingHorizontal: 20,
@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   countryItemSelected: {
-    backgroundColor: 'rgba(255, 107, 53, 0.1)',
+    backgroundColor: 'rgba(243, 106, 63, 0.1)',
   },
   countryFlag: {
     fontSize: 32,
@@ -189,17 +189,17 @@ const styles = StyleSheet.create({
   countryName: {
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.white,
+    color: Colors.ink,
     flex: 1,
   },
   countryDialCode: {
     fontSize: 16,
     fontWeight: '500',
-    color: Colors.grayLight,
+    color: Colors.textSecondary,
   },
   separator: {
     height: 1,
-    backgroundColor: Colors.gray,
+    backgroundColor: Colors.creamDark,
     marginLeft: 60,
   },
 });

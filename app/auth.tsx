@@ -422,7 +422,7 @@ export default function AuthScreen() {
                         placeholder={selectedCountry.code === 'US' || selectedCountry.code === 'CA' 
                           ? '(555) 123-4567' 
                           : 'Phone number'}
-                        placeholderTextColor={Colors.grayLight}
+                        placeholderTextColor={Colors.gray400}
                         value={phoneNumber}
                         onChangeText={(text) => setPhoneNumber(formatPhoneNumber(text, selectedCountry))}
                         keyboardType="phone-pad"
@@ -435,7 +435,7 @@ export default function AuthScreen() {
                     testID="continueButton"
                     style={[
                       styles.button,
-                      { backgroundColor: isPhoneValid() && !isLoading ? Colors.accent : Colors.darkSurface },
+                      { backgroundColor: isPhoneValid() && !isLoading ? Colors.ember : Colors.creamDark },
                       !isPhoneValid() && styles.buttonDisabled,
                     ]}
                     onPress={handleSendCode}
@@ -444,9 +444,9 @@ export default function AuthScreen() {
                   >
                     <View style={styles.buttonInner}>
                       {isLoading ? (
-                        <ActivityIndicator color={Colors.cream} />
+                        <ActivityIndicator color={Colors.white} />
                       ) : (
-                        <Text style={styles.buttonText}>Continue</Text>
+                        <Text style={[styles.buttonText, !isPhoneValid() && styles.buttonTextDisabled]}>Continue</Text>
                       )}
                     </View>
                   </TouchableOpacity>
@@ -486,7 +486,7 @@ export default function AuthScreen() {
                       testID="passwordInput"
                       style={styles.codeInput}
                       placeholder="Enter password"
-                      placeholderTextColor={Colors.grayLight}
+                      placeholderTextColor={Colors.gray400}
                       value={password}
                       onChangeText={setPassword}
                       secureTextEntry
@@ -499,7 +499,7 @@ export default function AuthScreen() {
                     testID="loginButton"
                     style={[
                       styles.button,
-                      { backgroundColor: isPasswordValid && !isLoading ? Colors.accent : Colors.darkSurface },
+                      { backgroundColor: isPasswordValid && !isLoading ? Colors.ember : Colors.creamDark },
                       !isPasswordValid && styles.buttonDisabled,
                     ]}
                     onPress={handleVerifyPassword}
@@ -508,9 +508,9 @@ export default function AuthScreen() {
                   >
                     <View style={styles.buttonInner}>
                       {isLoading ? (
-                        <ActivityIndicator color={Colors.cream} />
+                        <ActivityIndicator color={Colors.white} />
                       ) : (
-                        <Text style={styles.buttonText}>Login</Text>
+                        <Text style={[styles.buttonText, !isPasswordValid && styles.buttonTextDisabled]}>Login</Text>
                       )}
                     </View>
                   </TouchableOpacity>
@@ -530,7 +530,7 @@ export default function AuthScreen() {
                     <TextInput
                       style={styles.codeInput}
                       placeholder="000000"
-                      placeholderTextColor={Colors.grayLight}
+                      placeholderTextColor={Colors.gray400}
                       value={code}
                       onChangeText={setCode}
                       keyboardType="number-pad"
@@ -541,7 +541,7 @@ export default function AuthScreen() {
                   <TouchableOpacity
                     style={[
                       styles.button,
-                      { backgroundColor: isCodeValid && !isLoading ? Colors.accent : Colors.darkSurface },
+                      { backgroundColor: isCodeValid && !isLoading ? Colors.ember : Colors.creamDark },
                       !isCodeValid && styles.buttonDisabled,
                     ]}
                     onPress={handleVerifyCode}
@@ -550,9 +550,9 @@ export default function AuthScreen() {
                   >
                     <View style={styles.buttonInner}>
                       {isLoading ? (
-                        <ActivityIndicator color={Colors.cream} />
+                        <ActivityIndicator color={Colors.white} />
                       ) : (
-                        <Text style={styles.buttonText}>Verify</Text>
+                        <Text style={[styles.buttonText, !isCodeValid && styles.buttonTextDisabled]}>Verify</Text>
                       )}
                     </View>
                   </TouchableOpacity>
@@ -585,7 +585,7 @@ export default function AuthScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.dark,
+    backgroundColor: Colors.cream,
   },
   keyboardView: {
     flex: 1,
@@ -601,14 +601,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontFamily: Fonts.medium,
-    color: Colors.cream,
+    color: Colors.ink,
     marginBottom: 8,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
     fontFamily: Fonts.regular,
-    color: Colors.textSecondaryDark,
+    color: Colors.textSecondary,
     textAlign: 'center',
   },
   form: {
@@ -620,42 +620,41 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 18,
     fontFamily: Fonts.regular,
-    color: Colors.cream,
+    color: Colors.ink,
     marginBottom: 12,
   },
   phoneInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.darkSurface,
+    backgroundColor: Colors.white,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: Colors.creamDark,
   },
   divider: {
     width: 1,
     height: 24,
-    backgroundColor: Colors.textSecondaryDark,
-    opacity: 0.3,
+    backgroundColor: Colors.creamDarker,
   },
   phoneInput: {
     flex: 1,
     padding: 16,
     fontSize: 18,
     fontFamily: Fonts.regular,
-    color: Colors.cream,
+    color: Colors.ink,
     letterSpacing: 0,
   },
   codeInput: {
-    backgroundColor: Colors.darkSurface,
+    backgroundColor: Colors.white,
     borderRadius: 12,
     padding: 16,
     fontSize: 18,
     fontFamily: Fonts.medium,
-    color: Colors.cream,
+    color: Colors.ink,
     textAlign: 'center',
     letterSpacing: 12,
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: Colors.creamDark,
   },
   button: {
     marginTop: 8,
@@ -664,7 +663,7 @@ const styles = StyleSheet.create({
     height: 64,
   },
   buttonDisabled: {
-    opacity: 0.5,
+    opacity: 0.7,
   },
   buttonInner: {
     flexDirection: 'row',
@@ -678,6 +677,9 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.medium,
     color: Colors.white,
   },
+  buttonTextDisabled: {
+    color: Colors.inkMuted,
+  },
   changePhoneButton: {
     marginTop: 12,
     padding: 8,
@@ -686,7 +688,7 @@ const styles = StyleSheet.create({
   changePhoneText: {
     fontSize: 16,
     fontFamily: Fonts.regular,
-    color: Colors.accent,
+    color: Colors.ember,
   },
   resendButton: {
     marginTop: 0,
@@ -696,7 +698,7 @@ const styles = StyleSheet.create({
   resendText: {
     fontSize: 16,
     fontFamily: Fonts.regular,
-    color: Colors.textSecondaryDark,
+    color: Colors.textSecondary,
     textDecorationLine: 'underline',
   },
   testAccountButton: {
@@ -704,26 +706,25 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: Colors.textSecondaryDark,
+    borderColor: Colors.creamDarker,
     borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: Colors.creamMedium,
   },
   testAccountText: {
     fontSize: 14,
     fontFamily: Fonts.regular,
-    color: Colors.textSecondaryDark,
+    color: Colors.textSecondary,
   },
   termsText: {
     fontSize: 13,
     fontFamily: Fonts.regular,
-    color: Colors.textSecondaryDark,
+    color: Colors.textSecondary,
     textAlign: 'center',
     marginTop: 16,
     lineHeight: 20,
   },
   termsLink: {
-    color: Colors.accent,
+    color: Colors.ember,
     textDecorationLine: 'underline',
   },
 });
-

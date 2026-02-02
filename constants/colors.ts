@@ -1,24 +1,36 @@
 // Reelful Design System - Colors
-// Cinema-inspired, warm & sophisticated palette
+// Clean, modern palette with warm cream background
 
 export default {
-  // Brand - Cream Palette
-  cream: '#f3ebe3',
-  creamLight: '#f8f0e8',
-  creamMedium: '#e8ddd3',
-  creamDark: '#ddd0c4',
-  creamDarker: '#d3c4b8',
+  // Brand - Cream Palette (Background)
+  cream: '#FAF9F5',
+  creamLight: '#FFFFFF',
+  creamMedium: '#F5F4F0',
+  creamDark: '#EDECE8',
+  creamDarker: '#E5E4E0',
 
-  // Brand - Dark Palette
+  // Brand - Ink Palette (Text/Dark elements)
+  ink: '#262626',
+  inkLight: '#404040',
+  inkMedium: '#1A1A1A',
+  inkMuted: '#636363',
+
+  // Accent - Ember (Orange)
+  ember: '#F36A3F',
+  emberLight: '#F58560',
+  emberDark: '#E05530',
+  emberMuted: '#F36A3F80',
+
+  // Backwards compatibility aliases
+  accent: '#F36A3F',
+  accentLight: '#F58560',
+  accentDark: '#E05530',
+  accentMuted: '#F36A3F80',
+
+  // Legacy dark theme (for screens that need dark backgrounds like video players)
   dark: '#1a1a18',
   darkElevated: '#232321',
   darkSurface: '#2d2d2a',
-
-  // Accent - Orange (from reel highlights)
-  accent: '#E8906A',
-  accentLight: '#F0A080',
-  accentDark: '#D07850',
-  accentMuted: '#C4856B',
 
   // Neutral Grays
   gray100: '#f5f5f5',
@@ -35,16 +47,28 @@ export default {
   black: '#000000',
   white: '#FFFFFF',
 
-  // Text Colors
-  textPrimaryLight: '#000000',
-  textSecondaryLight: '#636363',
-  textPrimaryDark: '#f3ebe3',
+  // Text Colors - Light theme (default)
+  textPrimary: '#262626',
+  textSecondary: '#636363',
+  textTertiary: '#9a9a9a',
+
+  // Text Colors - Dark theme (for dark backgrounds)
+  textPrimaryDark: '#FAF9F5',
   textSecondaryDark: '#9a9a9a',
 
+  // Legacy text colors (backwards compatibility)
+  textPrimaryLight: '#262626',
+  textSecondaryLight: '#636363',
+
+  // Status Colors
+  success: '#4CAF50',
+  error: '#ff3b30',
+  warning: '#F36A3F',
+
   // Legacy (for backwards compatibility)
-  orange: '#FF6B35',
-  orangeLight: '#FF8C42',
-  orangeDark: '#E85A2B',
+  orange: '#F36A3F',
+  orangeLight: '#F58560',
+  orangeDark: '#E05530',
   gray: '#333333',
   grayLight: '#666666',
   grayDark: '#1A1A1A',

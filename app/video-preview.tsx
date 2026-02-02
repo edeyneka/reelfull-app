@@ -339,7 +339,7 @@ export default function VideoPreviewScreen() {
           onPress={handleClose}
           activeOpacity={0.7}
         >
-          <X size={24} color={Colors.cream} strokeWidth={2} />
+          <X size={24} color={Colors.ink} strokeWidth={2} />
         </TouchableOpacity>
         <View style={styles.placeholder} />
         <View style={styles.placeholder} />
@@ -367,7 +367,7 @@ export default function VideoPreviewScreen() {
           onPress={handleClose}
           activeOpacity={0.7}
         >
-          <X size={24} color={Colors.cream} strokeWidth={2} />
+          <X size={24} color={Colors.ink} strokeWidth={2} />
         </TouchableOpacity>
         <View style={styles.placeholder} />
         {projectId && !isTestMode && (
@@ -376,7 +376,7 @@ export default function VideoPreviewScreen() {
             onPress={handleChatHistory}
             activeOpacity={0.7}
           >
-            <MessageSquare size={22} color={Colors.cream} strokeWidth={2} />
+            <MessageSquare size={22} color={Colors.ink} strokeWidth={2} />
           </TouchableOpacity>
         )}
         {(!projectId || isTestMode) && <View style={styles.placeholder} />}
@@ -409,7 +409,7 @@ export default function VideoPreviewScreen() {
               )}
               <View style={styles.generatingOverlay}>
                 <Animated.View style={{ transform: [{ rotate: spin }] }}>
-                  <Loader2 size={48} color={Colors.accent} strokeWidth={2} />
+                  <Loader2 size={48} color={Colors.ember} strokeWidth={2} />
                 </Animated.View>
                 <Text style={styles.generatingPhaseText}>{phaseText.title}</Text>
               </View>
@@ -439,9 +439,9 @@ export default function VideoPreviewScreen() {
               disabled={isGenerating}
             >
               {voiceoverEnabled ? (
-                <Mic size={18} color={isGenerating ? Colors.grayLight : Colors.white} strokeWidth={2} />
+                <Mic size={18} color={isGenerating ? Colors.textSecondary : Colors.white} strokeWidth={2} />
               ) : (
-                <MicOff size={18} color={Colors.grayLight} strokeWidth={2} />
+                <MicOff size={18} color={Colors.textSecondary} strokeWidth={2} />
               )}
               <Text style={[
                 styles.videoOptionLabel,
@@ -460,9 +460,9 @@ export default function VideoPreviewScreen() {
               disabled={isGenerating}
             >
               {musicEnabled ? (
-                <Music size={18} color={isGenerating ? Colors.grayLight : Colors.white} strokeWidth={2} />
+                <Music size={18} color={isGenerating ? Colors.textSecondary : Colors.white} strokeWidth={2} />
               ) : (
-                <Music2 size={18} color={Colors.grayLight} strokeWidth={2} />
+                <Music2 size={18} color={Colors.textSecondary} strokeWidth={2} />
               )}
               <Text style={[
                 styles.videoOptionLabel,
@@ -496,7 +496,7 @@ export default function VideoPreviewScreen() {
             disabled={isDownloading || isGenerating}
           >
             <LinearGradient
-              colors={isGenerating ? [Colors.darkElevated, Colors.darkSurface] : ['#F0A080', Colors.accent, '#D07850']}
+              colors={isGenerating ? [Colors.creamDark, Colors.creamDarker] : [Colors.emberLight, Colors.ember, Colors.emberDark]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.downloadGradient}
@@ -510,7 +510,7 @@ export default function VideoPreviewScreen() {
                 </>
               ) : (
                 <>
-                  <Download size={20} color={isGenerating ? Colors.grayLight : Colors.white} strokeWidth={2.5} />
+                  <Download size={20} color={isGenerating ? Colors.textSecondary : Colors.white} strokeWidth={2.5} />
                   <Text style={[styles.downloadButtonText, isGenerating && styles.disabledButtonText]}>Download</Text>
                 </>
               )}
@@ -531,7 +531,7 @@ export default function VideoPreviewScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.dark,
+    backgroundColor: Colors.cream,
   },
   header: {
     flexDirection: 'row',
@@ -539,7 +539,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 24,
     paddingBottom: 8,
-    backgroundColor: Colors.dark,
+    backgroundColor: Colors.cream,
   },
   closeButton: {
     width: 40,
@@ -569,13 +569,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontFamily: Fonts.medium,
-    color: Colors.cream,
+    color: Colors.ink,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 14,
     fontFamily: Fonts.regular,
-    color: Colors.textSecondaryDark,
+    color: Colors.textSecondary,
     textAlign: 'center',
     marginTop: 8,
   },
@@ -591,7 +591,7 @@ const styles = StyleSheet.create({
     maxHeight: 560,
     borderRadius: 16,
     overflow: 'hidden',
-    backgroundColor: Colors.darkElevated,
+    backgroundColor: Colors.creamDark,
   },
   generatingThumbnail: {
     width: '100%',
@@ -600,7 +600,7 @@ const styles = StyleSheet.create({
   generatingPlaceholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: Colors.darkElevated,
+    backgroundColor: Colors.creamDark,
   },
   generatingOverlay: {
     position: 'absolute',
@@ -616,7 +616,7 @@ const styles = StyleSheet.create({
   generatingPhaseText: {
     fontSize: 14,
     fontFamily: Fonts.medium,
-    color: Colors.accent,
+    color: Colors.ember,
     textAlign: 'center',
   },
   actions: {
@@ -634,7 +634,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 12,
-    backgroundColor: Colors.darkElevated,
+    backgroundColor: Colors.creamDark,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
@@ -642,21 +642,21 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   videoOptionToggleActive: {
-    backgroundColor: 'rgba(232, 144, 106, 0.2)',
-    borderColor: Colors.accent,
+    backgroundColor: 'rgba(243, 106, 63, 0.15)',
+    borderColor: Colors.ember,
   },
   videoOptionLabel: {
     fontSize: 10,
     fontFamily: Fonts.regular,
-    color: Colors.cream,
+    color: Colors.ink,
   },
   videoOptionLabelInactive: {
-    color: Colors.grayLight,
+    color: Colors.textSecondary,
   },
   videoOptionToggleDisabled: {
     opacity: 0.5,
     borderColor: 'transparent',
-    backgroundColor: Colors.darkElevated,
+    backgroundColor: Colors.creamDark,
   },
   disabledSection: {
     opacity: 0.6,
@@ -665,7 +665,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   disabledButtonText: {
-    color: Colors.grayLight,
+    color: Colors.textSecondary,
   },
   downloadButton: {
     width: '100%',
@@ -682,12 +682,12 @@ const styles = StyleSheet.create({
   downloadButtonText: {
     fontSize: 16,
     fontFamily: Fonts.medium,
-    color: Colors.cream,
+    color: Colors.white,
   },
   downloadSuccessText: {
     fontSize: 14,
     fontFamily: Fonts.regular,
-    color: Colors.cream,
+    color: Colors.ink,
     textAlign: 'center',
     opacity: 0.8,
   },
@@ -699,10 +699,10 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 16,
-    color: Colors.grayLight,
+    color: Colors.textSecondary,
   },
   errorButton: {
-    backgroundColor: Colors.accent,
+    backgroundColor: Colors.ember,
     borderRadius: 100,
     paddingHorizontal: 24,
     paddingVertical: 14,
@@ -710,7 +710,7 @@ const styles = StyleSheet.create({
   errorButtonText: {
     fontSize: 16,
     fontFamily: Fonts.medium,
-    color: Colors.cream,
+    color: Colors.white,
   },
 });
 

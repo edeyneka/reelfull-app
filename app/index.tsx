@@ -8,11 +8,9 @@ import {
   Animated,
   ActivityIndicator,
   Dimensions,
-  Image,
   Easing,
   Linking,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
@@ -34,8 +32,6 @@ export default function IntroScreen() {
   const reelRotation = useRef(new Animated.Value(0)).current;
   const titleFade = useRef(new Animated.Value(0)).current;
   const reelFade = useRef(new Animated.Value(0)).current;
-  const spotlightOpacity = useRef(new Animated.Value(0)).current;
-  const spotlightPosition = useRef(new Animated.ValueXY({ x: 0, y: SCREEN_HEIGHT * 0.3 })).current;
 
   // Continuous reel rotation - start immediately and run forever
   useEffect(() => {
@@ -50,44 +46,6 @@ export default function IntroScreen() {
     rotateAnimation.start();
     return () => rotateAnimation.stop();
   }, []);
-
-  // Animate spotlight blob randomly
-  useEffect(() => {
-    const animateSpotlight = () => {
-      // Random position in left portion of screen
-      const randomX = Math.random() * SCREEN_WIDTH * 0.4 - SCREEN_WIDTH * 0.1;
-      const randomY = Math.random() * SCREEN_HEIGHT * 0.5 + SCREEN_HEIGHT * 0.1;
-
-      // Fade in and move
-      Animated.parallel([
-        Animated.timing(spotlightOpacity, {
-          toValue: 0.6,
-          duration: 1500,
-          useNativeDriver: true,
-        }),
-        Animated.timing(spotlightPosition, {
-          toValue: { x: randomX, y: randomY },
-          duration: 1500,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        // Hold for a moment then fade out
-        setTimeout(() => {
-          Animated.timing(spotlightOpacity, {
-            toValue: 0,
-            duration: 1500,
-            useNativeDriver: true,
-          }).start(() => {
-            // Repeat after delay
-            setTimeout(animateSpotlight, 1000 + Math.random() * 2000);
-          });
-        }, 2000 + Math.random() * 2000);
-      });
-    };
-
-    const timeout = setTimeout(animateSpotlight, 1000);
-    return () => clearTimeout(timeout);
-  }, [spotlightOpacity, spotlightPosition]);
 
   // Initial entrance animation
   useEffect(() => {
@@ -154,36 +112,6 @@ export default function IntroScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Ambient glow on right side - subtle warm glow near reel */}
-      <View style={styles.ambientGlow}>
-        <LinearGradient
-          colors={['rgba(255, 200, 150, 0.08)', 'rgba(255, 180, 130, 0.04)', 'transparent']}
-          style={StyleSheet.absoluteFill}
-          start={{ x: 1, y: 0.5 }}
-          end={{ x: 0, y: 0.5 }}
-        />
-      </View>
-
-      {/* Animated spotlight blob - soft cinema light effect */}
-      <Animated.View
-        style={[
-          styles.spotlightBlob,
-          {
-            opacity: spotlightOpacity,
-            transform: [
-              { translateX: spotlightPosition.x },
-              { translateY: spotlightPosition.y },
-            ],
-          },
-        ]}
-      >
-        {/* Layered circles to simulate blur - outermost (largest, most transparent) */}
-        <View style={styles.spotlightLayer1} />
-        <View style={styles.spotlightLayer2} />
-        <View style={styles.spotlightLayer3} />
-        <View style={styles.spotlightCore} />
-      </Animated.View>
-
       {/* Title at top left */}
       <Animated.View
         style={[
@@ -202,7 +130,7 @@ export default function IntroScreen() {
         ]}
       >
         <Animated.Image
-          source={require('../assets/images/white-reel.png')}
+          source={require('../assets/images/reel.png')}
           style={[
             styles.reelImage,
             { transform: [{ rotate: spin }] },
@@ -219,24 +147,16 @@ export default function IntroScreen() {
             { paddingBottom: insets.bottom + 24, opacity: fadeAnim },
           ]}
         >
-          {/* Get Started button with 3D pillowy effect */}
+          {/* Get Started button */}
           <TouchableOpacity
-            style={styles.buttonWrapper}
+            style={styles.button}
             onPress={() => {
               setHasNavigated(true);
               router.replace('/auth');
             }}
-            activeOpacity={0.9}
+            activeOpacity={0.8}
           >
-            <LinearGradient
-              colors={[Colors.creamLight, Colors.cream, Colors.creamMedium, Colors.creamDark]}
-              locations={[0, 0.3, 0.7, 1]}
-              style={styles.button}
-            >
-              {/* Top highlight for dome effect */}
-              <View style={styles.buttonHighlight} />
-              <Text style={styles.buttonText}>Get Started</Text>
-            </LinearGradient>
+            <Text style={styles.buttonText}>Get Started</Text>
           </TouchableOpacity>
 
           {/* Terms text */}
@@ -262,7 +182,7 @@ export default function IntroScreen() {
       {/* Loading indicator when checking auth */}
       {isLoading && (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.cream} />
+          <ActivityIndicator size="large" color={Colors.ember} />
         </View>
       )}
     </View>
@@ -272,51 +192,7 @@ export default function IntroScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.dark,
-  },
-  ambientGlow: {
-    position: 'absolute',
-    right: 0,
-    top: '30%',
-    width: 200,
-    height: 400,
-    overflow: 'hidden',
-  },
-  spotlightBlob: {
-    position: 'absolute',
-    width: 250,
-    height: 180,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  // Layered circles to create soft blur effect (largest to smallest)
-  spotlightLayer1: {
-    position: 'absolute',
-    width: 250,
-    height: 180,
-    borderRadius: 125,
-    backgroundColor: 'rgba(255, 235, 210, 0.07)',
-  },
-  spotlightLayer2: {
-    position: 'absolute',
-    width: 180,
-    height: 130,
-    borderRadius: 90,
-    backgroundColor: 'rgba(255, 245, 230, 0.12)',
-  },
-  spotlightLayer3: {
-    position: 'absolute',
-    width: 120,
-    height: 85,
-    borderRadius: 60,
-    backgroundColor: 'rgba(255, 250, 242, 0.18)',
-  },
-  spotlightCore: {
-    position: 'absolute',
-    width: 60,
-    height: 45,
-    borderRadius: 30,
-    backgroundColor: 'rgba(255, 252, 248, 0.35)',
+    backgroundColor: Colors.cream,
   },
   titleContainer: {
     position: 'absolute',
@@ -326,7 +202,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 50,
     fontFamily: Fonts.medium,
-    color: Colors.cream,
+    color: Colors.ink,
     letterSpacing: -1,
   },
   reelContainer: {
@@ -353,47 +229,30 @@ const styles = StyleSheet.create({
     gap: 16,
     zIndex: 10,
   },
-  buttonWrapper: {
-    width: '100%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
   button: {
-    height: 64,
+    width: '100%',
+    height: 56,
     borderRadius: 100,
     justifyContent: 'center',
     alignItems: 'center',
-    overflow: 'hidden',
-  },
-  buttonHighlight: {
-    position: 'absolute',
-    top: 0,
-    left: '10%',
-    right: '10%',
-    height: '50%',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: 100,
-    transform: [{ scaleY: 0.6 }],
+    backgroundColor: Colors.ember,
   },
   buttonText: {
     fontSize: 18,
     fontFamily: Fonts.medium,
-    color: 'rgba(0, 0, 0, 0.85)',
+    color: Colors.white,
     letterSpacing: 0.3,
   },
   termsText: {
     fontSize: 12,
     fontFamily: Fonts.regular,
-    color: Colors.textSecondaryDark,
+    color: Colors.textSecondary,
     textAlign: 'center',
     lineHeight: 18,
     maxWidth: 300,
   },
   termsLink: {
-    color: Colors.textSecondaryDark,
+    color: Colors.ink,
     textDecorationLine: 'underline',
   },
   loadingContainer: {

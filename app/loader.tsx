@@ -187,7 +187,7 @@ export default function LoaderScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={[Colors.dark, Colors.darkElevated, Colors.dark]}
+        colors={[Colors.cream, Colors.creamMedium, Colors.cream]}
         style={styles.gradient}
       >
         <Animated.View
@@ -198,7 +198,7 @@ export default function LoaderScreen() {
             },
           ]}
         >
-          <Sparkles size={60} color={Colors.accent} strokeWidth={2} />
+          <Sparkles size={60} color={Colors.ember} strokeWidth={2} />
         </Animated.View>
 
         <Text style={styles.title}>Creating your reel</Text>
@@ -251,7 +251,7 @@ export default function LoaderScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.dark,
+    backgroundColor: Colors.cream,
   },
   gradient: {
     flex: 1,
@@ -263,19 +263,19 @@ const styles = StyleSheet.create({
     marginBottom: 32,
     padding: 24,
     borderRadius: 100,
-    backgroundColor: 'rgba(232, 144, 106, 0.1)',
+    backgroundColor: 'rgba(243, 106, 63, 0.1)',
   },
   title: {
     fontSize: 24,
     fontFamily: Fonts.medium,
-    color: Colors.cream,
+    color: Colors.ink,
     marginBottom: 8,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
     fontFamily: Fonts.regular,
-    color: Colors.textSecondaryDark,
+    color: Colors.textSecondary,
     marginBottom: 48,
     textAlign: 'center',
   },
@@ -286,24 +286,24 @@ const styles = StyleSheet.create({
   },
   timerLabel: {
     fontSize: 14,
-    color: Colors.grayLight,
+    color: Colors.textSecondary,
     marginBottom: 8,
   },
   timerText: {
     fontSize: 48,
     fontFamily: Fonts.medium,
-    color: Colors.accent,
+    color: Colors.ember,
     fontVariant: ['tabular-nums'],
   },
   progressText: {
     fontSize: 14,
-    color: Colors.grayLight,
+    color: Colors.textSecondary,
     marginTop: 16,
     textAlign: 'center',
   },
   errorText: {
     fontSize: 16,
-    color: Colors.cream,
+    color: Colors.ink,
   },
   errorContainer: {
     marginTop: 32,
@@ -318,17 +318,17 @@ const styles = StyleSheet.create({
   errorTitle: {
     fontSize: 18,
     fontFamily: Fonts.medium,
-    color: '#EF4444',
+    color: Colors.error,
     marginBottom: 8,
   },
   errorMessage: {
     fontSize: 14,
-    color: Colors.grayLight,
+    color: Colors.textSecondary,
     textAlign: 'center',
     marginBottom: 16,
   },
   retryButton: {
-    backgroundColor: Colors.accent,
+    backgroundColor: Colors.ember,
     borderRadius: 100,
     paddingHorizontal: 24,
     paddingVertical: 14,
@@ -336,6 +336,6 @@ const styles = StyleSheet.create({
   retryButtonText: {
     fontSize: 16,
     fontFamily: Fonts.medium,
-    color: Colors.cream,
+    color: Colors.white,
   },
 });

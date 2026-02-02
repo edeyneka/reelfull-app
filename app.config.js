@@ -23,7 +23,7 @@ module.exports = ({ config }) => {
     splash: {
       image: './assets/images/splash-icon.png',
       resizeMode: 'contain',
-      backgroundColor: '#ffffff',
+      backgroundColor: '#FAF9F5',
     },
     ios: {
       supportsTablet: false,
@@ -40,7 +40,7 @@ module.exports = ({ config }) => {
     android: {
       adaptiveIcon: {
         foregroundImage: './assets/images/adaptive-icon.png',
-        backgroundColor: '#ffffff',
+        backgroundColor: '#FAF9F5',
       },
       package: 'app.rork.reelfull',
       permissions: [
@@ -78,7 +78,7 @@ module.exports = ({ config }) => {
       [
         'expo-notifications',
         {
-          color: '#FF6B35',
+          color: '#F36A3F',
         },
       ],
       [

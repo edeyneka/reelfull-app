@@ -317,9 +317,9 @@ export default function OnboardingScreen() {
             <View style={styles.header}>
               <View style={styles.iconContainer}>
                 {isVoiceStep ? (
-                  <Mic size={40} color={Colors.accent} strokeWidth={2} />
+                  <Mic size={40} color={Colors.ember} strokeWidth={2} />
                 ) : (
-                  <Sparkles size={40} color={Colors.accent} strokeWidth={2} />
+                  <Sparkles size={40} color={Colors.ember} strokeWidth={2} />
                 )}
               </View>
               <Text style={styles.title}>
@@ -343,7 +343,7 @@ export default function OnboardingScreen() {
                       testID="nameInput"
                       style={styles.input}
                       placeholder="Enter your name"
-                      placeholderTextColor={Colors.grayLight}
+                      placeholderTextColor={Colors.gray400}
                       value={name}
                       onChangeText={setName}
                       autoCapitalize="words"
@@ -361,15 +361,15 @@ export default function OnboardingScreen() {
                     <LinearGradient
                       colors={
                         isStep1Valid
-                          ? ['#F0A080', Colors.accent, '#D07850']
-                          : [Colors.gray, Colors.grayLight]
+                          ? [Colors.emberLight, Colors.ember, Colors.emberDark]
+                          : [Colors.gray600, Colors.gray700]
                       }
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 0 }}
                       style={styles.buttonGradient}
                     >
                       <Text style={styles.buttonText}>Next</Text>
-                      <ArrowRight size={20} color={Colors.cream} strokeWidth={2.5} />
+                      <ArrowRight size={20} color={Colors.white} strokeWidth={2.5} />
                     </LinearGradient>
                   </TouchableOpacity>
                 </>
@@ -410,15 +410,15 @@ export default function OnboardingScreen() {
                     <LinearGradient
                       colors={
                         isStep2Valid
-                          ? ['#F0A080', Colors.accent, '#D07850']
-                          : [Colors.gray, Colors.grayLight]
+                          ? [Colors.emberLight, Colors.ember, Colors.emberDark]
+                          : [Colors.gray600, Colors.gray700]
                       }
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 0 }}
                       style={styles.buttonGradient}
                     >
                       <Text style={styles.buttonText}>Next</Text>
-                      <ArrowRight size={20} color={Colors.cream} strokeWidth={2.5} />
+                      <ArrowRight size={20} color={Colors.white} strokeWidth={2.5} />
                     </LinearGradient>
                   </TouchableOpacity>
                 </>
@@ -432,7 +432,7 @@ export default function OnboardingScreen() {
                   
                   <View style={styles.voiceNoteContainer}>
                     <Text style={styles.voiceNoteText}>
-                      💡 Don&apos;t want to record? No worries! You&apos;ll be able to choose from our default AI voices in the settings.
+                      Don&apos;t want to record? No worries! You&apos;ll be able to choose from our default AI voices in the settings.
                     </Text>
                   </View>
                   
@@ -505,7 +505,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     padding: 16,
     borderRadius: 50,
-    backgroundColor: 'rgba(232, 144, 106, 0.2)',
+    backgroundColor: 'rgba(243, 106, 63, 0.2)',
   },
   title: {
     fontSize: 24,
@@ -554,8 +554,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   optionSelected: {
-    borderColor: Colors.accent,
-    backgroundColor: 'rgba(232, 144, 106, 0.15)',
+    borderColor: Colors.ember,
+    backgroundColor: 'rgba(243, 106, 63, 0.15)',
   },
   optionText: {
     fontSize: 16,
@@ -564,7 +564,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   optionTextSelected: {
-    color: Colors.accent,
+    color: Colors.ember,
   },
   button: {
     marginTop: 24,
@@ -585,15 +585,15 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 18,
     fontFamily: Fonts.medium,
-    color: Colors.cream,
+    color: Colors.white,
   },
   voiceNoteContainer: {
-    backgroundColor: 'rgba(232, 144, 106, 0.1)',
+    backgroundColor: 'rgba(243, 106, 63, 0.1)',
     borderRadius: 12,
     padding: 14,
     marginTop: 16,
     borderWidth: 1,
-    borderColor: 'rgba(232, 144, 106, 0.3)',
+    borderColor: 'rgba(243, 106, 63, 0.3)',
   },
   voiceNoteText: {
     fontSize: 13,

@@ -218,7 +218,7 @@ export default function ResultScreen() {
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <Text style={{ color: Colors.cream, fontSize: 18 }}>Error: No project ID</Text>
         <TouchableOpacity
-          style={{ marginTop: 20, padding: 16, backgroundColor: Colors.accent, borderRadius: 100 }}
+          style={{ marginTop: 20, padding: 16, backgroundColor: Colors.ember, borderRadius: 100 }}
           onPress={() => router.replace('/(tabs)')}
         >
           <Text style={{ color: Colors.cream, fontFamily: Fonts.medium }}>Go to Feed</Text>
@@ -230,7 +230,7 @@ export default function ResultScreen() {
   if (!project) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={Colors.accent} />
+        <ActivityIndicator size="large" color={Colors.ember} />
         <Text style={{ color: Colors.cream, fontSize: 18, marginTop: 16 }}>Loading...</Text>
       </View>
     );
@@ -241,7 +241,7 @@ export default function ResultScreen() {
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <Text style={{ color: Colors.cream, fontSize: 18 }}>Video not ready yet</Text>
         <TouchableOpacity
-          style={{ marginTop: 20, padding: 16, backgroundColor: Colors.accent, borderRadius: 100 }}
+          style={{ marginTop: 20, padding: 16, backgroundColor: Colors.ember, borderRadius: 100 }}
           onPress={() => router.replace('/(tabs)')}
         >
           <Text style={{ color: Colors.cream, fontFamily: Fonts.medium }}>Go to Feed</Text>
@@ -266,7 +266,7 @@ export default function ResultScreen() {
         >
           <View style={styles.content}>
             <View style={styles.header}>
-              <Check size={32} color={Colors.accent} strokeWidth={3} />
+              <Check size={32} color={Colors.ember} strokeWidth={3} />
               <Text style={styles.title}>Your reel is ready!</Text>
             </View>
 
@@ -278,13 +278,13 @@ export default function ResultScreen() {
                 activeOpacity={0.8}
               >
                 {isCopied ? (
-                  <Check size={24} color={Colors.accent} strokeWidth={2} />
+                  <Check size={24} color={Colors.ember} strokeWidth={2} />
                 ) : (
                   <Copy size={24} color={Colors.cream} strokeWidth={2} />
                 )}
                 <Text style={[
                   styles.secondaryButtonText,
-                  isCopied && { color: Colors.accent }
+                  isCopied && { color: Colors.ember }
                 ]}>
                   {isCopied ? 'Copied!' : 'Copy Script'}
                 </Text>
@@ -309,9 +309,9 @@ export default function ResultScreen() {
                 activeOpacity={0.8}
               >
                 {isRegenerating ? (
-                  <ActivityIndicator size="small" color={Colors.accent} />
+                  <ActivityIndicator size="small" color={Colors.ember} />
                 ) : (
-                  <RefreshCw size={24} color={Colors.accent} strokeWidth={2} />
+                  <RefreshCw size={24} color={Colors.ember} strokeWidth={2} />
                 )}
                 <Text style={styles.regenerateButtonText}>
                   {isRegenerating ? 'Regenerating...' : 'Regenerate'}
@@ -321,7 +321,7 @@ export default function ResultScreen() {
 
             {isSaved && (
               <View style={styles.savedBadge}>
-                <Check size={16} color={Colors.accent} strokeWidth={3} />
+                <Check size={16} color={Colors.ember} strokeWidth={3} />
                 <Text style={styles.savedText}>Saved to feed</Text>
               </View>
             )}
@@ -387,16 +387,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
-    backgroundColor: 'rgba(232, 144, 106, 0.15)',
+    backgroundColor: 'rgba(243, 106, 63, 0.15)',
     borderRadius: 100,
     padding: 18,
     borderWidth: 2,
-    borderColor: Colors.accent,
+    borderColor: Colors.ember,
   },
   regenerateButtonText: {
     fontSize: 18,
     fontFamily: Fonts.regular,
-    color: Colors.accent,
+    color: Colors.ember,
   },
   savedBadge: {
     flexDirection: 'row',
@@ -405,14 +405,14 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 16,
     padding: 12,
-    backgroundColor: 'rgba(232, 144, 106, 0.1)',
+    backgroundColor: 'rgba(243, 106, 63, 0.1)',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(232, 144, 106, 0.3)',
+    borderColor: 'rgba(243, 106, 63, 0.3)',
   },
   savedText: {
     fontSize: 14,
     fontFamily: Fonts.regular,
-    color: Colors.accent,
+    color: Colors.ember,
   },
 });

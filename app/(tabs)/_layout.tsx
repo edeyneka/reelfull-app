@@ -17,8 +17,8 @@ function CustomTabBar({ state, descriptors, navigation }: TabBarProps) {
   const router = useRouter();
 
   const getIcon = (routeName: string, isFocused: boolean) => {
-    // Use cream for active, gray with opacity for inactive
-    const color = isFocused ? Colors.cream : 'rgba(243, 235, 227, 0.5)';
+    // Use ember for active, ink with opacity for inactive
+    const color = isFocused ? Colors.ember : 'rgba(38, 38, 38, 0.5)';
     const size = 26;
     const strokeWidth = isFocused ? 2.5 : 2;
 
@@ -41,7 +41,7 @@ function CustomTabBar({ state, descriptors, navigation }: TabBarProps) {
     <View style={[styles.tabBarWrapper, { paddingBottom: insets.bottom + 8 }]}>
       <View style={styles.tabBarContainer}>
         {Platform.OS === 'ios' ? (
-          <BlurView intensity={40} tint="dark" style={styles.blurBackground} />
+          <BlurView intensity={80} tint="light" style={styles.blurBackground} />
         ) : (
           <View style={styles.androidBackground} />
         )}
@@ -59,14 +59,14 @@ function CustomTabBar({ state, descriptors, navigation }: TabBarProps) {
             {getIcon('index', state.index === 0)}
           </TouchableOpacity>
 
-          {/* Center Create Button with accent gradient */}
+          {/* Center Create Button with ember gradient */}
           <TouchableOpacity
             style={styles.createButton}
             onPress={handleCreatePress}
             activeOpacity={0.8}
           >
             <LinearGradient
-              colors={['#F0A080', Colors.accent, '#D07850']}
+              colors={[Colors.emberLight, Colors.ember, Colors.emberDark]}
               style={styles.createButtonInner}
             >
               <Plus size={26} color={Colors.white} strokeWidth={2.5} />
@@ -127,26 +127,26 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
     // Outer shadow for depth
-    shadowColor: '#000',
+    shadowColor: Colors.ink,
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.15,
     shadowRadius: 16,
     elevation: 10,
   },
   blurBackground: {
     ...StyleSheet.absoluteFillObject,
-    // Dark gradient background per design spec
-    backgroundColor: 'rgba(45, 45, 42, 0.95)',
+    // Light cream background
+    backgroundColor: 'rgba(250, 249, 245, 0.85)',
   },
   androidBackground: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(35, 35, 33, 0.98)',
+    backgroundColor: 'rgba(250, 249, 245, 0.95)',
   },
   glassBorder: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: 32,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: 'rgba(38, 38, 38, 0.08)',
   },
   tabBarContent: {
     flex: 1,
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: Colors.accent,
+    shadowColor: Colors.ember,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 8,

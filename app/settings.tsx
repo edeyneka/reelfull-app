@@ -498,7 +498,7 @@ export default function SettingsScreen() {
               onPress={closeModal}
               activeOpacity={0.7}
             >
-              <X size={24} color={Colors.cream} strokeWidth={2} />
+              <X size={24} color={Colors.ink} strokeWidth={2} />
             </TouchableOpacity>
           </View>
           <View style={styles.loadingContainer}>
@@ -530,11 +530,11 @@ export default function SettingsScreen() {
               onPress={closeModal}
               activeOpacity={0.7}
             >
-              <X size={24} color={Colors.cream} strokeWidth={2} />
+              <X size={24} color={Colors.ink} strokeWidth={2} />
             </TouchableOpacity>
           </View>
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={Colors.accent} />
+            <ActivityIndicator size="large" color={Colors.ember} />
           </View>
         </View>
       </Animated.View>
@@ -573,7 +573,7 @@ export default function SettingsScreen() {
               onPress={closeModal}
               activeOpacity={0.7}
             >
-              <X size={24} color={Colors.cream} strokeWidth={2} />
+              <X size={24} color={Colors.ink} strokeWidth={2} />
             </TouchableOpacity>
           </View>
 
@@ -602,7 +602,7 @@ export default function SettingsScreen() {
                     {videoGenerationStatus?.isPremium ? (
                       <Gift size={22} color="#4CAF50" strokeWidth={2} />
                     ) : (
-                      <Crown size={22} color={Colors.accent} strokeWidth={2} />
+                      <Crown size={22} color={Colors.ember} strokeWidth={2} />
                     )}
                   </View>
                   <View>
@@ -617,7 +617,7 @@ export default function SettingsScreen() {
                     </Text>
                   </View>
                 </View>
-                <ChevronRight size={20} color={Colors.grayLight} strokeWidth={2} />
+                <ChevronRight size={20} color={Colors.textSecondary} strokeWidth={2} />
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -628,11 +628,11 @@ export default function SettingsScreen() {
               >
                 <View style={styles.menuItemLeft}>
                   <View style={styles.menuIconContainer}>
-                    <User size={22} color={Colors.cream} strokeWidth={2} />
+                    <User size={22} color={Colors.ink} strokeWidth={2} />
                   </View>
                   <Text style={styles.menuItemText}>Account</Text>
                 </View>
-                <ChevronRight size={20} color={Colors.grayLight} strokeWidth={2} />
+                <ChevronRight size={20} color={Colors.textSecondary} strokeWidth={2} />
               </TouchableOpacity>
 
               {ENABLE_STYLE_PREFERENCE && (
@@ -643,11 +643,11 @@ export default function SettingsScreen() {
                 >
                   <View style={styles.menuItemLeft}>
                     <View style={styles.menuIconContainer}>
-                      <Palette size={22} color={Colors.cream} strokeWidth={2} />
+                      <Palette size={22} color={Colors.ink} strokeWidth={2} />
                     </View>
                     <Text style={styles.menuItemText}>Content Preferences</Text>
                   </View>
-                  <ChevronRight size={20} color={Colors.grayLight} strokeWidth={2} />
+                  <ChevronRight size={20} color={Colors.textSecondary} strokeWidth={2} />
                 </TouchableOpacity>
               )}
 
@@ -659,11 +659,11 @@ export default function SettingsScreen() {
               >
                 <View style={styles.menuItemLeft}>
                   <View style={styles.menuIconContainer}>
-                    <Headphones size={22} color={Colors.cream} strokeWidth={2} />
+                    <Headphones size={22} color={Colors.ink} strokeWidth={2} />
                   </View>
                   <Text style={styles.menuItemText}>Voice Settings</Text>
                 </View>
-                <ChevronRight size={20} color={Colors.grayLight} strokeWidth={2} />
+                <ChevronRight size={20} color={Colors.textSecondary} strokeWidth={2} />
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -674,11 +674,11 @@ export default function SettingsScreen() {
               >
                 <View style={styles.menuItemLeft}>
                   <View style={styles.menuIconContainer}>
-                    <Mic size={22} color={Colors.cream} strokeWidth={2} />
+                    <Mic size={22} color={Colors.ink} strokeWidth={2} />
                   </View>
                   <Text style={styles.menuItemText}>Voice Clone</Text>
                 </View>
-                <ChevronRight size={20} color={Colors.grayLight} strokeWidth={2} />
+                <ChevronRight size={20} color={Colors.textSecondary} strokeWidth={2} />
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -689,11 +689,11 @@ export default function SettingsScreen() {
               >
                 <View style={styles.menuItemLeft}>
                   <View style={styles.menuIconContainer}>
-                    <Info size={22} color={Colors.cream} strokeWidth={2} />
+                    <Info size={22} color={Colors.ink} strokeWidth={2} />
                   </View>
                   <Text style={styles.menuItemText}>About</Text>
                 </View>
-                <ChevronRight size={20} color={Colors.grayLight} strokeWidth={2} />
+                <ChevronRight size={20} color={Colors.textSecondary} strokeWidth={2} />
               </TouchableOpacity>
             </View>
 
@@ -715,7 +715,7 @@ export default function SettingsScreen() {
               activeOpacity={0.7}
               disabled={isLoading}
             >
-              <Trash2 size={16} color="#ff3b30" strokeWidth={2} />
+              <Trash2 size={16} color={Colors.error} strokeWidth={2} />
               <Text style={styles.deleteAccountText}>Delete Account</Text>
             </TouchableOpacity>
           </View>
@@ -732,7 +732,7 @@ export default function SettingsScreen() {
                     activeOpacity={0.7}
                     disabled={isLoading}
                   >
-                    <X size={24} color={Colors.cream} strokeWidth={2} />
+                    <X size={24} color={Colors.ink} strokeWidth={2} />
                   </TouchableOpacity>
                 </View>
                 <TextInput
@@ -740,7 +740,7 @@ export default function SettingsScreen() {
                   value={editedName}
                   onChangeText={setEditedName}
                   placeholder="Enter your name"
-                  placeholderTextColor={Colors.grayLight}
+                  placeholderTextColor={Colors.gray400}
                   autoCapitalize="words"
                   editable={!isLoading}
                 />
@@ -752,8 +752,8 @@ export default function SettingsScreen() {
                   <LinearGradient
                     colors={
                       !isLoading
-                        ? ['#F0A080', Colors.accent, '#D07850']
-                        : [Colors.gray, Colors.grayLight]
+                        ? [Colors.emberLight, Colors.ember, Colors.emberDark]
+                        : [Colors.creamDark, Colors.creamDarker]
                     }
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
@@ -781,7 +781,7 @@ export default function SettingsScreen() {
                     activeOpacity={0.7}
                     disabled={isLoading}
                   >
-                    <X size={24} color={Colors.cream} strokeWidth={2} />
+                    <X size={24} color={Colors.ink} strokeWidth={2} />
                   </TouchableOpacity>
                 </View>
                 <View style={styles.styleOptions}>
@@ -814,8 +814,8 @@ export default function SettingsScreen() {
                   <LinearGradient
                     colors={
                       !isLoading
-                        ? ['#F0A080', Colors.accent, '#D07850']
-                        : [Colors.gray, Colors.grayLight]
+                        ? [Colors.emberLight, Colors.ember, Colors.emberDark]
+                        : [Colors.creamDark, Colors.creamDarker]
                     }
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
@@ -844,7 +844,7 @@ export default function SettingsScreen() {
                     activeOpacity={0.7}
                     disabled={isLoading}
                   >
-                    <X size={24} color={Colors.cream} strokeWidth={2} />
+                    <X size={24} color={Colors.ink} strokeWidth={2} />
                   </TouchableOpacity>
                 </View>
                 <Text style={styles.modalDescription}>
@@ -871,7 +871,7 @@ export default function SettingsScreen() {
                     onPress={() => setIsSelectingVoice(false)}
                     activeOpacity={0.7}
                   >
-                    <X size={24} color={Colors.cream} strokeWidth={2} />
+                    <X size={24} color={Colors.ink} strokeWidth={2} />
                   </TouchableOpacity>
                 </View>
 
@@ -887,7 +887,7 @@ export default function SettingsScreen() {
                       activeOpacity={0.7}
                     >
                       <View style={styles.voiceOptionContent}>
-                        <Headphones size={24} color={Colors.accent} strokeWidth={2} />
+                        <Headphones size={24} color={Colors.ember} strokeWidth={2} />
                         <View style={styles.voiceOptionText}>
                           <Text style={styles.voiceOptionName}>
                             {user.name ? `${user.name}'s Voice` : 'Your Voice'}
@@ -903,9 +903,9 @@ export default function SettingsScreen() {
                           disabled={playingPreviewId === user.elevenlabsVoiceId && !previewUrl}
                         >
                           {playingPreviewId === user.elevenlabsVoiceId && !previewUrl ? (
-                            <ActivityIndicator size="small" color={Colors.accent} />
+                            <ActivityIndicator size="small" color={Colors.ember} />
                           ) : (
-                            <Volume2 size={18} color={Colors.accent} strokeWidth={2} />
+                            <Volume2 size={18} color={Colors.ember} strokeWidth={2} />
                           )}
                         </TouchableOpacity>
                       )}
@@ -924,7 +924,7 @@ export default function SettingsScreen() {
                       activeOpacity={0.7}
                     >
                       <View style={styles.voiceOptionContent}>
-                        <Volume2 size={24} color={Colors.accent} strokeWidth={2} />
+                        <Volume2 size={24} color={Colors.ember} strokeWidth={2} />
                         <View style={styles.voiceOptionTextContainer}>
                           <Text style={styles.voiceOptionName}>{voice.name}</Text>
                           <Text style={styles.voiceOptionDesc}>
@@ -940,9 +940,9 @@ export default function SettingsScreen() {
                           disabled={playingPreviewId === voice.voiceId && !previewUrl}
                         >
                           {playingPreviewId === voice.voiceId && !previewUrl ? (
-                            <ActivityIndicator size="small" color={Colors.accent} />
+                            <ActivityIndicator size="small" color={Colors.ember} />
                           ) : (
-                            <Volume2 size={18} color={Colors.accent} strokeWidth={2} />
+                            <Volume2 size={18} color={Colors.ember} strokeWidth={2} />
                           )}
                         </TouchableOpacity>
                       )}
@@ -964,7 +964,7 @@ export default function SettingsScreen() {
                     onPress={() => setIsAboutOpen(false)}
                     activeOpacity={0.7}
                   >
-                    <X size={24} color={Colors.cream} strokeWidth={2} />
+                    <X size={24} color={Colors.ink} strokeWidth={2} />
                   </TouchableOpacity>
                 </View>
                 <View style={styles.aboutContent}>
@@ -1002,20 +1002,20 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   modalContainer: {
-    backgroundColor: Colors.dark,
+    backgroundColor: Colors.cream,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     height: '94%',
-    shadowColor: '#000',
+    shadowColor: Colors.ink,
     shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 8,
   },
   dragHandle: {
     width: 40,
     height: 5,
-    backgroundColor: '#333333',
+    backgroundColor: Colors.creamDarker,
     borderRadius: 3,
     alignSelf: 'center',
     marginTop: 12,
@@ -1044,7 +1044,7 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 16,
     fontFamily: Fonts.regular,
-    color: Colors.textSecondaryDark,
+    color: Colors.textSecondary,
   },
   // Profile Section
   profileSection: {
@@ -1056,13 +1056,13 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: 24,
     fontFamily: Fonts.medium,
-    color: Colors.cream,
+    color: Colors.ink,
     fontWeight: '600',
   },
   // Divider
   divider: {
     height: 1,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: Colors.creamDark,
     marginBottom: 8,
   },
   // Menu Section
@@ -1076,7 +1076,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#1a1a1a',
+    borderBottomColor: Colors.creamDark,
   },
   menuItemLeft: {
     flexDirection: 'row',
@@ -1091,17 +1091,17 @@ const styles = StyleSheet.create({
   },
   menuItemText: {
     fontSize: 16,
-    color: Colors.cream,
+    color: Colors.ink,
     fontFamily: Fonts.regular,
   },
   menuItemSubtext: {
     fontSize: 12,
-    color: Colors.textSecondaryDark,
+    color: Colors.textSecondary,
     fontFamily: Fonts.regular,
     marginTop: 2,
   },
   proIconContainer: {
-    backgroundColor: 'rgba(232, 144, 106, 0.15)',
+    backgroundColor: 'rgba(243, 106, 63, 0.15)',
     borderRadius: 8,
   },
   // Logout
@@ -1112,7 +1112,7 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     fontSize: 16,
-    color: '#ff3b30',
+    color: Colors.error,
     fontFamily: Fonts.regular,
   },
   // Delete Account
@@ -1121,7 +1121,7 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#1a1a1a',
+    borderTopColor: Colors.creamDark,
   },
   deleteAccountButton: {
     alignItems: 'center',
@@ -1132,7 +1132,7 @@ const styles = StyleSheet.create({
   },
   deleteAccountText: {
     fontSize: 13,
-    color: '#ff3b30',
+    color: Colors.error,
     fontFamily: Fonts.regular,
   },
   // Edit Modals
@@ -1142,17 +1142,22 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
   },
   editModalContent: {
-    backgroundColor: Colors.darkElevated,
+    backgroundColor: Colors.white,
     borderRadius: 16,
     padding: 24,
     width: '85%',
     maxWidth: 400,
+    shadowColor: Colors.ink,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
   },
   editModalHeader: {
     flexDirection: 'row',
@@ -1163,19 +1168,19 @@ const styles = StyleSheet.create({
   editModalTitle: {
     fontSize: 20,
     fontFamily: Fonts.medium,
-    color: Colors.cream,
+    color: Colors.ink,
     fontWeight: '600',
   },
   editInput: {
-    backgroundColor: Colors.darkSurface,
+    backgroundColor: Colors.creamMedium,
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
     fontFamily: Fonts.regular,
-    color: Colors.cream,
+    color: Colors.ink,
     marginBottom: 24,
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 1,
+    borderColor: Colors.creamDark,
   },
   saveButton: {
     borderRadius: 100,
@@ -1196,43 +1201,53 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   styleOption: {
-    backgroundColor: Colors.darkSurface,
+    backgroundColor: Colors.creamMedium,
     borderRadius: 12,
     padding: 16,
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: Colors.creamDark,
   },
   styleOptionSelected: {
-    borderColor: Colors.accent,
-    backgroundColor: 'rgba(232, 144, 106, 0.15)',
+    borderColor: Colors.ember,
+    backgroundColor: 'rgba(243, 106, 63, 0.1)',
   },
   styleOptionText: {
     fontSize: 16,
     fontFamily: Fonts.regular,
-    color: Colors.cream,
+    color: Colors.ink,
     textAlign: 'center',
   },
   styleOptionTextSelected: {
-    color: Colors.accent,
+    color: Colors.ember,
     fontWeight: '600',
   },
   // Voice Modal
   voiceModalContent: {
-    backgroundColor: Colors.darkElevated,
+    backgroundColor: Colors.white,
     borderRadius: 16,
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 16,
     width: '92%',
     maxHeight: '92%',
+    shadowColor: Colors.ink,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
   },
   voiceCloneModalContent: {
-    backgroundColor: Colors.darkElevated,
+    backgroundColor: Colors.white,
     borderRadius: 16,
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 20,
     width: '92%',
+    shadowColor: Colors.ink,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
   },
   voiceModalHeader: {
     flexDirection: 'row',
@@ -1243,7 +1258,7 @@ const styles = StyleSheet.create({
   modalDescription: {
     fontSize: 14,
     fontFamily: Fonts.regular,
-    color: '#8e8e93',
+    color: Colors.textSecondary,
     marginBottom: 12,
     textAlign: 'center',
   },
@@ -1254,16 +1269,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: Colors.darkSurface,
+    backgroundColor: Colors.creamMedium,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: Colors.creamDark,
   },
   voiceOptionSelected: {
-    borderColor: Colors.accent,
-    backgroundColor: 'rgba(232, 144, 106, 0.1)',
+    borderColor: Colors.ember,
+    backgroundColor: 'rgba(243, 106, 63, 0.1)',
   },
   voiceOptionContent: {
     flexDirection: 'row',
@@ -1280,19 +1295,19 @@ const styles = StyleSheet.create({
   voiceOptionName: {
     fontSize: 16,
     fontFamily: Fonts.regular,
-    color: Colors.cream,
+    color: Colors.ink,
     marginBottom: 4,
   },
   voiceOptionDesc: {
     fontSize: 13,
     fontFamily: Fonts.regular,
-    color: Colors.textSecondaryDark,
+    color: Colors.textSecondary,
   },
   previewButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#3a3a3c',
+    backgroundColor: Colors.creamDark,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1303,7 +1318,7 @@ const styles = StyleSheet.create({
   aboutDescription: {
     fontSize: 16,
     fontFamily: Fonts.regular,
-    color: Colors.cream,
+    color: Colors.ink,
     lineHeight: 24,
     marginBottom: 16,
   },
@@ -1314,12 +1329,12 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#3a3a3c',
+    borderTopColor: Colors.creamDark,
   },
   madeWithLoveText: {
     fontSize: 16,
     fontFamily: Fonts.regular,
-    color: Colors.grayLight,
+    color: Colors.textSecondary,
   },
   orangeHeart: {
     fontSize: 18,

@@ -179,12 +179,12 @@ function ChatBubble({
         <View style={[styles.messageActions, styles.messageActionsUser]}>
           {isCopied ? (
             <View style={styles.copiedFeedback}>
-              <Check size={14} color={Colors.accent} strokeWidth={2.5} />
+              <Check size={14} color={Colors.ember} strokeWidth={2.5} />
               <Text style={styles.copiedText}>Copied</Text>
             </View>
           ) : (
             <TouchableOpacity onPress={onCopy} style={styles.actionButton}>
-              <Copy size={14} color={Colors.grayLight} />
+              <Copy size={14} color={Colors.textSecondary} />
             </TouchableOpacity>
           )}
         </View>
@@ -196,12 +196,12 @@ function ChatBubble({
           {/* Copy button */}
           {isCopied ? (
             <View style={styles.copiedFeedback}>
-              <Check size={14} color={Colors.accent} strokeWidth={2.5} />
+              <Check size={14} color={Colors.ember} strokeWidth={2.5} />
               <Text style={styles.copiedText}>Copied</Text>
             </View>
           ) : (
             <TouchableOpacity onPress={onCopy} style={styles.actionButton}>
-              <Copy size={14} color={Colors.grayLight} />
+              <Copy size={14} color={Colors.textSecondary} />
             </TouchableOpacity>
           )}
           
@@ -212,17 +212,17 @@ function ChatBubble({
             disabled={isGeneratingVoice}
           >
             {isGeneratingVoice ? (
-              <ActivityIndicator size={14} color={Colors.accent} />
+              <ActivityIndicator size={14} color={Colors.ember} />
             ) : isPlayingVoice ? (
-              <VolumeX size={14} color={Colors.accent} />
+              <VolumeX size={14} color={Colors.ember} />
             ) : (
-              <Volume2 size={14} color={Colors.grayLight} />
+              <Volume2 size={14} color={Colors.textSecondary} />
             )}
           </TouchableOpacity>
           
           {/* Speed selector button */}
           <TouchableOpacity onPress={onChangeSpeed} style={styles.actionButton}>
-            <Gauge size={14} color={Colors.grayLight} />
+            <Gauge size={14} color={Colors.textSecondary} />
           </TouchableOpacity>
           
           {/* Keep order toggle */}
@@ -263,11 +263,11 @@ function ScriptEditor({
     <View style={[styles.editorOverlay, { paddingTop: insets.top }]}>
       <View style={styles.editorHeader}>
         <TouchableOpacity onPress={onClose} style={styles.editorCloseButton}>
-          <X size={24} color={Colors.white} />
+          <X size={24} color={Colors.ink} />
         </TouchableOpacity>
         <Text style={styles.editorTitle}>Edit Script</Text>
         <TouchableOpacity onPress={() => onSave(editedScript)} style={styles.editorSaveButton}>
-          <Check size={24} color={Colors.accent} />
+          <Check size={24} color={Colors.ember} />
         </TouchableOpacity>
       </View>
       <TextInput
@@ -277,7 +277,7 @@ function ScriptEditor({
         multiline
         textAlignVertical="top"
         autoFocus
-        placeholderTextColor={Colors.grayLight}
+        placeholderTextColor={Colors.gray400}
       />
     </View>
   );
@@ -1319,7 +1319,7 @@ export default function ChatComposerScreen() {
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <TouchableOpacity style={styles.headerButton} onPress={handleClose}>
-          <ArrowLeft size={24} color={Colors.white} />
+          <ArrowLeft size={24} color={Colors.ink} />
         </TouchableOpacity>
         
         <TouchableOpacity 
@@ -1329,7 +1329,7 @@ export default function ChatComposerScreen() {
             'The last generated script will be used for your video creation. You can edit or regenerate the script before approving.'
           )}
         >
-          <Info size={20} color={Colors.grayLight} />
+          <Info size={20} color={Colors.textSecondary} />
         </TouchableOpacity>
       </View>
       
@@ -1349,7 +1349,7 @@ export default function ChatComposerScreen() {
           {/* Info banner when viewing chat from a completed video */}
           {fromVideo && !hasForkedFromVideo && (
             <View style={styles.infoBanner}>
-              <Info size={16} color={Colors.accent} />
+              <Info size={16} color={Colors.ember} />
               <Text style={styles.infoBannerText}>
                 Any changes will create a new draft. Original video stays unchanged.
               </Text>
@@ -1403,7 +1403,7 @@ export default function ChatComposerScreen() {
             onPress={pickMedia}
             disabled={isGenerating}
           >
-            <Plus size={24} color={Colors.white} />
+            <Plus size={24} color={Colors.ink} />
           </TouchableOpacity>
           
           {/* Unified card containing media + input */}
@@ -1463,7 +1463,7 @@ export default function ChatComposerScreen() {
               ref={inputRef}
               style={styles.composerTextInput}
               placeholder={hasScript ? "Type to edit, or tap → to approve" : "Share your story, or leave it blank..."}
-              placeholderTextColor={Colors.grayLight}
+              placeholderTextColor={Colors.gray400}
               value={inputText}
               onChangeText={setInputText}
               multiline
@@ -1515,7 +1515,7 @@ export default function ChatComposerScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.dark,
+    backgroundColor: Colors.cream,
   },
   header: {
     flexDirection: 'row',
@@ -1528,7 +1528,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: Colors.gray,
+    backgroundColor: Colors.creamDark,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1551,7 +1551,7 @@ const styles = StyleSheet.create({
   infoBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(232, 144, 106, 0.1)',
+    backgroundColor: 'rgba(243, 106, 63, 0.08)',
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
@@ -1561,7 +1561,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     fontFamily: Fonts.regular,
-    color: Colors.accent,
+    color: Colors.ember,
     lineHeight: 18,
   },
   welcomeContainer: {
@@ -1571,13 +1571,13 @@ const styles = StyleSheet.create({
   welcomeTitle: {
     fontSize: 28,
     fontFamily: Fonts.medium,
-    color: Colors.cream,
+    color: Colors.ink,
     marginBottom: 8,
   },
   welcomeSubtitle: {
     fontSize: 16,
     fontFamily: Fonts.regular,
-    color: Colors.textSecondaryDark,
+    color: Colors.textSecondary,
     textAlign: 'center',
   },
   messageBubbleContainer: {
@@ -1610,12 +1610,14 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   messageBubbleUser: {
-    backgroundColor: Colors.accent,
+    backgroundColor: Colors.ember,
     borderBottomRightRadius: 4,
   },
   messageBubbleAssistant: {
-    backgroundColor: Colors.darkSurface,
+    backgroundColor: Colors.white,
     borderBottomLeftRadius: 4,
+    borderWidth: 1,
+    borderColor: Colors.creamDark,
   },
   messageBubbleLoading: {
     minWidth: 200,
@@ -1623,7 +1625,7 @@ const styles = StyleSheet.create({
   messageText: {
     fontSize: 15,
     fontFamily: Fonts.regular,
-    color: Colors.cream,
+    color: Colors.ink,
     lineHeight: 22,
   },
   messageTextUser: {
@@ -1637,7 +1639,7 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 14,
     fontFamily: Fonts.regular,
-    color: Colors.grayLight,
+    color: Colors.textSecondary,
   },
   scriptLoadingContainer: {
     flexDirection: 'row',
@@ -1648,12 +1650,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: Fonts.regular,
     fontStyle: 'italic',
-    color: Colors.accent,
+    color: Colors.ember,
   },
   editedLabel: {
     fontSize: 11,
     fontFamily: Fonts.regular,
-    color: Colors.grayLight,
+    color: Colors.textSecondary,
     marginTop: 4,
     fontStyle: 'italic',
   },
@@ -1677,7 +1679,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   actionButtonActive: {
-    backgroundColor: 'rgba(255, 107, 53, 0.15)',
+    backgroundColor: 'rgba(243, 106, 63, 0.12)',
   },
   copiedFeedback: {
     flexDirection: 'row',
@@ -1688,10 +1690,10 @@ const styles = StyleSheet.create({
   copiedText: {
     fontSize: 12,
     fontFamily: Fonts.regular,
-    color: Colors.accent,
+    color: Colors.ember,
   },
   limitWarning: {
-    backgroundColor: 'rgba(232, 144, 106, 0.1)',
+    backgroundColor: 'rgba(243, 106, 63, 0.08)',
     borderRadius: 8,
     padding: 12,
     marginTop: 8,
@@ -1699,7 +1701,7 @@ const styles = StyleSheet.create({
   limitWarningText: {
     fontSize: 13,
     fontFamily: Fonts.regular,
-    color: Colors.accent,
+    color: Colors.ember,
     textAlign: 'center',
   },
   // Unified Composer styles
@@ -1709,14 +1711,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 15,
-    backgroundColor: Colors.dark,
+    backgroundColor: Colors.cream,
     gap: 8,
   },
   composerCard: {
     flex: 1,
-    backgroundColor: Colors.darkSurface,
+    backgroundColor: Colors.white,
     borderRadius: 20,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: Colors.creamDark,
   },
   composerMediaScroll: {
     flexDirection: 'row',
@@ -1730,7 +1734,7 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 12,
     overflow: 'hidden',
-    backgroundColor: Colors.gray,
+    backgroundColor: Colors.creamDark,
   },
   composerMediaImage: {
     width: '100%',
@@ -1762,7 +1766,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 15,
     fontFamily: Fonts.regular,
-    color: Colors.cream,
+    color: Colors.ink,
     maxHeight: 100,
   },
   composerMediaPlaceholder: {
@@ -1773,7 +1777,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.gray,
+    backgroundColor: Colors.creamDark,
     zIndex: 1,
   },
   composerMediaImageHidden: {
@@ -1781,7 +1785,7 @@ const styles = StyleSheet.create({
   },
   processingOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
@@ -1789,14 +1793,14 @@ const styles = StyleSheet.create({
   processingOverlayText: {
     fontSize: 16,
     fontFamily: Fonts.regular,
-    color: Colors.cream,
+    color: Colors.white,
     marginTop: 12,
   },
   addMediaButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: Colors.gray,
+    backgroundColor: Colors.creamDark,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 4,
@@ -1805,13 +1809,13 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: Colors.gray,
+    backgroundColor: Colors.creamDark,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 4,
   },
   sendButtonActive: {
-    backgroundColor: Colors.accent,
+    backgroundColor: Colors.ember,
   },
   sendButtonDisabled: {
     opacity: 0.6,
@@ -1826,7 +1830,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: Colors.dark,
+    backgroundColor: Colors.cream,
     zIndex: 100,
   },
   editorHeader: {
@@ -1836,7 +1840,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.gray,
+    borderBottomColor: Colors.creamDark,
   },
   editorCloseButton: {
     padding: 8,
@@ -1844,7 +1848,7 @@ const styles = StyleSheet.create({
   editorTitle: {
     fontSize: 18,
     fontFamily: Fonts.medium,
-    color: Colors.cream,
+    color: Colors.ink,
   },
   editorSaveButton: {
     padding: 8,
@@ -1854,7 +1858,7 @@ const styles = StyleSheet.create({
     padding: 16,
     fontSize: 16,
     fontFamily: Fonts.regular,
-    color: Colors.cream,
+    color: Colors.ink,
     lineHeight: 24,
   },
 });

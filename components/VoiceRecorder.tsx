@@ -245,7 +245,7 @@ export default function VoiceRecorder({
                 colors={
                   isRecording
                     ? ['#DC2626', '#EF4444']
-                    : [Colors.orange, Colors.orangeLight]
+                    : [Colors.ember, Colors.emberLight]
                 }
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
@@ -275,9 +275,9 @@ export default function VoiceRecorder({
                 activeOpacity={0.7}
               >
                 {isPlaying ? (
-                  <Pause size={24} color={Colors.orange} strokeWidth={2} />
+                  <Pause size={24} color={Colors.ember} strokeWidth={2} />
                 ) : (
-                  <Play size={24} color={Colors.orange} strokeWidth={2} />
+                  <Play size={24} color={Colors.ember} strokeWidth={2} />
                 )}
               </TouchableOpacity>
               <TouchableOpacity
@@ -285,7 +285,7 @@ export default function VoiceRecorder({
                 onPress={resetRecording}
                 activeOpacity={0.7}
               >
-                <RotateCcw size={24} color={Colors.grayLight} strokeWidth={2} />
+                <RotateCcw size={24} color={Colors.textSecondary} strokeWidth={2} />
               </TouchableOpacity>
             </View>
             <Text style={styles.instruction}>
@@ -298,7 +298,7 @@ export default function VoiceRecorder({
               disabled={disabled}
             >
               <LinearGradient
-                colors={disabled ? [Colors.gray, Colors.grayLight] : [Colors.orange, Colors.orangeLight]}
+                colors={disabled ? [Colors.creamDark, Colors.creamDarker] : [Colors.ember, Colors.emberLight]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.confirmButtonGradient}
@@ -324,20 +324,20 @@ const styles = StyleSheet.create({
   scriptTitle: {
     fontSize: 16,
     fontWeight: '600' as const,
-    color: Colors.white,
+    color: Colors.ink,
     opacity: 0.9,
   },
   scriptBox: {
-    backgroundColor: 'rgba(50, 50, 50, 0.85)',
+    backgroundColor: Colors.creamMedium,
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderColor: Colors.creamDark,
   },
   scriptText: {
     fontSize: 13,
     lineHeight: 20,
-    color: Colors.white,
+    color: Colors.ink,
     opacity: 0.9,
   },
   recorderContainer: {
@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
   },
   instruction: {
     fontSize: 14,
-    color: Colors.grayLight,
+    color: Colors.textSecondary,
     textAlign: 'center',
     marginTop: 4,
   },
@@ -375,11 +375,11 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: Colors.gray,
+    backgroundColor: Colors.creamDark,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: Colors.grayLight,
+    borderColor: Colors.creamDarker,
   },
   confirmButton: {
     marginTop: 10,
