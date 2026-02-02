@@ -818,20 +818,17 @@ export default function ChatComposerScreen() {
         content: userInput || 'Generate a script based on my media',
       });
       
-      // Get image URLs for analysis
+      // Get storage IDs for media - backend will fetch proper URLs from Convex storage
       const uploadedMedia = mediaUris.filter(m => m.storageId);
-      const imageUrls = await Promise.all(
-        uploadedMedia.map(async (m) => {
-          // Get URL from storage
-          return m.uri; // Use the uploaded URL
-        })
-      );
+      const storageIds = uploadedMedia
+        .map(m => m.storageId)
+        .filter((id): id is string => !!id);
       
       // Generate script
       const result = await generateChatScript({
         projectId: currentProjectId,
         conversationHistory,
-        imageUrls,
+        storageIds,
         isFirstMessage: !hasScript,
         isNewMedia,
         newMediaCount,
