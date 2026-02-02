@@ -13,7 +13,6 @@ import {
   Alert,
   Animated,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAction, useMutation } from "convex/react";
@@ -358,19 +357,15 @@ export default function OnboardingScreen() {
                     disabled={!isStep1Valid}
                     activeOpacity={0.8}
                   >
-                    <LinearGradient
-                      colors={
-                        isStep1Valid
-                          ? [Colors.emberLight, Colors.ember, Colors.emberDark]
-                          : [Colors.gray600, Colors.gray700]
-                      }
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={styles.buttonGradient}
+                    <View
+                      style={[
+                        styles.buttonInner,
+                        { backgroundColor: isStep1Valid ? Colors.ember : Colors.gray600 }
+                      ]}
                     >
                       <Text style={styles.buttonText}>Next</Text>
                       <ArrowRight size={20} color={Colors.white} strokeWidth={2.5} />
-                    </LinearGradient>
+                    </View>
                   </TouchableOpacity>
                 </>
               ) : isStyleStep ? (
@@ -407,19 +402,15 @@ export default function OnboardingScreen() {
                     disabled={!isStep2Valid}
                     activeOpacity={0.8}
                   >
-                    <LinearGradient
-                      colors={
-                        isStep2Valid
-                          ? [Colors.emberLight, Colors.ember, Colors.emberDark]
-                          : [Colors.gray600, Colors.gray700]
-                      }
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={styles.buttonGradient}
+                    <View
+                      style={[
+                        styles.buttonInner,
+                        { backgroundColor: isStep2Valid ? Colors.ember : Colors.gray600 }
+                      ]}
                     >
                       <Text style={styles.buttonText}>Next</Text>
                       <ArrowRight size={20} color={Colors.white} strokeWidth={2.5} />
-                    </LinearGradient>
+                    </View>
                   </TouchableOpacity>
                 </>
               ) : (
@@ -575,12 +566,13 @@ const styles = StyleSheet.create({
   buttonDisabled: {
     opacity: 0.5,
   },
-  buttonGradient: {
+  buttonInner: {
     flexDirection: 'row',
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+    borderRadius: 100,
   },
   buttonText: {
     fontSize: 18,

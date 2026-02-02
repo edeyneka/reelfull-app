@@ -16,7 +16,6 @@ import {
 import * as FileSystem from 'expo-file-system/legacy';
 import * as MediaLibrary from 'expo-media-library';
 import { VideoView, useVideoPlayer } from 'expo-video';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -495,11 +494,11 @@ export default function VideoPreviewScreen() {
             activeOpacity={isGenerating ? 1 : 0.8}
             disabled={isDownloading || isGenerating}
           >
-            <LinearGradient
-              colors={isGenerating ? [Colors.creamDark, Colors.creamDarker] : [Colors.emberLight, Colors.ember, Colors.emberDark]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.downloadGradient}
+            <View
+              style={[
+                styles.downloadButtonInner,
+                { backgroundColor: isGenerating ? Colors.creamDark : Colors.ember }
+              ]}
             >
               {isDownloading ? (
                 <>
@@ -514,7 +513,7 @@ export default function VideoPreviewScreen() {
                   <Text style={[styles.downloadButtonText, isGenerating && styles.disabledButtonText]}>Download</Text>
                 </>
               )}
-            </LinearGradient>
+            </View>
           </TouchableOpacity>
 
           {downloadSuccess && (
@@ -672,12 +671,13 @@ const styles = StyleSheet.create({
     borderRadius: 100,
     overflow: 'hidden',
   },
-  downloadGradient: {
+  downloadButtonInner: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 12,
     gap: 8,
+    borderRadius: 100,
   },
   downloadButtonText: {
     fontSize: 16,

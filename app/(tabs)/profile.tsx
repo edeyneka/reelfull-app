@@ -13,7 +13,6 @@ import {
   Animated,
   Platform,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -566,22 +565,18 @@ export default function ProfileTab() {
               activeOpacity={0.7}
               disabled={isLoading}
             >
-              <LinearGradient
-                colors={
-                  !isLoading
-                    ? [Colors.emberLight, Colors.ember, Colors.emberDark]
-                    : [Colors.creamDark, Colors.creamDarker]
-                }
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.saveButton}
+              <View
+                style={[
+                  styles.saveButton,
+                  { backgroundColor: isLoading ? Colors.creamDark : Colors.ember }
+                ]}
               >
                 {isLoading ? (
                   <ActivityIndicator size="small" color={Colors.white} />
                 ) : (
                   <Text style={styles.saveButtonText}>Save</Text>
                 )}
-              </LinearGradient>
+              </View>
             </TouchableOpacity>
           </View>
         </View>
@@ -628,22 +623,18 @@ export default function ProfileTab() {
               activeOpacity={0.7}
               disabled={isLoading}
             >
-              <LinearGradient
-                colors={
-                  !isLoading
-                    ? [Colors.emberLight, Colors.ember, Colors.emberDark]
-                    : [Colors.creamDark, Colors.creamDarker]
-                }
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.saveButton}
+              <View
+                style={[
+                  styles.saveButton,
+                  { backgroundColor: isLoading ? Colors.creamDark : Colors.ember }
+                ]}
               >
                 {isLoading ? (
                   <ActivityIndicator size="small" color={Colors.white} />
                 ) : (
                   <Text style={styles.saveButtonText}>Save</Text>
                 )}
-              </LinearGradient>
+              </View>
             </TouchableOpacity>
           </View>
         </View>

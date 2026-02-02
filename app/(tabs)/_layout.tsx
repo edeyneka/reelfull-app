@@ -3,7 +3,6 @@ import { View, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Home, Plus, User } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
 import Colors from '@/constants/colors';
 
 type TabBarProps = {
@@ -59,18 +58,15 @@ function CustomTabBar({ state, descriptors, navigation }: TabBarProps) {
             {getIcon('index', state.index === 0)}
           </TouchableOpacity>
 
-          {/* Center Create Button with ember gradient */}
+          {/* Center Create Button with solid ember */}
           <TouchableOpacity
             style={styles.createButton}
             onPress={handleCreatePress}
             activeOpacity={0.8}
           >
-            <LinearGradient
-              colors={[Colors.emberLight, Colors.ember, Colors.emberDark]}
-              style={styles.createButtonInner}
-            >
+            <View style={styles.createButtonInner}>
               <Plus size={26} color={Colors.white} strokeWidth={2.5} />
-            </LinearGradient>
+            </View>
           </TouchableOpacity>
 
           {/* Profile Tab */}
@@ -173,6 +169,7 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: Colors.ember,
     shadowColor: Colors.ember,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,

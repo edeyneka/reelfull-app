@@ -14,7 +14,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { LinearGradient } from 'expo-linear-gradient';
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
 import { Asset } from 'expo-asset';
@@ -619,15 +618,11 @@ export default function ScriptReviewScreen() {
               disabled={isSubmitting}
               activeOpacity={0.8}
             >
-              <LinearGradient
-                colors={
-                  isSubmitting
-                    ? [Colors.creamDark, Colors.creamDarker]
-                    : [Colors.emberLight, Colors.ember, Colors.emberDark]
-                }
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.approveButtonGradient}
+              <View
+                style={[
+                  styles.approveButtonInner,
+                  { backgroundColor: isSubmitting ? Colors.creamDark : Colors.ember }
+                ]}
               >
                 {isSubmitting ? (
                   <>
@@ -640,7 +635,7 @@ export default function ScriptReviewScreen() {
                     <Text style={styles.approveButtonText}>Approve & Generate Reel</Text>
                   </>
                 )}
-              </LinearGradient>
+              </View>
             </TouchableOpacity>
           </>
         ) : (
@@ -909,12 +904,13 @@ const styles = StyleSheet.create({
   approveButtonDisabled: {
     opacity: 0.5,
   },
-  approveButtonGradient: {
+  approveButtonInner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
     padding: 18,
+    borderRadius: 100,
   },
   approveButtonText: {
     fontSize: 18,

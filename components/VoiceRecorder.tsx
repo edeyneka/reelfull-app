@@ -2,7 +2,6 @@ import { Mic, Square, Play, Pause, RotateCcw, Check } from 'lucide-react-native'
 import { useEffect, useState, useRef } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
 import { Audio } from 'expo-av';
-import { LinearGradient } from 'expo-linear-gradient';
 import Colors from '@/constants/colors';
 
 // const SCRIPT_TEXT = `Morning rush? Meet your new ritual.
@@ -241,22 +240,18 @@ export default function VoiceRecorder({
               onPress={handleRecordPress}
               activeOpacity={0.8}
             >
-              <LinearGradient
-                colors={
-                  isRecording
-                    ? ['#DC2626', '#EF4444']
-                    : [Colors.ember, Colors.emberLight]
-                }
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.recordButtonGradient}
+              <View
+                style={[
+                  styles.recordButtonInner,
+                  { backgroundColor: isRecording ? '#DC2626' : Colors.ember }
+                ]}
               >
                 {isRecording ? (
                   <Square size={26} color={Colors.white} fill={Colors.white} />
                 ) : (
                   <Mic size={26} color={Colors.white} strokeWidth={2} />
                 )}
-              </LinearGradient>
+              </View>
             </TouchableOpacity>
             <Text style={styles.instruction}>
               {isRecording
@@ -297,15 +292,15 @@ export default function VoiceRecorder({
               activeOpacity={0.8}
               disabled={disabled}
             >
-              <LinearGradient
-                colors={disabled ? [Colors.creamDark, Colors.creamDarker] : [Colors.ember, Colors.emberLight]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.confirmButtonGradient}
+              <View
+                style={[
+                  styles.confirmButtonInner,
+                  { backgroundColor: disabled ? Colors.creamDark : Colors.ember }
+                ]}
               >
                 <Check size={20} color={Colors.white} strokeWidth={3} />
                 <Text style={styles.confirmButtonText}>{disabled ? 'Uploading...' : 'Use This Recording'}</Text>
-              </LinearGradient>
+              </View>
             </TouchableOpacity>
           </>
         )}
@@ -354,7 +349,7 @@ const styles = StyleSheet.create({
   recordingActive: {
     transform: [{ scale: 1.05 }],
   },
-  recordButtonGradient: {
+  recordButtonInner: {
     width: '100%',
     height: '100%',
     alignItems: 'center',
@@ -387,12 +382,13 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     width: '100%',
   },
-  confirmButtonGradient: {
+  confirmButtonInner: {
     flexDirection: 'row',
     padding: 14,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+    borderRadius: 12,
   },
   confirmButtonText: {
     fontSize: 16,

@@ -17,7 +17,7 @@
  * 
  * Set this to true when running Maestro tests or testing the UI flow.
  */
-export const ENABLE_TEST_RUN_MODE = false;
+export const ENABLE_TEST_RUN_MODE = true;
 
 // Set to false to hide style preference during onboarding and settings
 // When hidden, the default style "professional" is used automatically

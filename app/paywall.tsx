@@ -14,7 +14,6 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X, Sparkles, Zap, Crown, Ticket, Check, Gift } from 'lucide-react-native';
 import { useQuery, useMutation } from 'convex/react';
@@ -479,12 +478,9 @@ export default function PaywallScreen() {
           >
             {/* Hero Section */}
             <View style={showCreditsView ? styles.heroSectionCompact : styles.heroSection}>
-          <LinearGradient
-            colors={[Colors.emberLight, Colors.ember, Colors.emberDark]}
-            style={showCreditsView ? styles.iconContainerCompact : styles.iconContainer}
-          >
+          <View style={showCreditsView ? styles.iconContainerCompact : styles.iconContainer}>
             {showCreditsView ? <Gift size={30} color={Colors.white} /> : <Crown size={30} color={Colors.white} />}
-          </LinearGradient>
+          </View>
           <Text style={showCreditsView ? styles.titleCompact : styles.title}>
             {showCreditsView ? 'Buy More Credits' : 'Unlock Reelful Pro'}
           </Text>
@@ -611,12 +607,7 @@ export default function PaywallScreen() {
               disabled={isPurchasingCredits}
               activeOpacity={0.8}
             >
-              <LinearGradient
-                colors={[Colors.emberLight, Colors.ember, Colors.emberDark]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.subscribeGradientCompact}
-              >
+              <View style={styles.subscribeButtonInnerCompact}>
                 {isPurchasingCredits ? (
                   <ActivityIndicator size="small" color={Colors.white} />
                 ) : (
@@ -624,7 +615,7 @@ export default function PaywallScreen() {
                     Buy {CREDIT_PACKS[selectedCreditPack].credits} Credits
                   </Text>
                 )}
-              </LinearGradient>
+              </View>
             </TouchableOpacity>
 
             <Text style={styles.legalTextCompact}>
@@ -776,18 +767,13 @@ export default function PaywallScreen() {
               disabled={isPurchasing}
               activeOpacity={0.8}
             >
-              <LinearGradient
-                colors={[Colors.emberLight, Colors.ember, Colors.emberDark]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.subscribeGradient}
-              >
+              <View style={styles.subscribeButtonInner}>
                 {isPurchasing ? (
                   <ActivityIndicator size="small" color={Colors.white} />
                 ) : (
                   <Text style={styles.subscribeText}>Subscribe Now</Text>
                 )}
-              </LinearGradient>
+              </View>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -862,6 +848,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
+    backgroundColor: Colors.ember,
   },
   // Compact hero for credits view
   heroSectionCompact: {
@@ -876,6 +863,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
+    backgroundColor: Colors.ember,
   },
   title: {
     fontSize: 26,
@@ -1083,17 +1071,19 @@ const styles = StyleSheet.create({
   subscribeButton: {
     marginBottom: 12,
   },
-  subscribeGradient: {
+  subscribeButtonInner: {
     paddingVertical: 16,
     borderRadius: 100,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: Colors.ember,
   },
-  subscribeGradientCompact: {
+  subscribeButtonInnerCompact: {
     paddingVertical: 16,
     borderRadius: 100,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: Colors.ember,
   },
   subscribeText: {
     fontSize: 16,
