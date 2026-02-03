@@ -306,6 +306,7 @@ export default function ChatComposerScreen() {
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const [isProcessingMedia, setIsProcessingMedia] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
   
   // Track if we've forked from a completed video project
   const [hasForkedFromVideo, setHasForkedFromVideo] = useState(false);
@@ -554,7 +555,7 @@ export default function ChatComposerScreen() {
     }
   }, [messages]);
   
-  // Scroll to bottom when keyboard appears
+  // Scroll to bottom when keyboard appears and track keyboard visibility
   useEffect(() => {
     const scrollToBottom = () => {
       // Scroll immediately
@@ -565,18 +566,37 @@ export default function ChatComposerScreen() {
       }, 350);
     };
     
+    const handleKeyboardShow = () => {
+      setKeyboardVisible(true);
+      scrollToBottom();
+    };
+    
+    const handleKeyboardHide = () => {
+      setKeyboardVisible(false);
+    };
+    
     const keyboardWillShowListener = Keyboard.addListener(
       'keyboardWillShow',
-      scrollToBottom
+      handleKeyboardShow
     );
     const keyboardDidShowListener = Keyboard.addListener(
       'keyboardDidShow',
-      scrollToBottom
+      handleKeyboardShow
+    );
+    const keyboardWillHideListener = Keyboard.addListener(
+      'keyboardWillHide',
+      handleKeyboardHide
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      'keyboardDidHide',
+      handleKeyboardHide
     );
     
     return () => {
       keyboardWillShowListener.remove();
       keyboardDidShowListener.remove();
+      keyboardWillHideListener.remove();
+      keyboardDidHideListener.remove();
     };
   }, []);
   
@@ -1396,7 +1416,7 @@ export default function ChatComposerScreen() {
         </ScrollView>
         
         {/* Unified Composer */}
-        <View style={[styles.composerContainer, { paddingBottom: insets.bottom }]}>
+        <View style={[styles.composerContainer, { paddingBottom: keyboardVisible ? 10 : insets.bottom }]}>
           {/* Add media button - outside card */}
           <TouchableOpacity 
             style={styles.addMediaButton}
