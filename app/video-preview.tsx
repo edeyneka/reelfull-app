@@ -60,10 +60,15 @@ const getGenerationPhase = (project: any): GenerationPhase => {
     hasRenderedVideoUrl: !!project.renderedVideoUrl,
   });
   
-  // Priority 1: Check render progress step - if it exists, we're past media preparation
+  // Priority 1: Check render progress step
   const step = project.renderProgress?.step?.toLowerCase() || '';
   if (step) {
     console.log('[getGenerationPhase] Render step found:', step);
+    
+    // Media preparation steps (voiceover, music, animations, loading) = preparing_media
+    if (step.includes('voiceover') || step.includes('music') || step.includes('animat') || step.includes('loading')) {
+      return 'preparing_media';
+    }
     if (step.includes('claude') || step.includes('editing')) {
       return 'video_agent';
     }
@@ -94,13 +99,38 @@ const getGenerationPhase = (project: any): GenerationPhase => {
 };
 
 // Get user-friendly phase text
-const getPhaseText = (phase: GenerationPhase): { title: string; subtitle: string } => {
+const getPhaseText = (phase: GenerationPhase, renderProgress?: { step?: string; details?: string }): { title: string; subtitle: string } => {
   switch (phase) {
     case 'preparing_media':
+      // Show specific step if available from renderProgress
+      const step = renderProgress?.step?.toLowerCase() || '';
+      if (step.includes('voiceover')) {
+        return { title: 'Preparing Media', subtitle: 'Creating AI voiceover...' };
+      }
+      if (step.includes('music')) {
+        return { title: 'Preparing Media', subtitle: 'Generating background music...' };
+      }
+      if (step.includes('animat')) {
+        return { title: 'Preparing Media', subtitle: 'Animating your images...' };
+      }
+      if (step.includes('loading')) {
+        return { title: 'Preparing Media', subtitle: 'Loading animated clips...' };
+      }
       return { title: 'Preparing Media', subtitle: 'Creating voiceover, music, and animations...' };
     case 'video_agent':
       return { title: 'Running Video Agent', subtitle: 'AI is editing your video sequence...' };
     case 'composing':
+      // Show specific step if available
+      const composeStep = renderProgress?.step?.toLowerCase() || '';
+      if (composeStep.includes('starting')) {
+        return { title: 'Composing', subtitle: 'Initializing video composition...' };
+      }
+      if (composeStep.includes('sandbox')) {
+        return { title: 'Composing', subtitle: 'Setting up render environment...' };
+      }
+      if (composeStep.includes('upload')) {
+        return { title: 'Composing', subtitle: 'Uploading media files...' };
+      }
       return { title: 'Composing', subtitle: 'Rendering your video...' };
     case 'finalizing':
       return { title: 'Finalizing', subtitle: 'Almost done! Preparing your video...' };
@@ -201,7 +231,7 @@ export default function VideoPreviewScreen() {
   // Calculate if we're still generating based on live project data
   const isGenerating = isGeneratingParam && (!project?.renderedVideoUrl || project?.status !== 'completed');
   const generationPhase = isGenerating ? getGenerationPhase(project) : null;
-  const phaseText = getPhaseText(generationPhase);
+  const phaseText = getPhaseText(generationPhase, project?.renderProgress);
   
   // Update video URI when generation completes
   useEffect(() => {
