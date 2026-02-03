@@ -1,4 +1,4 @@
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { ArrowLeft, Plus, Send, X, Check, Info, Copy, MessageSquare, Volume2, Gauge, ListOrdered, Loader2, VolumeX } from 'lucide-react-native';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
@@ -17,6 +17,7 @@ import {
   Pressable,
   Animated,
   ActionSheetIOS,
+  InteractionManager,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { VideoExportPreset } from 'expo-image-picker';
@@ -538,13 +539,22 @@ export default function ChatComposerScreen() {
     }
   }, [existingMessages]);
   
-  // Auto-open media picker for new projects
-  useEffect(() => {
-    if (!projectId && !hasAutoOpenedPicker.current && messages.length === 0) {
-      hasAutoOpenedPicker.current = true;
-      setTimeout(() => pickMedia(), 300);
-    }
-  }, [projectId, messages.length]);
+  // Auto-focus keyboard for new projects (after screen transition completes)
+  useFocusEffect(
+    useCallback(() => {
+      if (!projectId && !hasAutoOpenedPicker.current && messages.length === 0) {
+        hasAutoOpenedPicker.current = true;
+        // Wait for screen transition animation to fully complete
+        const task = InteractionManager.runAfterInteractions(() => {
+          // Additional delay to ensure screen is fully rendered
+          setTimeout(() => {
+            inputRef.current?.focus();
+          }, 500);
+        });
+        return () => task.cancel();
+      }
+    }, [projectId, messages.length])
+  );
   
   // Scroll to bottom when new messages are added
   useEffect(() => {
