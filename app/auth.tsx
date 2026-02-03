@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
   ScrollView,
   Linking,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAction, useMutation, useQuery } from "convex/react";
@@ -393,6 +394,13 @@ export default function AuthScreen() {
             keyboardShouldPersistTaps="handled"
           >
             <View style={styles.header}>
+              <View style={styles.iconContainer}>
+                <Image
+                  source={require('../assets/images/reel-icon.png')}
+                  style={styles.iconImage}
+                  resizeMode="contain"
+                />
+              </View>
               <Text style={styles.title}>
                 {step === 'phone' ? 'Welcome!' : step === 'password' ? 'Enter Password' : 'Enter Verification Code'}
               </Text>
@@ -450,23 +458,6 @@ export default function AuthScreen() {
                       )}
                     </View>
                   </TouchableOpacity>
-
-                  <Text style={styles.termsText}>
-                    By continuing, you agree to our{' '}
-                    <Text
-                      style={styles.termsLink}
-                      onPress={() => Linking.openURL('https://www.reelful.app/terms.html')}
-                    >
-                      Terms of Service
-                    </Text>
-                    {' '}and{' '}
-                    <Text
-                      style={styles.termsLink}
-                      onPress={() => Linking.openURL('https://www.reelful.app/privacy.html')}
-                    >
-                      Privacy Policy
-                    </Text>
-                  </Text>
 
                   {/* Test Account Button - Commented out for production */}
                   {/* <TouchableOpacity
@@ -597,6 +588,13 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     marginBottom: 48,
+  },
+  iconContainer: {
+    marginBottom: 20,
+  },
+  iconImage: {
+    width: 88,
+    height: 88,
   },
   title: {
     fontSize: 24,

@@ -251,8 +251,7 @@ export default function OnboardingScreen() {
                       { backgroundColor: isStep1Valid ? Colors.ember : Colors.creamDark }
                     ]}
                   >
-                    <Text style={[styles.buttonText, !isStep1Valid && styles.buttonTextDisabled]}>Next</Text>
-                    <ArrowRight size={20} color={isStep1Valid ? Colors.white : Colors.inkMuted} strokeWidth={2.5} />
+                    <Text style={[styles.buttonText, !isStep1Valid && styles.buttonTextDisabled]}>Continue</Text>
                   </View>
                 </TouchableOpacity>
               </>
@@ -296,8 +295,7 @@ export default function OnboardingScreen() {
                       { backgroundColor: isStep2Valid ? Colors.ember : Colors.creamDark }
                     ]}
                   >
-                    <Text style={[styles.buttonText, !isStep2Valid && styles.buttonTextDisabled]}>Next</Text>
-                    <ArrowRight size={20} color={isStep2Valid ? Colors.white : Colors.inkMuted} strokeWidth={2.5} />
+                    <Text style={[styles.buttonText, !isStep2Valid && styles.buttonTextDisabled]}>Continue</Text>
                   </View>
                 </TouchableOpacity>
               </>
