@@ -22,6 +22,7 @@ import Colors from '@/constants/colors';
 import { Fonts } from '@/constants/typography';
 import { usePaywall, CREDIT_PACKS, CreditPackType } from '@/contexts/PaywallContext';
 import { useApp } from '@/contexts/AppContext';
+import { ENABLE_TEST_RUN_MODE } from '@/constants/config';
 import * as Haptics from 'expo-haptics';
 
 type PlanType = 'monthly' | 'annual';
@@ -151,7 +152,10 @@ export default function PaywallScreen() {
   
   // Pro users see credits view, non-Pro users see subscription view
   // Use backend status (more reliable) with fallback to RevenueCat status
-  const showCreditsView = videoGenerationStatus?.isPremium ?? subscriptionState.isPro;
+  // In test mode, always show subscription view to allow testing the subscription flow
+  const showCreditsView = ENABLE_TEST_RUN_MODE 
+    ? false 
+    : (videoGenerationStatus?.isPremium ?? subscriptionState.isPro);
   
   // Promo code state
   const [promoCode, setPromoCode] = useState('');
