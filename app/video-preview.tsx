@@ -19,6 +19,7 @@ import * as MediaLibrary from 'expo-media-library';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { useEvent } from 'expo';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BlurView } from 'expo-blur';
 import { useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Colors from '@/constants/colors';
@@ -639,7 +640,9 @@ export default function VideoPreviewScreen() {
         ]}
         pointerEvents="none"
       >
-        <Text style={styles.toastText}>This video was saved to camera roll</Text>
+        <BlurView intensity={40} tint="dark" style={styles.toastBlur}>
+          <Text style={styles.toastText}>This video was saved to camera roll</Text>
+        </BlurView>
       </Animated.View>
     </View>
   );
@@ -763,12 +766,17 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 20,
     right: 20,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    alignItems: 'center',
+    borderRadius: 24,
+    overflow: 'hidden',
     zIndex: 20,
+  },
+  toastBlur: {
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   toastText: {
     fontSize: 15,
