@@ -1,21 +1,23 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { X, Download, Mic, MicOff, Music, Music2, Subtitles, MessageSquare, Loader2 } from 'lucide-react-native';
-import { useState, useEffect, useRef } from 'react';
+import { X, Download, Mic, Music, Subtitles, MessageSquare, Loader2, Play, Pause } from 'lucide-react-native';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Alert,
   ActivityIndicator,
   Platform,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
   Animated,
   Image,
+  Dimensions,
 } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as MediaLibrary from 'expo-media-library';
 import { VideoView, useVideoPlayer } from 'expo-video';
+import { useEvent } from 'expo';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -23,6 +25,17 @@ import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
 import { Fonts } from '@/constants/typography';
 import { GenerationPhase } from '@/types';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+// Icon shadow style for visibility on light/dark videos
+const ICON_SHADOW = {
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.6,
+  shadowRadius: 4,
+  elevation: 8,
+};
 
 // Helper function to calculate generation phase from project data
 const getGenerationPhase = (project: any): GenerationPhase => {
@@ -92,6 +105,51 @@ const getPhaseText = (phase: GenerationPhase): { title: string; subtitle: string
   }
 };
 
+// Icon button wrapper with shadow for visibility on any video background
+const IconButton = ({ 
+  onPress, 
+  children, 
+  style,
+  disabled,
+  testID,
+}: { 
+  onPress: () => void; 
+  children: React.ReactNode;
+  style?: any;
+  disabled?: boolean;
+  testID?: string;
+}) => (
+  <TouchableOpacity
+    testID={testID}
+    style={[styles.iconButton, ICON_SHADOW, style]}
+    onPress={onPress}
+    activeOpacity={0.7}
+    disabled={disabled}
+  >
+    {children}
+  </TouchableOpacity>
+);
+
+// Sidebar icon button for right side controls (no background, just shadow like top icons)
+const SidebarButton = ({ 
+  onPress, 
+  children, 
+  disabled,
+}: { 
+  onPress: () => void; 
+  children: React.ReactNode;
+  disabled?: boolean;
+}) => (
+  <TouchableOpacity
+    style={[styles.sidebarButton, ICON_SHADOW]}
+    onPress={onPress}
+    activeOpacity={0.7}
+    disabled={disabled}
+  >
+    {children}
+  </TouchableOpacity>
+);
+
 export default function VideoPreviewScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -123,6 +181,9 @@ export default function VideoPreviewScreen() {
   
   // Spinner animation
   const spinAnim = useRef(new Animated.Value(0)).current;
+  
+  // Toast animation
+  const toastOpacity = useRef(new Animated.Value(0)).current;
   
   // Query project status when generating
   const project = useQuery(
@@ -173,6 +234,13 @@ export default function VideoPreviewScreen() {
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
   
+  // Video playback state
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [showControls, setShowControls] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
   // Video option toggles
   const [voiceoverEnabled, setVoiceoverEnabled] = useState(true);
   const [musicEnabled, setMusicEnabled] = useState(true);
@@ -193,6 +261,87 @@ export default function VideoPreviewScreen() {
       }
     }
   );
+  
+  // Subscribe to player status changes
+  const { isPlaying: playerIsPlaying } = useEvent(videoPlayer, 'playingChange', { isPlaying: videoPlayer.playing });
+  
+  // Update local isPlaying state when player state changes
+  useEffect(() => {
+    setIsPlaying(playerIsPlaying);
+  }, [playerIsPlaying]);
+  
+  // Track video progress
+  useEffect(() => {
+    if (!videoPlayer || isGenerating) return;
+    
+    const interval = setInterval(() => {
+      if (videoPlayer.duration > 0) {
+        setDuration(videoPlayer.duration);
+        setProgress(videoPlayer.currentTime / videoPlayer.duration);
+      }
+    }, 100);
+    
+    return () => clearInterval(interval);
+  }, [videoPlayer, isGenerating]);
+  
+  // Auto-hide controls after 3 seconds
+  const resetControlsTimeout = useCallback(() => {
+    if (controlsTimeoutRef.current) {
+      clearTimeout(controlsTimeoutRef.current);
+    }
+    controlsTimeoutRef.current = setTimeout(() => {
+      setShowControls(false);
+    }, 3000);
+  }, []);
+  
+  // Handle tap on video
+  const handleVideoTap = useCallback(() => {
+    if (isGenerating) return;
+    
+    // Toggle play/pause
+    if (videoPlayer) {
+      if (isPlaying) {
+        videoPlayer.pause();
+      } else {
+        videoPlayer.play();
+      }
+    }
+    
+    // Show controls and reset timeout
+    setShowControls(true);
+    resetControlsTimeout();
+  }, [videoPlayer, isPlaying, isGenerating, resetControlsTimeout]);
+  
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Animate toast when download succeeds
+  useEffect(() => {
+    if (downloadSuccess) {
+      // Fade in
+      Animated.sequence([
+        Animated.timing(toastOpacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.delay(2500),
+        Animated.timing(toastOpacity, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setDownloadSuccess(false);
+      });
+    }
+  }, [downloadSuccess, toastOpacity]);
 
   const handleClose = () => {
     // In test mode, navigate directly to feed since the navigation stack may be inconsistent
@@ -277,7 +426,6 @@ export default function VideoPreviewScreen() {
         link.download = `reelfull_${Date.now()}.mp4`;
         link.click();
         setDownloadSuccess(true);
-        setTimeout(() => setDownloadSuccess(false), 5000);
       } else {
         // Mobile: download to local file first, then save to media library
         const fileUri = `${FileSystem.documentDirectory}reelfull_${Date.now()}.mp4`;
@@ -301,7 +449,6 @@ export default function VideoPreviewScreen() {
           }
           
           setDownloadSuccess(true);
-          setTimeout(() => setDownloadSuccess(false), 5000);
         } else {
           throw new Error(`Download failed with status: ${downloadResult.status}`);
         }
@@ -332,18 +479,15 @@ export default function VideoPreviewScreen() {
   if (!videoUri && !isGenerating) {
     return (
       <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-        <TouchableOpacity
-          style={styles.closeButton}
-          onPress={handleClose}
-          activeOpacity={0.7}
-        >
-          <X size={24} color={Colors.ink} strokeWidth={2} />
-        </TouchableOpacity>
-        <View style={styles.placeholder} />
-        <View style={styles.placeholder} />
-      </View>
-      <View style={styles.errorContainer}>
+        {/* Top controls */}
+        <View style={[styles.topControls, { paddingTop: insets.top + 16 }]}>
+          <IconButton onPress={handleClose}>
+            <X size={28} color={Colors.white} strokeWidth={2.5} />
+          </IconButton>
+          <View style={styles.topControlsRight} />
+        </View>
+        
+        <View style={styles.errorContainer}>
           <Text style={styles.errorText}>Video not available</Text>
           <TouchableOpacity
             style={styles.errorButton}
@@ -359,170 +503,144 @@ export default function VideoPreviewScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-        <TouchableOpacity
-          testID="closeVideoPreviewButton"
-          style={styles.closeButton}
-          onPress={handleClose}
-          activeOpacity={0.7}
-        >
-          <X size={24} color={Colors.ink} strokeWidth={2} />
-        </TouchableOpacity>
-        <View style={styles.placeholder} />
-        {projectId && !isTestMode && (
-          <TouchableOpacity
-            style={styles.chatButton}
-            onPress={handleChatHistory}
-            activeOpacity={0.7}
-          >
-            <MessageSquare size={22} color={Colors.ink} strokeWidth={2} />
-          </TouchableOpacity>
-        )}
-        {(!projectId || isTestMode) && <View style={styles.placeholder} />}
-      </View>
-
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Title section - only visible when generating */}
-        {isGenerating && (
-          <View style={styles.titleSection}>
-            <Text style={styles.title}>{phaseText.title}</Text>
-            <Text style={styles.subtitle}>{phaseText.subtitle}</Text>
-          </View>
-        )}
-
-        <View testID="videoPreviewContainer" style={styles.videoPreviewContainer}>
-          {isGenerating ? (
-            // Generating state - show thumbnail with spinner overlay
-            <View style={styles.videoPreview}>
-              {thumbnailUrl ? (
-                <Image
-                  source={{ uri: thumbnailUrl }}
-                  style={styles.generatingThumbnail}
-                  resizeMode="cover"
-                />
-              ) : (
-                <View style={styles.generatingPlaceholder} />
-              )}
-              <View style={styles.generatingOverlay}>
-                <Animated.View style={{ transform: [{ rotate: spin }] }}>
-                  <Loader2 size={48} color={Colors.ember} strokeWidth={2} />
-                </Animated.View>
-                <Text style={styles.generatingPhaseText}>{phaseText.title}</Text>
-              </View>
-            </View>
+      {/* Full-screen video or generating state */}
+      {isGenerating ? (
+        // Generating state - show thumbnail with spinner overlay
+        <View style={styles.fullscreenVideo}>
+          {thumbnailUrl ? (
+            <Image
+              source={{ uri: thumbnailUrl }}
+              style={styles.generatingThumbnail}
+              resizeMode="cover"
+            />
           ) : (
-            // Ready state - show video player
+            <View style={styles.generatingPlaceholder} />
+          )}
+          <View style={styles.generatingOverlay}>
+            <Animated.View style={{ transform: [{ rotate: spin }] }}>
+              <Loader2 size={48} color={Colors.ember} strokeWidth={2} />
+            </Animated.View>
+            <Text style={styles.generatingPhaseText}>{phaseText.title}</Text>
+            <Text style={styles.generatingSubtitleText}>{phaseText.subtitle}</Text>
+          </View>
+        </View>
+      ) : (
+        // Ready state - show full-screen video player with tap-to-pause
+        <TouchableWithoutFeedback onPress={handleVideoTap}>
+          <View style={styles.fullscreenVideo}>
             <VideoView
               player={videoPlayer}
-              style={styles.videoPreview}
+              style={StyleSheet.absoluteFill}
               contentFit="cover"
-              nativeControls={true}
+              nativeControls={false}
             />
-          )}
-        </View>
-
-        <View style={styles.actions}>
-          {/* Video Option Toggles - disabled when generating */}
-          <View style={[styles.videoOptionsRow, isGenerating && styles.disabledSection]}>
-            <TouchableOpacity
-              style={[
-                styles.videoOptionToggle,
-                voiceoverEnabled && !isGenerating && styles.videoOptionToggleActive,
-                isGenerating && styles.videoOptionToggleDisabled
-              ]}
-              onPress={() => !isGenerating && setVoiceoverEnabled(!voiceoverEnabled)}
-              activeOpacity={isGenerating ? 1 : 0.7}
-              disabled={isGenerating}
-            >
-              {voiceoverEnabled ? (
-                <Mic size={18} color={isGenerating ? Colors.textSecondary : Colors.ink} strokeWidth={2} />
-              ) : (
-                <MicOff size={18} color={Colors.textSecondary} strokeWidth={2} />
-              )}
-              <Text style={[
-                styles.videoOptionLabel,
-                (!voiceoverEnabled || isGenerating) && styles.videoOptionLabelInactive
-              ]}>Voice</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.videoOptionToggle,
-                musicEnabled && !isGenerating && styles.videoOptionToggleActive,
-                isGenerating && styles.videoOptionToggleDisabled
-              ]}
-              onPress={() => !isGenerating && setMusicEnabled(!musicEnabled)}
-              activeOpacity={isGenerating ? 1 : 0.7}
-              disabled={isGenerating}
-            >
-              {musicEnabled ? (
-                <Music size={18} color={isGenerating ? Colors.textSecondary : Colors.ink} strokeWidth={2} />
-              ) : (
-                <Music2 size={18} color={Colors.textSecondary} strokeWidth={2} />
-              )}
-              <Text style={[
-                styles.videoOptionLabel,
-                (!musicEnabled || isGenerating) && styles.videoOptionLabelInactive
-              ]}>Music</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.videoOptionToggle,
-                captionsEnabled && !isGenerating && styles.videoOptionToggleActive,
-                isGenerating && styles.videoOptionToggleDisabled
-              ]}
-              onPress={() => !isGenerating && setCaptionsEnabled(!captionsEnabled)}
-              activeOpacity={isGenerating ? 1 : 0.7}
-              disabled={isGenerating}
-            >
-              <Subtitles size={18} color={(captionsEnabled && !isGenerating) ? Colors.ink : Colors.grayLight} strokeWidth={2} />
-              <Text style={[
-                styles.videoOptionLabel,
-                (!captionsEnabled || isGenerating) && styles.videoOptionLabelInactive
-              ]}>Captions</Text>
-            </TouchableOpacity>
+            
+            {/* Play/Pause indicator overlay - shows briefly when toggling */}
+            {showControls && (
+              <View style={styles.playPauseOverlay}>
+                <View style={styles.playPauseIcon}>
+                  {isPlaying ? (
+                    <Pause size={48} color={Colors.white} strokeWidth={2} fill={Colors.white} />
+                  ) : (
+                    <Play size={48} color={Colors.white} strokeWidth={2} fill={Colors.white} />
+                  )}
+                </View>
+              </View>
+            )}
           </View>
-
-          {/* Download button - disabled when generating */}
-          <TouchableOpacity
-            style={[styles.downloadButton, isGenerating && styles.disabledButton]}
-            onPress={handleDownload}
-            activeOpacity={isGenerating ? 1 : 0.8}
-            disabled={isDownloading || isGenerating}
-          >
-            <View
-              style={[
-                styles.downloadButtonInner,
-                { backgroundColor: isGenerating ? Colors.creamDark : Colors.ember }
-              ]}
-            >
-              {isDownloading ? (
-                <>
-                  <ActivityIndicator size="small" color={Colors.white} />
-                  <Text style={styles.downloadButtonText}>
-                    {!(voiceoverEnabled && musicEnabled && captionsEnabled) ? 'Composing...' : 'Downloading...'}
-                  </Text>
-                </>
-              ) : (
-                <>
-                  <Download size={20} color={isGenerating ? Colors.textSecondary : Colors.white} strokeWidth={2.5} />
-                  <Text style={[styles.downloadButtonText, isGenerating && styles.disabledButtonText]}>Download</Text>
-                </>
-              )}
-            </View>
-          </TouchableOpacity>
-
-          {downloadSuccess && (
-            <Text style={styles.downloadSuccessText}>
-              This video was saved to your camera roll.
-            </Text>
+        </TouchableWithoutFeedback>
+      )}
+      
+      {/* Top controls overlay */}
+      <View style={[styles.topControls, { paddingTop: insets.top + 16 }]}>
+        <IconButton 
+          testID="closeVideoPreviewButton"
+          onPress={handleClose}
+        >
+          <X size={28} color={Colors.white} strokeWidth={2.5} />
+        </IconButton>
+        
+        <View style={styles.topControlsRight}>
+          {projectId && !isTestMode && (
+            <IconButton onPress={handleChatHistory}>
+              <MessageSquare size={26} color={Colors.white} strokeWidth={2} />
+            </IconButton>
           )}
         </View>
-      </ScrollView>
+      </View>
+      
+      {/* Right sidebar controls - hidden during generation */}
+      {!isGenerating && (
+        <View style={[styles.rightSidebar, { bottom: insets.bottom + 120 }]}>
+          {/* Download button */}
+          <SidebarButton 
+            onPress={handleDownload}
+            disabled={isDownloading}
+          >
+            {isDownloading ? (
+              <ActivityIndicator size="small" color={Colors.white} />
+            ) : (
+              <Download size={26} color={Colors.white} strokeWidth={2} />
+            )}
+          </SidebarButton>
+          
+          {/* Voice toggle */}
+          <SidebarButton 
+            onPress={() => setVoiceoverEnabled(!voiceoverEnabled)}
+          >
+            <Mic 
+              size={26} 
+              color={voiceoverEnabled ? Colors.white : "rgba(255,255,255,0.5)"} 
+              strokeWidth={2} 
+            />
+          </SidebarButton>
+          
+          {/* Music toggle */}
+          <SidebarButton 
+            onPress={() => setMusicEnabled(!musicEnabled)}
+          >
+            <Music 
+              size={26} 
+              color={musicEnabled ? Colors.white : "rgba(255,255,255,0.5)"} 
+              strokeWidth={2} 
+            />
+          </SidebarButton>
+          
+          {/* Captions toggle */}
+          <SidebarButton 
+            onPress={() => setCaptionsEnabled(!captionsEnabled)}
+          >
+            <Subtitles 
+              size={26} 
+              color={captionsEnabled ? Colors.white : "rgba(255,255,255,0.5)"} 
+              strokeWidth={2} 
+            />
+          </SidebarButton>
+        </View>
+      )}
+      
+      {/* Video timeline progress bar - shows when controls are visible */}
+      {!isGenerating && showControls && (
+        <View style={[styles.timelineContainer, { bottom: insets.bottom + 40 }]}>
+          <View style={styles.timelineTrack}>
+            <View style={[styles.timelineProgress, { width: `${progress * 100}%` }]} />
+          </View>
+        </View>
+      )}
+      
+      {/* Download success toast */}
+      <Animated.View 
+        style={[
+          styles.toast, 
+          { 
+            opacity: toastOpacity,
+            top: insets.top + 60,
+          }
+        ]}
+        pointerEvents="none"
+      >
+        <Text style={styles.toastText}>This video was saved to camera roll</Text>
+      </Animated.View>
     </View>
   );
 }
@@ -530,67 +648,83 @@ export default function VideoPreviewScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.cream,
+    backgroundColor: Colors.black,
   },
-  header: {
+  fullscreenVideo: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
+  },
+  topControls: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    zIndex: 10,
+  },
+  topControlsRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    paddingBottom: 8,
-    backgroundColor: Colors.cream,
   },
-  closeButton: {
-    width: 40,
-    height: 40,
+  iconButton: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 22,
+  },
+  rightSidebar: {
+    position: 'absolute',
+    right: 12,
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 12,
+    zIndex: 10,
+  },
+  sidebarButton: {
+    width: 48,
+    height: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 24,
+  },
+  playPauseOverlay: {
+    ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  chatButton: {
-    width: 40,
-    height: 40,
+  playPauseIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  placeholder: {
-    width: 40,
+  timelineContainer: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    zIndex: 10,
   },
-  content: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: 0,
-    paddingBottom: 40,
-  },
-  titleSection: {
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 24,
-    fontFamily: Fonts.medium,
-    color: Colors.ink,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 14,
-    fontFamily: Fonts.regular,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    marginTop: 8,
-  },
-  videoPreviewContainer: {
-    flex: 1,
-    justifyContent: 'flex-start',
-    alignItems: 'center',
-    marginBottom: 0,
-  },
-  videoPreview: {
-    width: '100%',
-    aspectRatio: 9 / 16,
-    maxHeight: 560,
-    borderRadius: 16,
+  timelineTrack: {
+    height: 3,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 1.5,
     overflow: 'hidden',
-    backgroundColor: Colors.creamDark,
+  },
+  timelineProgress: {
+    height: '100%',
+    backgroundColor: Colors.white,
+    borderRadius: 1.5,
   },
   generatingThumbnail: {
     width: '100%',
@@ -599,7 +733,7 @@ const styles = StyleSheet.create({
   generatingPlaceholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: Colors.creamDark,
+    backgroundColor: Colors.dark,
   },
   generatingOverlay: {
     position: 'absolute',
@@ -613,83 +747,34 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   generatingPhaseText: {
-    fontSize: 14,
+    fontSize: 18,
     fontFamily: Fonts.medium,
     color: Colors.ember,
     textAlign: 'center',
   },
-  actions: {
-    alignItems: 'center',
-    gap: 8,
-  },
-  videoOptionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 10,
-  },
-  videoOptionToggle: {
-    width: 60,
-    height: 60,
-    borderRadius: 12,
-    backgroundColor: Colors.creamDark,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'transparent',
-    gap: 4,
-  },
-  videoOptionToggleActive: {
-    backgroundColor: 'rgba(243, 106, 63, 0.15)',
-    borderColor: Colors.ember,
-  },
-  videoOptionLabel: {
-    fontSize: 10,
-    fontFamily: Fonts.regular,
-    color: Colors.ink,
-  },
-  videoOptionLabelInactive: {
-    color: Colors.textSecondary,
-  },
-  videoOptionToggleDisabled: {
-    opacity: 0.5,
-    borderColor: 'transparent',
-    backgroundColor: Colors.creamDark,
-  },
-  disabledSection: {
-    opacity: 0.6,
-  },
-  disabledButton: {
-    opacity: 0.7,
-  },
-  disabledButtonText: {
-    color: Colors.textSecondary,
-  },
-  downloadButton: {
-    width: '100%',
-    borderRadius: 100,
-    overflow: 'hidden',
-  },
-  downloadButtonInner: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 12,
-    gap: 8,
-    borderRadius: 100,
-  },
-  downloadButtonText: {
-    fontSize: 16,
-    fontFamily: Fonts.medium,
-    color: Colors.white,
-  },
-  downloadSuccessText: {
+  generatingSubtitleText: {
     fontSize: 14,
     fontFamily: Fonts.regular,
-    color: Colors.ink,
+    color: 'rgba(255,255,255,0.7)',
     textAlign: 'center',
-    opacity: 0.8,
+    paddingHorizontal: 40,
+  },
+  toast: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    zIndex: 20,
+  },
+  toastText: {
+    fontSize: 15,
+    fontFamily: Fonts.medium,
+    color: Colors.white,
+    textAlign: 'center',
   },
   errorContainer: {
     flex: 1,
@@ -699,7 +784,8 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 16,
-    color: Colors.textSecondary,
+    fontFamily: Fonts.regular,
+    color: Colors.white,
   },
   errorButton: {
     backgroundColor: Colors.ember,
@@ -713,4 +799,3 @@ const styles = StyleSheet.create({
     color: Colors.white,
   },
 });
-
