@@ -19,6 +19,7 @@ import {
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Colors from '@/constants/colors';
@@ -184,18 +185,30 @@ function VideoThumbnail({
               style={styles.thumbnail}
               resizeMode="cover"
             />
-            <View style={styles.draftOverlay}>
-              <FileText size={28} color={Colors.white} strokeWidth={2} />
-              <Text style={styles.draftText}>Draft</Text>
-            </View>
+            <LinearGradient
+              colors={['#FFEEE8', Colors.creamLight]}
+              locations={[0, 1]}
+              start={{ x: 0, y: 0.5 }}
+              end={{ x: 1, y: 0.5 }}
+              style={styles.draftOverlay}
+            >
+              <FileText size={28} color={Colors.ink} strokeWidth={2} />
+              <Text style={styles.draftTextPlaceholder}>Draft</Text>
+            </LinearGradient>
           </>
         );
       }
       return (
-        <View style={styles.draftThumbnail}>
+        <LinearGradient
+          colors={['#FFEEE8', Colors.creamLight]}
+          locations={[0, 1]}
+          start={{ x: 0, y: 0.5 }}
+          end={{ x: 1, y: 0.5 }}
+          style={styles.draftThumbnail}
+        >
           <FileText size={28} color={Colors.ink} strokeWidth={2} />
           <Text style={styles.draftTextPlaceholder}>Draft</Text>
-        </View>
+        </LinearGradient>
       );
     }
 
@@ -989,7 +1002,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 12,
-    fontFamily: Fonts.regular,
+    fontFamily: Fonts.medium,
     color: Colors.ember,
     marginTop: 8,
     textAlign: 'center',
@@ -1021,7 +1034,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.creamMedium,
     gap: 12,
   },
   draftOverlay: {
@@ -1030,19 +1042,18 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
     gap: 12,
   },
   draftText: {
     fontSize: 13,
-    fontFamily: Fonts.regular,
+    fontFamily: Fonts.medium,
     color: Colors.white,
   },
   draftTextPlaceholder: {
     fontSize: 13,
-    fontFamily: Fonts.regular,
+    fontFamily: Fonts.medium,
     color: Colors.ink,
   },
   errorOverlay: {
