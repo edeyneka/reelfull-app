@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { ArrowRight } from 'lucide-react-native';
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -12,11 +12,9 @@ import {
   View,
   ActivityIndicator,
   ScrollView,
-  Animated,
-  Image,
   Linking,
+  Image,
 } from 'react-native';
-import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -230,7 +228,7 @@ export default function AuthScreen() {
           // Test mode: always go to onboarding for testing
           router.replace('/onboarding');
         } else if (result.onboardingCompleted) {
-          router.replace('/feed');
+          router.replace('/(tabs)');
         } else {
           router.replace('/onboarding');
         }
@@ -289,7 +287,7 @@ export default function AuthScreen() {
         if (ENABLE_TEST_RUN_MODE) {
           router.replace('/onboarding');
         } else if (result.onboardingCompleted) {
-          router.replace('/feed');
+          router.replace('/(tabs)');
         } else {
           router.replace('/onboarding');
         }
@@ -333,7 +331,7 @@ export default function AuthScreen() {
           // Test mode: always go to onboarding for testing
           router.replace('/onboarding');
         } else if (result.onboardingCompleted) {
-          router.replace('/feed');
+          router.replace('/(tabs)');
         } else {
           router.replace('/onboarding');
         }
@@ -380,99 +378,9 @@ export default function AuthScreen() {
     }
   }, [code]);
   
-  const videoSource = require('../assets/third_intro_ultra.mp4');
   
-  // Crossfade video loop logic
-  const video1Ref = useRef<Video>(null);
-  const video2Ref = useRef<Video>(null);
-  const video1Opacity = useRef(new Animated.Value(1)).current;
-  const video2Opacity = useRef(new Animated.Value(0)).current;
-  const activeVideo = useRef<1 | 2>(1);
-  const isTransitioning = useRef(false);
-  
-  const FADE_DURATION = 800;
-  const TRIGGER_BEFORE_END = 1000;
-  
-  const handleVideo1Status = useCallback((status: AVPlaybackStatus) => {
-    if (!status.isLoaded) return;
-    
-    const duration = status.durationMillis || 0;
-    const position = status.positionMillis || 0;
-    const timeLeft = duration - position;
-    
-    if (activeVideo.current === 1 && timeLeft < TRIGGER_BEFORE_END && timeLeft > 0 && !isTransitioning.current) {
-      isTransitioning.current = true;
-      
-      video2Ref.current?.setPositionAsync(0);
-      video2Ref.current?.playAsync();
-      
-      Animated.parallel([
-        Animated.timing(video1Opacity, { toValue: 0, duration: FADE_DURATION, useNativeDriver: true }),
-        Animated.timing(video2Opacity, { toValue: 1, duration: FADE_DURATION, useNativeDriver: true }),
-      ]).start(() => {
-        activeVideo.current = 2;
-        isTransitioning.current = false;
-        video1Ref.current?.pauseAsync();
-      });
-    }
-  }, [video1Opacity, video2Opacity]);
-  
-  const handleVideo2Status = useCallback((status: AVPlaybackStatus) => {
-    if (!status.isLoaded) return;
-    
-    const duration = status.durationMillis || 0;
-    const position = status.positionMillis || 0;
-    const timeLeft = duration - position;
-    
-    if (activeVideo.current === 2 && timeLeft < TRIGGER_BEFORE_END && timeLeft > 0 && !isTransitioning.current) {
-      isTransitioning.current = true;
-      
-      video1Ref.current?.setPositionAsync(0);
-      video1Ref.current?.playAsync();
-      
-      Animated.parallel([
-        Animated.timing(video2Opacity, { toValue: 0, duration: FADE_DURATION, useNativeDriver: true }),
-        Animated.timing(video1Opacity, { toValue: 1, duration: FADE_DURATION, useNativeDriver: true }),
-      ]).start(() => {
-        activeVideo.current = 1;
-        isTransitioning.current = false;
-        video2Ref.current?.pauseAsync();
-      });
-    }
-  }, [video1Opacity, video2Opacity]);
-
   return (
     <View style={styles.container}>
-      {/* Video Background with Crossfade */}
-      <Animated.View style={[styles.videoContainer, { opacity: video1Opacity }]}>
-        <Video
-          ref={video1Ref}
-          source={videoSource}
-          style={styles.videoBackground}
-          resizeMode={ResizeMode.COVER}
-          shouldPlay
-          isMuted
-          onPlaybackStatusUpdate={handleVideo1Status}
-          progressUpdateIntervalMillis={100}
-        />
-      </Animated.View>
-      <Animated.View style={[styles.videoContainer, { opacity: video2Opacity }]}>
-        <Video
-          ref={video2Ref}
-          source={videoSource}
-          style={styles.videoBackground}
-          resizeMode={ResizeMode.COVER}
-          isMuted
-          onPlaybackStatusUpdate={handleVideo2Status}
-          progressUpdateIntervalMillis={100}
-        />
-      </Animated.View>
-      
-      {/* Semi-transparent overlay */}
-      <View style={styles.overlay} />
-      
-      {/* Content */}
-      <View style={styles.contentContainer}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.keyboardView}
@@ -487,9 +395,9 @@ export default function AuthScreen() {
           >
             <View style={styles.header}>
               <View style={styles.iconContainer}>
-                <Image 
-                  source={require('../assets/images/icon-no-bg.png')} 
-                  style={styles.logoImage}
+                <Image
+                  source={require('../assets/images/reel-icon.png')}
+                  style={styles.iconImage}
                   resizeMode="contain"
                 />
               </View>
@@ -522,7 +430,7 @@ export default function AuthScreen() {
                         placeholder={selectedCountry.code === 'US' || selectedCountry.code === 'CA' 
                           ? '(555) 123-4567' 
                           : 'Phone number'}
-                        placeholderTextColor={Colors.grayLight}
+                        placeholderTextColor={Colors.gray400}
                         value={phoneNumber}
                         onChangeText={(text) => setPhoneNumber(formatPhoneNumber(text, selectedCountry))}
                         keyboardType="phone-pad"
@@ -535,7 +443,7 @@ export default function AuthScreen() {
                     testID="continueButton"
                     style={[
                       styles.button,
-                      { backgroundColor: isPhoneValid() && !isLoading ? Colors.orange : Colors.gray },
+                      { backgroundColor: isPhoneValid() && !isLoading ? Colors.ember : Colors.creamDark },
                       !isPhoneValid() && styles.buttonDisabled,
                     ]}
                     onPress={handleSendCode}
@@ -546,27 +454,10 @@ export default function AuthScreen() {
                       {isLoading ? (
                         <ActivityIndicator color={Colors.white} />
                       ) : (
-                        <Text style={styles.buttonText}>Continue</Text>
+                        <Text style={[styles.buttonText, !isPhoneValid() && styles.buttonTextDisabled]}>Continue</Text>
                       )}
                     </View>
                   </TouchableOpacity>
-
-                  <Text style={styles.termsText}>
-                    By continuing, you agree to our{' '}
-                    <Text
-                      style={styles.termsLink}
-                      onPress={() => Linking.openURL('https://www.reelful.app/terms.html')}
-                    >
-                      Terms of Service
-                    </Text>
-                    {' '}and{' '}
-                    <Text
-                      style={styles.termsLink}
-                      onPress={() => Linking.openURL('https://www.reelful.app/privacy.html')}
-                    >
-                      Privacy Policy
-                    </Text>
-                  </Text>
 
                   {/* Test Account Button - Commented out for production */}
                   {/* <TouchableOpacity
@@ -586,7 +477,7 @@ export default function AuthScreen() {
                       testID="passwordInput"
                       style={styles.codeInput}
                       placeholder="Enter password"
-                      placeholderTextColor={Colors.grayLight}
+                      placeholderTextColor={Colors.gray400}
                       value={password}
                       onChangeText={setPassword}
                       secureTextEntry
@@ -599,7 +490,7 @@ export default function AuthScreen() {
                     testID="loginButton"
                     style={[
                       styles.button,
-                      { backgroundColor: isPasswordValid && !isLoading ? Colors.orange : Colors.gray },
+                      { backgroundColor: isPasswordValid && !isLoading ? Colors.ember : Colors.creamDark },
                       !isPasswordValid && styles.buttonDisabled,
                     ]}
                     onPress={handleVerifyPassword}
@@ -610,7 +501,7 @@ export default function AuthScreen() {
                       {isLoading ? (
                         <ActivityIndicator color={Colors.white} />
                       ) : (
-                        <Text style={styles.buttonText}>Login</Text>
+                        <Text style={[styles.buttonText, !isPasswordValid && styles.buttonTextDisabled]}>Login</Text>
                       )}
                     </View>
                   </TouchableOpacity>
@@ -630,7 +521,7 @@ export default function AuthScreen() {
                     <TextInput
                       style={styles.codeInput}
                       placeholder="000000"
-                      placeholderTextColor={Colors.grayLight}
+                      placeholderTextColor={Colors.gray400}
                       value={code}
                       onChangeText={setCode}
                       keyboardType="number-pad"
@@ -641,7 +532,7 @@ export default function AuthScreen() {
                   <TouchableOpacity
                     style={[
                       styles.button,
-                      { backgroundColor: isCodeValid && !isLoading ? Colors.orange : Colors.gray },
+                      { backgroundColor: isCodeValid && !isLoading ? Colors.ember : Colors.creamDark },
                       !isCodeValid && styles.buttonDisabled,
                     ]}
                     onPress={handleVerifyCode}
@@ -652,7 +543,7 @@ export default function AuthScreen() {
                       {isLoading ? (
                         <ActivityIndicator color={Colors.white} />
                       ) : (
-                        <Text style={styles.buttonText}>Verify</Text>
+                        <Text style={[styles.buttonText, !isCodeValid && styles.buttonTextDisabled]}>Verify</Text>
                       )}
                     </View>
                   </TouchableOpacity>
@@ -678,7 +569,6 @@ export default function AuthScreen() {
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
-      </View>
     </View>
   );
 }
@@ -686,29 +576,7 @@ export default function AuthScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.black,
-  },
-  videoContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  videoBackground: {
-    width: '100%',
-    height: '100%',
-  },
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-  },
-  contentContainer: {
-    flex: 1,
+    backgroundColor: Colors.cream,
   },
   keyboardView: {
     flex: 1,
@@ -724,21 +592,21 @@ const styles = StyleSheet.create({
   iconContainer: {
     marginBottom: 20,
   },
-  logoImage: {
-    width: 56,
-    height: 56,
+  iconImage: {
+    width: 88,
+    height: 88,
   },
   title: {
     fontSize: 24,
-    fontFamily: Fonts.regular,
-    color: Colors.white,
+    fontFamily: Fonts.medium,
+    color: Colors.ink,
     marginBottom: 8,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
     fontFamily: Fonts.regular,
-    color: Colors.grayLight,
+    color: Colors.textSecondary,
     textAlign: 'center',
   },
   form: {
@@ -750,61 +618,65 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 18,
     fontFamily: Fonts.regular,
-    color: Colors.white,
+    color: Colors.ink,
     marginBottom: 12,
   },
   phoneInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(50, 50, 50, 0.8)',
+    backgroundColor: Colors.white,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: Colors.creamDark,
   },
   divider: {
     width: 1,
     height: 24,
-    backgroundColor: Colors.grayLight,
-    opacity: 0.3,
+    backgroundColor: Colors.creamDarker,
   },
   phoneInput: {
     flex: 1,
     padding: 16,
     fontSize: 18,
-    color: Colors.white,
+    fontFamily: Fonts.regular,
+    color: Colors.ink,
     letterSpacing: 0,
   },
   codeInput: {
-    backgroundColor: 'rgba(50, 50, 50, 0.8)',
+    backgroundColor: Colors.white,
     borderRadius: 12,
     padding: 16,
     fontSize: 18,
-    fontFamily: Fonts.title,
-    color: Colors.white,
+    fontFamily: Fonts.medium,
+    color: Colors.ink,
     textAlign: 'center',
     letterSpacing: 12,
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: Colors.creamDark,
   },
   button: {
     marginTop: 8,
-    borderRadius: 12,
+    borderRadius: 100,
     overflow: 'hidden',
+    height: 64,
   },
   buttonDisabled: {
-    opacity: 0.5,
+    opacity: 0.7,
   },
   buttonInner: {
     flexDirection: 'row',
-    padding: 18,
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
   },
   buttonText: {
     fontSize: 18,
-    fontFamily: Fonts.title,
+    fontFamily: Fonts.medium,
     color: Colors.white,
+  },
+  buttonTextDisabled: {
+    color: Colors.inkMuted,
   },
   changePhoneButton: {
     marginTop: 12,
@@ -814,7 +686,7 @@ const styles = StyleSheet.create({
   changePhoneText: {
     fontSize: 16,
     fontFamily: Fonts.regular,
-    color: Colors.orange,
+    color: Colors.ember,
   },
   resendButton: {
     marginTop: 0,
@@ -824,7 +696,7 @@ const styles = StyleSheet.create({
   resendText: {
     fontSize: 16,
     fontFamily: Fonts.regular,
-    color: Colors.grayLight,
+    color: Colors.textSecondary,
     textDecorationLine: 'underline',
   },
   testAccountButton: {
@@ -832,26 +704,25 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: Colors.grayLight,
+    borderColor: Colors.creamDarker,
     borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: Colors.creamMedium,
   },
   testAccountText: {
     fontSize: 14,
     fontFamily: Fonts.regular,
-    color: Colors.grayLight,
+    color: Colors.textSecondary,
   },
   termsText: {
     fontSize: 13,
     fontFamily: Fonts.regular,
-    color: Colors.grayLight,
+    color: Colors.textSecondary,
     textAlign: 'center',
     marginTop: 16,
     lineHeight: 20,
   },
   termsLink: {
-    color: Colors.orange,
+    color: Colors.ember,
     textDecorationLine: 'underline',
   },
 });
-

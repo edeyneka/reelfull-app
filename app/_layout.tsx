@@ -6,11 +6,12 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ConvexProvider, ConvexReactClient } from "convex/react";
 import { AppProvider, useApp } from "@/contexts/AppContext";
 import { PaywallProvider } from "@/contexts/PaywallContext";
-import { useFonts, Inter_400Regular, Inter_700Bold } from '@expo-google-fonts/inter';
+import * as Font from 'expo-font';
 import { registerForPushNotificationsAsync } from "@/lib/videoPollingService";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Constants from 'expo-constants';
+import Colors from "@/constants/colors";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -61,15 +62,16 @@ function AppContent() {
   }, [userId]);
 
   return (
-    <Stack screenOptions={{ 
+    <Stack screenOptions={{
       headerShown: false,
-      contentStyle: { backgroundColor: '#000000' },
+      contentStyle: { backgroundColor: Colors.dark },
     }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="auth" />
       <Stack.Screen name="onboarding" />
-      <Stack.Screen name="feed" options={{ animation: 'fade' }} />
+      <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
       <Stack.Screen name="composer" options={{ gestureEnabled: false }} />
+      <Stack.Screen name="chat-composer" options={{ gestureEnabled: false }} />
       <Stack.Screen name="script-review" options={{ gestureEnabled: false }} />
       <Stack.Screen name="video-preview" options={{ gestureEnabled: false }} />
       <Stack.Screen name="loader" options={{ gestureEnabled: false }} />
@@ -90,15 +92,37 @@ function AppContent() {
           contentStyle: { backgroundColor: 'transparent' },
         }} 
       />
+      <Stack.Screen 
+        name="profile" 
+        options={{ 
+          presentation: "modal",
+          animation: 'slide_from_bottom',
+        }} 
+      />
     </Stack>
   );
 }
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({
-    Inter_400Regular,
-    Inter_700Bold,
-  });
+  const [fontsLoaded, setFontsLoaded] = React.useState(false);
+
+  useEffect(() => {
+    async function loadFonts() {
+      try {
+        await Font.loadAsync({
+          'PPNeueMontreal-Book': require('../assets/fonts/PPNeueMontreal-Book.otf'),
+          'PPNeueMontreal-Medium': require('../assets/fonts/PPNeueMontreal-Medium.otf'),
+          'PPNeueMontreal-Bold': require('../assets/fonts/PPNeueMontreal-Bold.otf'),
+          'PPNeueMontreal-Italic': require('../assets/fonts/PPNeueMontreal-Italic.otf'),
+        });
+        setFontsLoaded(true);
+      } catch (error) {
+        console.error('[App] Error loading fonts:', error);
+        setFontsLoaded(true); // Continue even if fonts fail
+      }
+    }
+    loadFonts();
+  }, []);
 
   useEffect(() => {
     if (fontsLoaded) {
@@ -115,12 +139,12 @@ export default function RootLayout() {
   return (
     <ConvexProvider client={convex}>
       <QueryClientProvider client={queryClient}>
-        <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#000000' }}>
+        <GestureHandlerRootView style={{ flex: 1, backgroundColor: Colors.dark }}>
           <AppProvider>
-              <PaywallProvider>
-                <AppContent />
-              </PaywallProvider>
-            </AppProvider>
+            <PaywallProvider>
+              <AppContent />
+            </PaywallProvider>
+          </AppProvider>
         </GestureHandlerRootView>
       </QueryClientProvider>
     </ConvexProvider>

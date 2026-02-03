@@ -14,7 +14,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { LinearGradient } from 'expo-linear-gradient';
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
 import { Asset } from 'expo-asset';
@@ -248,7 +247,7 @@ export default function ScriptReviewScreen() {
           style: 'default',
           onPress: () => {
             // Navigate to feed immediately
-            router.replace('/feed');
+            router.replace('/(tabs)');
           }
         }]
       );
@@ -367,7 +366,7 @@ export default function ScriptReviewScreen() {
             onPress={() => router.back()}
             activeOpacity={0.7}
           >
-            <ArrowLeft size={24} color={Colors.white} strokeWidth={2} />
+            <ArrowLeft size={24} color={Colors.ink} strokeWidth={2} />
           </TouchableOpacity>
           {/* <Text style={styles.headerTitle}>Script Review</Text> */}
           {/* <View style={styles.placeholder} /> */}
@@ -388,13 +387,13 @@ export default function ScriptReviewScreen() {
             onPress={() => router.back()}
             activeOpacity={0.7}
           >
-            <ArrowLeft size={24} color={Colors.white} strokeWidth={2} />
+            <ArrowLeft size={24} color={Colors.ink} strokeWidth={2} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Script Review</Text>
           <View style={styles.placeholder} />
         </View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.orange} />
+          <ActivityIndicator size="large" color={Colors.ember} />
         </View>
       </View>
     );
@@ -413,7 +412,7 @@ export default function ScriptReviewScreen() {
           onPress={handleBackToComposer}
           activeOpacity={0.7}
         >
-          <ArrowLeft size={24} color={Colors.white} strokeWidth={2} />
+          <ArrowLeft size={24} color={Colors.ink} strokeWidth={2} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Review Script</Text>
         <View style={styles.placeholder} />
@@ -421,7 +420,7 @@ export default function ScriptReviewScreen() {
 
       {ENABLE_TEST_RUN_MODE && isTestRun && (
         <View style={styles.testModeBadge}>
-          <TestTube size={14} color={Colors.orange} />
+          <TestTube size={14} color={Colors.ember} />
           <Text style={styles.testModeText}>Test Run Mode</Text>
         </View>
       )}
@@ -432,7 +431,7 @@ export default function ScriptReviewScreen() {
       >
         {isLoadingScript ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={Colors.orange} />
+            <ActivityIndicator size="large" color={Colors.ember} />
             <Text style={styles.loadingText}>Generating script...</Text>
           </View>
         ) : hasScript ? (
@@ -447,7 +446,7 @@ export default function ScriptReviewScreen() {
                       onPress={() => setIsEditing(true)}
                       activeOpacity={0.7}
                     >
-                      <Edit2 size={18} color={Colors.orange} strokeWidth={2} />
+                      <Edit2 size={18} color={Colors.ember} strokeWidth={2} />
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.iconButton}
@@ -456,9 +455,9 @@ export default function ScriptReviewScreen() {
                       disabled={isRegenerating}
                     >
                       {isRegenerating ? (
-                        <ActivityIndicator size="small" color={Colors.orange} />
+                        <ActivityIndicator size="small" color={Colors.ember} />
                       ) : (
-                        <RotateCcw size={18} color={Colors.orange} strokeWidth={2} />
+                        <RotateCcw size={18} color={Colors.ember} strokeWidth={2} />
                       )}
                     </TouchableOpacity>
                   </View>
@@ -474,7 +473,7 @@ export default function ScriptReviewScreen() {
                     multiline
                     textAlignVertical="top"
                     placeholder="Enter script..."
-                    placeholderTextColor={Colors.grayLight}
+                    placeholderTextColor={Colors.gray400}
                     autoFocus
                   />
                   <View style={styles.editActions}>
@@ -483,7 +482,7 @@ export default function ScriptReviewScreen() {
                       onPress={handleSaveEdit}
                       activeOpacity={0.7}
                     >
-                      <Check size={18} color={Colors.white} strokeWidth={2} />
+                      <Check size={18} color={Colors.cream} strokeWidth={2} />
                       <Text style={styles.editButtonText}>Save</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -491,7 +490,7 @@ export default function ScriptReviewScreen() {
                       onPress={handleCancelEdit}
                       activeOpacity={0.7}
                     >
-                      <X size={18} color={Colors.grayLight} strokeWidth={2} />
+                      <X size={18} color={Colors.textSecondary} strokeWidth={2} />
                       <Text style={styles.cancelButtonText}>Cancel</Text>
                     </TouchableOpacity>
                   </View>
@@ -542,7 +541,7 @@ export default function ScriptReviewScreen() {
                 activeOpacity={0.7}
               >
                 <View style={[styles.checkbox, includeMusic && styles.checkboxChecked]}>
-                  {includeMusic && <Check size={14} color={Colors.white} strokeWidth={3} />}
+                  {includeMusic && <Check size={14} color={Colors.cream} strokeWidth={3} />}
                 </View>
                 <Text style={styles.checkboxLabel}>Add Music</Text>
               </TouchableOpacity>
@@ -553,7 +552,7 @@ export default function ScriptReviewScreen() {
                 activeOpacity={0.7}
               >
                 <View style={[styles.checkbox, includeCaptions && styles.checkboxChecked]}>
-                  {includeCaptions && <Check size={14} color={Colors.white} strokeWidth={3} />}
+                  {includeCaptions && <Check size={14} color={Colors.cream} strokeWidth={3} />}
                 </View>
                 <Text style={styles.checkboxLabel}>Add Captions</Text>
               </TouchableOpacity>
@@ -567,7 +566,7 @@ export default function ScriptReviewScreen() {
                 activeOpacity={0.7}
               >
                 <View style={[styles.checkbox, keepOrder && styles.checkboxChecked]}>
-                  {keepOrder && <Check size={14} color={Colors.white} strokeWidth={3} />}
+                  {keepOrder && <Check size={14} color={Colors.cream} strokeWidth={3} />}
                 </View>
                 <Text style={styles.checkboxLabel}>Keep Order</Text>
               </TouchableOpacity>
@@ -619,15 +618,11 @@ export default function ScriptReviewScreen() {
               disabled={isSubmitting}
               activeOpacity={0.8}
             >
-              <LinearGradient
-                colors={
-                  isSubmitting
-                    ? [Colors.gray, Colors.grayLight]
-                    : [Colors.orange, Colors.orangeLight]
-                }
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.approveButtonGradient}
+              <View
+                style={[
+                  styles.approveButtonInner,
+                  { backgroundColor: isSubmitting ? Colors.creamDark : Colors.ember }
+                ]}
               >
                 {isSubmitting ? (
                   <>
@@ -640,7 +635,7 @@ export default function ScriptReviewScreen() {
                     <Text style={styles.approveButtonText}>Approve & Generate Reel</Text>
                   </>
                 )}
-              </LinearGradient>
+              </View>
             </TouchableOpacity>
           </>
         ) : (
@@ -663,7 +658,7 @@ export default function ScriptReviewScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.black,
+    backgroundColor: Colors.cream,
   },
   header: {
     flexDirection: 'row',
@@ -671,20 +666,20 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 24,
     paddingBottom: 16,
-    backgroundColor: Colors.black,
+    backgroundColor: Colors.cream,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: Colors.gray,
+    backgroundColor: Colors.creamDark,
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
     fontSize: 20,
-    fontFamily: Fonts.title,
-    color: Colors.white,
+    fontFamily: Fonts.medium,
+    color: Colors.ink,
   },
   placeholder: {
     width: 40,
@@ -699,7 +694,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   loadingText: {
-    color: Colors.grayLight,
+    color: Colors.textSecondary,
     fontSize: 16,
   },
   section: {
@@ -713,8 +708,8 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontFamily: Fonts.title,
-    color: Colors.white,
+    fontFamily: Fonts.medium,
+    color: Colors.ink,
   },
   actions: {
     flexDirection: 'row',
@@ -724,33 +719,33 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: Colors.gray,
+    backgroundColor: Colors.creamDark,
     justifyContent: 'center',
     alignItems: 'center',
   },
   scriptContainer: {
-    backgroundColor: Colors.grayDark,
-    borderRadius: 12,
+    backgroundColor: Colors.white,
+    borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: Colors.gray,
+    borderColor: Colors.creamDark,
   },
   scriptText: {
     fontSize: 16,
     lineHeight: 24,
-    color: Colors.white,
+    color: Colors.ink,
   },
   editingContainer: {
     gap: 12,
   },
   scriptInput: {
-    backgroundColor: Colors.grayDark,
-    borderRadius: 12,
+    backgroundColor: Colors.white,
+    borderRadius: 16,
     padding: 16,
     fontSize: 16,
-    color: Colors.white,
+    color: Colors.ink,
     borderWidth: 2,
-    borderColor: Colors.orange,
+    borderColor: Colors.ember,
     minHeight: 200,
     textAlignVertical: 'top',
   },
@@ -764,13 +759,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: Colors.orange,
-    borderRadius: 12,
+    backgroundColor: Colors.ember,
+    borderRadius: 100,
     padding: 16,
   },
   editButtonText: {
     fontSize: 16,
-    fontFamily: Fonts.title,
+    fontFamily: Fonts.medium,
     color: Colors.white,
   },
   cancelButton: {
@@ -779,14 +774,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: Colors.gray,
-    borderRadius: 12,
+    backgroundColor: Colors.creamDark,
+    borderRadius: 100,
     padding: 16,
   },
   cancelButtonText: {
     fontSize: 16,
-    fontFamily: Fonts.title,
-    color: Colors.grayLight,
+    fontFamily: Fonts.medium,
+    color: Colors.textSecondary,
   },
   voiceSpeedContainer: {
     marginTop: 2,
@@ -795,7 +790,7 @@ const styles = StyleSheet.create({
   voiceSpeedLabel: {
     fontSize: 14,
     fontFamily: Fonts.regular,
-    color: Colors.grayLight,
+    color: Colors.textSecondary,
     marginBottom: 4,
   },
   voiceSpeedToggle: {
@@ -804,27 +799,27 @@ const styles = StyleSheet.create({
   },
   voiceSpeedOption: {
     flex: 1,
-    backgroundColor: Colors.grayDark,
-    borderRadius: 10,
+    backgroundColor: Colors.white,
+    borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 8,
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: Colors.creamDark,
     alignItems: 'center',
     justifyContent: 'center',
   },
   voiceSpeedOptionActive: {
-    borderColor: Colors.orange,
-    backgroundColor: 'rgba(255, 107, 53, 0.1)',
+    borderColor: Colors.ember,
+    backgroundColor: 'rgba(243, 106, 63, 0.08)',
   },
   voiceSpeedText: {
     fontSize: 13,
     fontFamily: Fonts.regular,
-    color: Colors.white,
+    color: Colors.ink,
     textAlign: 'center',
   },
   voiceSpeedTextActive: {
-    color: Colors.orange,
+    color: Colors.ember,
     fontWeight: '600',
   },
   audioOptionsContainer: {
@@ -845,19 +840,19 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: Colors.grayLight,
-    backgroundColor: Colors.grayDark,
+    borderColor: Colors.creamDarker,
+    backgroundColor: Colors.white,
     justifyContent: 'center',
     alignItems: 'center',
   },
   checkboxChecked: {
-    backgroundColor: Colors.orange,
-    borderColor: Colors.orange,
+    backgroundColor: Colors.ember,
+    borderColor: Colors.ember,
   },
   checkboxLabel: {
     fontSize: 15,
     fontFamily: Fonts.regular,
-    color: Colors.white,
+    color: Colors.ink,
   },
   renderModeContainer: {
     marginTop: 24,
@@ -866,7 +861,7 @@ const styles = StyleSheet.create({
   renderModeLabel: {
     fontSize: 14,
     fontFamily: Fonts.regular,
-    color: Colors.grayLight,
+    color: Colors.textSecondary,
     marginBottom: 4,
   },
   renderModeToggle: {
@@ -875,50 +870,51 @@ const styles = StyleSheet.create({
   },
   renderModeOption: {
     flex: 1,
-    backgroundColor: Colors.grayDark,
+    backgroundColor: Colors.white,
     borderRadius: 12,
     padding: 16,
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: Colors.creamDark,
     alignItems: 'center',
   },
   renderModeOptionActive: {
-    borderColor: Colors.orange,
-    backgroundColor: 'rgba(255, 107, 53, 0.1)',
+    borderColor: Colors.ember,
+    backgroundColor: 'rgba(243, 106, 63, 0.08)',
   },
   renderModeText: {
     fontSize: 16,
     fontFamily: Fonts.regular,
-    color: Colors.white,
+    color: Colors.ink,
     fontWeight: '600',
     marginBottom: 4,
   },
   renderModeTextActive: {
-    color: Colors.orange,
+    color: Colors.ember,
   },
   renderModeDesc: {
     fontSize: 12,
     fontFamily: Fonts.regular,
-    color: Colors.grayLight,
+    color: Colors.textSecondary,
   },
   approveButton: {
-    borderRadius: 12,
+    borderRadius: 100,
     overflow: 'hidden',
     marginTop: 24,
   },
   approveButtonDisabled: {
     opacity: 0.5,
   },
-  approveButtonGradient: {
+  approveButtonInner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
     padding: 18,
+    borderRadius: 100,
   },
   approveButtonText: {
     fontSize: 18,
-    fontFamily: Fonts.title,
+    fontFamily: Fonts.medium,
     color: Colors.white,
   },
   errorContainer: {
@@ -928,17 +924,17 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 16,
-    color: Colors.grayLight,
+    color: Colors.textSecondary,
   },
   retryButton: {
-    backgroundColor: Colors.orange,
-    borderRadius: 12,
+    backgroundColor: Colors.ember,
+    borderRadius: 100,
     paddingHorizontal: 24,
-    paddingVertical: 12,
+    paddingVertical: 14,
   },
   retryButtonText: {
     fontSize: 16,
-    fontFamily: Fonts.title,
+    fontFamily: Fonts.medium,
     color: Colors.white,
   },
   testModeBadge: {
@@ -946,19 +942,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: 'rgba(255, 107, 53, 0.15)',
+    backgroundColor: 'rgba(243, 106, 63, 0.1)',
     paddingVertical: 8,
     paddingHorizontal: 16,
     marginHorizontal: 24,
     marginTop: 8,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255, 107, 53, 0.3)',
+    borderColor: 'rgba(243, 106, 63, 0.2)',
   },
   testModeText: {
     fontSize: 13,
     fontFamily: Fonts.regular,
-    color: Colors.orange,
+    color: Colors.ember,
   },
 });
 

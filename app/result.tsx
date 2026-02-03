@@ -188,7 +188,7 @@ export default function ResultScreen() {
         });
 
         // Navigate to feed to see the new generating video
-        router.replace('/feed');
+        router.replace('/(tabs)');
       } else {
         throw new Error('Failed to create regenerated project');
       }
@@ -210,18 +210,18 @@ export default function ResultScreen() {
   };
 
   const handleGoHome = () => {
-    router.replace('/feed');
+    router.replace('/(tabs)');
   };
 
   if (!projectId) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={{ color: Colors.white, fontSize: 18 }}>Error: No project ID</Text>
+        <Text style={{ color: Colors.cream, fontSize: 18 }}>Error: No project ID</Text>
         <TouchableOpacity
-          style={{ marginTop: 20, padding: 16, backgroundColor: Colors.orange, borderRadius: 12 }}
-          onPress={() => router.replace('/feed')}
+          style={{ marginTop: 20, padding: 16, backgroundColor: Colors.ember, borderRadius: 100 }}
+          onPress={() => router.replace('/(tabs)')}
         >
-          <Text style={{ color: Colors.white, fontFamily: Fonts.title }}>Go to Feed</Text>
+          <Text style={{ color: Colors.cream, fontFamily: Fonts.medium }}>Go to Feed</Text>
         </TouchableOpacity>
       </View>
     );
@@ -230,8 +230,8 @@ export default function ResultScreen() {
   if (!project) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={Colors.orange} />
-        <Text style={{ color: Colors.white, fontSize: 18, marginTop: 16 }}>Loading...</Text>
+        <ActivityIndicator size="large" color={Colors.ember} />
+        <Text style={{ color: Colors.cream, fontSize: 18, marginTop: 16 }}>Loading...</Text>
       </View>
     );
   }
@@ -239,12 +239,12 @@ export default function ResultScreen() {
   if (!videoUrl) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={{ color: Colors.white, fontSize: 18 }}>Video not ready yet</Text>
+        <Text style={{ color: Colors.cream, fontSize: 18 }}>Video not ready yet</Text>
         <TouchableOpacity
-          style={{ marginTop: 20, padding: 16, backgroundColor: Colors.orange, borderRadius: 12 }}
-          onPress={() => router.replace('/feed')}
+          style={{ marginTop: 20, padding: 16, backgroundColor: Colors.ember, borderRadius: 100 }}
+          onPress={() => router.replace('/(tabs)')}
         >
-          <Text style={{ color: Colors.white, fontFamily: Fonts.title }}>Go to Feed</Text>
+          <Text style={{ color: Colors.cream, fontFamily: Fonts.medium }}>Go to Feed</Text>
         </TouchableOpacity>
       </View>
     );
@@ -261,12 +261,12 @@ export default function ResultScreen() {
         />
 
         <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.8)', Colors.black]}
+          colors={['transparent', 'rgba(0,0,0,0.8)', Colors.dark]}
           style={[styles.overlay, { paddingBottom: insets.bottom + 20 }]}
         >
           <View style={styles.content}>
             <View style={styles.header}>
-              <Check size={32} color={Colors.orange} strokeWidth={3} />
+              <Check size={32} color={Colors.ember} strokeWidth={3} />
               <Text style={styles.title}>Your reel is ready!</Text>
             </View>
 
@@ -278,13 +278,13 @@ export default function ResultScreen() {
                 activeOpacity={0.8}
               >
                 {isCopied ? (
-                  <Check size={24} color={Colors.orange} strokeWidth={2} />
+                  <Check size={24} color={Colors.ember} strokeWidth={2} />
                 ) : (
-                  <Copy size={24} color={Colors.white} strokeWidth={2} />
+                  <Copy size={24} color={Colors.cream} strokeWidth={2} />
                 )}
                 <Text style={[
                   styles.secondaryButtonText,
-                  isCopied && { color: Colors.orange }
+                  isCopied && { color: Colors.ember }
                 ]}>
                   {isCopied ? 'Copied!' : 'Copy Script'}
                 </Text>
@@ -296,7 +296,7 @@ export default function ResultScreen() {
                 disabled={isDownloading}
                 activeOpacity={0.8}
               >
-                <Download size={24} color={Colors.white} strokeWidth={2} />
+                <Download size={24} color={Colors.cream} strokeWidth={2} />
                 <Text style={styles.secondaryButtonText}>
                   {isDownloading ? 'Downloading...' : 'Download'}
                 </Text>
@@ -309,9 +309,9 @@ export default function ResultScreen() {
                 activeOpacity={0.8}
               >
                 {isRegenerating ? (
-                  <ActivityIndicator size="small" color={Colors.orange} />
+                  <ActivityIndicator size="small" color={Colors.ember} />
                 ) : (
-                  <RefreshCw size={24} color={Colors.orange} strokeWidth={2} />
+                  <RefreshCw size={24} color={Colors.ember} strokeWidth={2} />
                 )}
                 <Text style={styles.regenerateButtonText}>
                   {isRegenerating ? 'Regenerating...' : 'Regenerate'}
@@ -321,7 +321,7 @@ export default function ResultScreen() {
 
             {isSaved && (
               <View style={styles.savedBadge}>
-                <Check size={16} color={Colors.orange} strokeWidth={3} />
+                <Check size={16} color={Colors.ember} strokeWidth={3} />
                 <Text style={styles.savedText}>Saved to feed</Text>
               </View>
             )}
@@ -335,7 +335,7 @@ export default function ResultScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.black,
+    backgroundColor: Colors.dark,
   },
   video: {
     width: '100%',
@@ -357,8 +357,8 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontFamily: Fonts.regular,
-    color: Colors.white,
+    fontFamily: Fonts.medium,
+    color: Colors.cream,
     marginTop: 16,
     marginBottom: 4,
     textAlign: 'center',
@@ -371,32 +371,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
-    backgroundColor: Colors.gray,
-    borderRadius: 12,
+    backgroundColor: Colors.darkElevated,
+    borderRadius: 100,
     padding: 18,
     borderWidth: 2,
-    borderColor: Colors.grayLight,
+    borderColor: Colors.darkSurface,
   },
   secondaryButtonText: {
     fontSize: 18,
     fontFamily: Fonts.regular,
-    color: Colors.white,
+    color: Colors.cream,
   },
   regenerateButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
-    backgroundColor: 'rgba(255, 107, 53, 0.15)',
-    borderRadius: 12,
+    backgroundColor: 'rgba(243, 106, 63, 0.15)',
+    borderRadius: 100,
     padding: 18,
     borderWidth: 2,
-    borderColor: Colors.orange,
+    borderColor: Colors.ember,
   },
   regenerateButtonText: {
     fontSize: 18,
     fontFamily: Fonts.regular,
-    color: Colors.orange,
+    color: Colors.ember,
   },
   savedBadge: {
     flexDirection: 'row',
@@ -405,14 +405,14 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 16,
     padding: 12,
-    backgroundColor: 'rgba(255, 107, 53, 0.1)',
-    borderRadius: 8,
+    backgroundColor: 'rgba(243, 106, 63, 0.1)',
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 107, 53, 0.3)',
+    borderColor: 'rgba(243, 106, 63, 0.3)',
   },
   savedText: {
     fontSize: 14,
     fontFamily: Fonts.regular,
-    color: Colors.orange,
+    color: Colors.ember,
   },
 });

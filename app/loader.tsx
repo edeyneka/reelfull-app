@@ -140,7 +140,7 @@ export default function LoaderScreen() {
         [
           {
             text: 'Go to Feed',
-            onPress: () => router.replace('/feed'),
+            onPress: () => router.replace('/(tabs)'),
             style: 'default',
           },
         ],
@@ -187,7 +187,7 @@ export default function LoaderScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={[Colors.black, Colors.grayDark, Colors.black]}
+        colors={[Colors.cream, Colors.creamMedium, Colors.cream]}
         style={styles.gradient}
       >
         <Animated.View
@@ -198,7 +198,7 @@ export default function LoaderScreen() {
             },
           ]}
         >
-          <Sparkles size={60} color={Colors.orange} strokeWidth={2} />
+          <Sparkles size={60} color={Colors.ember} strokeWidth={2} />
         </Animated.View>
 
         <Text style={styles.title}>Creating your reel</Text>
@@ -236,7 +236,7 @@ export default function LoaderScreen() {
             </Text>
             <TouchableOpacity
               style={styles.retryButton}
-              onPress={() => router.replace('/feed')}
+              onPress={() => router.replace('/(tabs)')}
               activeOpacity={0.7}
             >
               <Text style={styles.retryButtonText}>Go to Feed</Text>
@@ -251,7 +251,7 @@ export default function LoaderScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.black,
+    backgroundColor: Colors.cream,
   },
   gradient: {
     flex: 1,
@@ -263,18 +263,19 @@ const styles = StyleSheet.create({
     marginBottom: 32,
     padding: 24,
     borderRadius: 100,
-    backgroundColor: 'rgba(255, 107, 53, 0.1)',
+    backgroundColor: 'rgba(243, 106, 63, 0.1)',
   },
   title: {
     fontSize: 24,
-    fontFamily: Fonts.regular,
-    color: Colors.white,
+    fontFamily: Fonts.medium,
+    color: Colors.ink,
     marginBottom: 8,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
-    color: Colors.grayLight,
+    fontFamily: Fonts.regular,
+    color: Colors.textSecondary,
     marginBottom: 48,
     textAlign: 'center',
   },
@@ -285,24 +286,24 @@ const styles = StyleSheet.create({
   },
   timerLabel: {
     fontSize: 14,
-    color: Colors.grayLight,
+    color: Colors.textSecondary,
     marginBottom: 8,
   },
   timerText: {
     fontSize: 48,
-    fontFamily: Fonts.title,
-    color: Colors.orange,
+    fontFamily: Fonts.medium,
+    color: Colors.ember,
     fontVariant: ['tabular-nums'],
   },
   progressText: {
     fontSize: 14,
-    color: Colors.grayLight,
+    color: Colors.textSecondary,
     marginTop: 16,
     textAlign: 'center',
   },
   errorText: {
     fontSize: 16,
-    color: Colors.white,
+    color: Colors.ink,
   },
   errorContainer: {
     marginTop: 32,
@@ -316,25 +317,25 @@ const styles = StyleSheet.create({
   },
   errorTitle: {
     fontSize: 18,
-    fontFamily: Fonts.title,
-    color: '#EF4444',
+    fontFamily: Fonts.medium,
+    color: Colors.error,
     marginBottom: 8,
   },
   errorMessage: {
     fontSize: 14,
-    color: Colors.grayLight,
+    color: Colors.textSecondary,
     textAlign: 'center',
     marginBottom: 16,
   },
   retryButton: {
-    backgroundColor: Colors.orange,
-    borderRadius: 12,
+    backgroundColor: Colors.ember,
+    borderRadius: 100,
     paddingHorizontal: 24,
-    paddingVertical: 12,
+    paddingVertical: 14,
   },
   retryButtonText: {
     fontSize: 16,
-    fontFamily: Fonts.title,
+    fontFamily: Fonts.medium,
     color: Colors.white,
   },
 });
