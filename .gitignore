@@ -42,3 +42,8 @@ yarn-error.*
 constants/testData.ts
 assets/test-video.mp4
 redesign-instruction.md
+ios/
+android/
+.rork
+rork-eslint.config.js
+core
