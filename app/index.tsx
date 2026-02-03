@@ -18,7 +18,7 @@ import { Fonts } from '@/constants/typography';
 import { ENABLE_TEST_RUN_MODE } from '@/constants/config';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const REEL_SIZE = SCREEN_WIDTH * 1.8;
+const REEL_SIZE = SCREEN_WIDTH * 2;
 
 export default function IntroScreen() {
   const router = useRouter();
@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   title: {
-    fontSize: 50,
+    fontSize: 70,
     fontFamily: Fonts.medium,
     color: Colors.ink,
     letterSpacing: -1,
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
   reelContainer: {
     position: 'absolute',
     right: -REEL_SIZE * 0.52,
-    top: '50%',
+    top: '48%',
     marginTop: -REEL_SIZE * 0.5,
     width: REEL_SIZE,
     height: REEL_SIZE,
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
   },
   bottomSection: {
     position: 'absolute',
-    bottom: 0,
+    bottom: -5,
     left: 24,
     right: 24,
     alignItems: 'center',
@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
     borderRadius: 100,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.ember,
+    backgroundColor: Colors.ink,
   },
   buttonText: {
     fontSize: 18,
