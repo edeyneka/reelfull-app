@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { ArrowRight, ChevronLeft } from 'lucide-react-native';
+import { ChevronLeft } from 'lucide-react-native';
 import { useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -14,12 +14,11 @@ import {
   Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAction, useMutation } from "convex/react";
+import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
 import { StylePreference } from '@/types';
-import VoiceRecorder from '@/components/VoiceRecorder';
 import { Fonts } from '@/constants/typography';
 import { ENABLE_STYLE_PREFERENCE, DEFAULT_STYLE } from '@/constants/config';
 
@@ -32,41 +31,10 @@ export default function OnboardingScreen() {
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');
   const [selectedStyle, setSelectedStyle] = useState<StylePreference | null>(null);
-  const [voiceRecordingUri, setVoiceRecordingUri] = useState<string | undefined>();
   const [isSaving, setIsSaving] = useState(false);
   
   // Convex hooks
-  const generateUploadUrl = useMutation(api.users.generateUploadUrl);
   const completeOnboardingAction = useAction(api.users.completeOnboarding);
-
-  const handleNext = () => {
-    if (step === 1 && name.trim()) {
-      if (ENABLE_STYLE_PREFERENCE) {
-        setStep(2);
-      } else {
-        // Skip style selection, go directly to voice recording
-        setSelectedStyle(DEFAULT_STYLE as StylePreference);
-        setStep(2); // This is now the voice step when style is disabled
-      }
-    } else if (ENABLE_STYLE_PREFERENCE && step === 2 && selectedStyle) {
-      setStep(3);
-    }
-  };
-
-  const handleBack = () => {
-    if (ENABLE_STYLE_PREFERENCE) {
-      if (step === 3) {
-        setStep(2);
-      } else if (step === 2) {
-        setStep(1);
-      }
-    } else {
-      // When style is disabled, step 2 is voice recording
-      if (step === 2) {
-        setStep(1);
-      }
-    }
-  };
 
   // Helper function to map local style to backend style
   const mapStyleToBackend = (style: StylePreference): 'playful' | 'professional' | 'travel' => {
@@ -76,107 +44,60 @@ export default function OnboardingScreen() {
     return 'playful'; // default
   };
 
-  // Helper function to upload voice recording to Convex storage
-  const uploadVoiceRecording = async (uri: string): Promise<string | null> => {
+  const handleCompleteOnboarding = async (style: StylePreference) => {
+    if (!userId) return;
+    
+    setIsSaving(true);
     try {
-      console.log('[onboarding] Uploading voice recording...');
+      console.log('[onboarding] Completing onboarding...');
       
-      // Get upload URL
-      const uploadUrl = await generateUploadUrl();
-      
-      // Read the file
-      const response = await fetch(uri);
-      const blob = await response.blob();
-      
-      // Upload to Convex storage
-      const uploadResponse = await fetch(uploadUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': blob.type },
-        body: blob,
+      // Save to backend (voice recording will be prompted later in the composer)
+      await completeOnboardingAction({
+        userId,
+        name: name.trim(),
+        preferredStyle: mapStyleToBackend(style),
       });
       
-      if (!uploadResponse.ok) {
-        throw new Error('Failed to upload voice recording');
+      // Also save locally (will be synced from backend on next load)
+      await saveUser({ name: name.trim(), style: style });
+      
+      console.log('[onboarding] Onboarding complete!');
+      router.replace('/(tabs)');
+    } catch (error) {
+      console.error('[onboarding] Error completing onboarding:', error);
+      Alert.alert('Error', 'Failed to save your profile. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleNext = async () => {
+    if (step === 1 && name.trim()) {
+      if (ENABLE_STYLE_PREFERENCE) {
+        setStep(2);
+      } else {
+        // Skip style selection, complete onboarding with default style
+        const style = DEFAULT_STYLE as StylePreference;
+        setSelectedStyle(style);
+        await handleCompleteOnboarding(style);
       }
-      
-      const { storageId } = await uploadResponse.json();
-      console.log('[onboarding] Voice recording uploaded:', storageId);
-      return storageId;
-    } catch (error) {
-      console.error('[onboarding] Error uploading voice recording:', error);
-      return null;
     }
   };
 
-  const handleVoiceRecordingComplete = async (uri: string) => {
-    if (!userId || !selectedStyle) return;
-    
-    setIsSaving(true);
-    try {
-      console.log('[onboarding] Completing onboarding with voice...');
-      
-      // Upload voice recording to Convex
-      const voiceStorageId = await uploadVoiceRecording(uri);
-      
-      // Save to backend
-      await completeOnboardingAction({
-        userId,
-        name: name.trim(),
-        preferredStyle: mapStyleToBackend(selectedStyle),
-        voiceRecordingStorageId: voiceStorageId || undefined,
-      });
-      
-      // Also save locally (will be synced from backend on next load)
-      await saveUser({ 
-        name: name.trim(), 
-        style: selectedStyle, 
-        voiceRecordingUri: uri 
-      });
-      
-      console.log('[onboarding] Onboarding complete!');
-      router.replace('/(tabs)');
-    } catch (error) {
-      console.error('[onboarding] Error completing onboarding:', error);
-      Alert.alert('Error', 'Failed to save your profile. Please try again.');
-    } finally {
-      setIsSaving(false);
+  const handleStyleContinue = async () => {
+    if (selectedStyle) {
+      await handleCompleteOnboarding(selectedStyle);
     }
   };
 
-  const handleSkipVoice = async () => {
-    if (!userId || !selectedStyle) return;
-    
-    setIsSaving(true);
-    try {
-      console.log('[onboarding] Completing onboarding without voice...');
-      
-      // Save to backend
-      await completeOnboardingAction({
-        userId,
-        name: name.trim(),
-        preferredStyle: mapStyleToBackend(selectedStyle),
-      });
-      
-      // Also save locally (will be synced from backend on next load)
-      await saveUser({ name: name.trim(), style: selectedStyle });
-      
-      console.log('[onboarding] Onboarding complete!');
-      router.replace('/(tabs)');
-    } catch (error) {
-      console.error('[onboarding] Error completing onboarding:', error);
-      Alert.alert('Error', 'Failed to save your profile. Please try again.');
-    } finally {
-      setIsSaving(false);
+  const handleBack = () => {
+    if (step === 2) {
+      setStep(1);
     }
   };
 
   const isStep1Valid = name.trim().length > 0;
   const isStep2Valid = selectedStyle !== null;
-  
-  // Determine if current step is the voice recording step
-  const isVoiceStep = ENABLE_STYLE_PREFERENCE ? step === 3 : step === 2;
-  // Determine if current step is the style selection step (only when enabled)
-  const isStyleStep = ENABLE_STYLE_PREFERENCE && step === 2;
 
   return (
     <View style={styles.container}>
@@ -210,14 +131,12 @@ export default function OnboardingScreen() {
               />
             </View>
             <Text style={styles.title}>
-              {step === 1 ? 'Welcome to Reelful' : isStyleStep ? 'Your Style' : 'Record Your Voice'}
+              {step === 1 ? 'Welcome to Reelful' : 'Your Style'}
             </Text>
             <Text style={styles.subtitle}>
               {step === 1
                 ? "Let's personalize your experience"
-                : isStyleStep
-                ? 'Choose the style that best fits you'
-                : 'This helps us create more personalized content'}
+                : 'Choose the style that best fits you'}
             </Text>
           </View>
 
@@ -255,7 +174,7 @@ export default function OnboardingScreen() {
                   </View>
                 </TouchableOpacity>
               </>
-            ) : isStyleStep ? (
+            ) : (
               <>
                 <View style={styles.inputGroup}>
                   <Text style={styles.label}>Choose your style</Text>
@@ -284,45 +203,21 @@ export default function OnboardingScreen() {
                 </View>
 
                 <TouchableOpacity
-                  style={[styles.button, !isStep2Valid && styles.buttonDisabled]}
-                  onPress={handleNext}
-                  disabled={!isStep2Valid}
+                  style={[styles.button, (!isStep2Valid || isSaving) && styles.buttonDisabled]}
+                  onPress={handleStyleContinue}
+                  disabled={!isStep2Valid || isSaving}
                   activeOpacity={0.8}
                 >
                   <View
                     style={[
                       styles.buttonInner,
-                      { backgroundColor: isStep2Valid ? Colors.ember : Colors.creamDark }
+                      { backgroundColor: isStep2Valid && !isSaving ? Colors.ember : Colors.creamDark }
                     ]}
                   >
-                    <Text style={[styles.buttonText, !isStep2Valid && styles.buttonTextDisabled]}>Continue</Text>
+                    <Text style={[styles.buttonText, (!isStep2Valid || isSaving) && styles.buttonTextDisabled]}>
+                      {isSaving ? 'Saving...' : 'Continue'}
+                    </Text>
                   </View>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <>
-                <VoiceRecorder
-                  onRecordingComplete={handleVoiceRecordingComplete}
-                  showScript={true}
-                  disabled={isSaving}
-                />
-                
-                <View style={styles.voiceNoteContainer}>
-                  <Text style={styles.voiceNoteText}>
-                    Don&apos;t want to record? No worries! You&apos;ll be able to choose from our default AI voices in the settings.
-                  </Text>
-                </View>
-                
-                <TouchableOpacity
-                  testID="skipVoiceButton"
-                  style={styles.skipButton}
-                  onPress={handleSkipVoice}
-                  activeOpacity={0.7}
-                  disabled={isSaving}
-                >
-                  <Text style={[styles.skipButtonText, isSaving && { opacity: 0.5 }]}>
-                    {isSaving ? 'Saving...' : 'Skip for now'}
-                  </Text>
                 </TouchableOpacity>
               </>
             )}
@@ -445,31 +340,5 @@ const styles = StyleSheet.create({
   },
   buttonTextDisabled: {
     color: Colors.inkMuted,
-  },
-  voiceNoteContainer: {
-    backgroundColor: Colors.creamMedium,
-    borderRadius: 12,
-    padding: 14,
-    marginTop: 16,
-    borderWidth: 1,
-    borderColor: Colors.creamDark,
-  },
-  voiceNoteText: {
-    fontSize: 13,
-    lineHeight: 19,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    fontFamily: Fonts.regular,
-  },
-  skipButton: {
-    marginTop: 20,
-    padding: 16,
-    alignItems: 'center',
-  },
-  skipButtonText: {
-    fontSize: 16,
-    fontFamily: Fonts.regular,
-    color: Colors.textSecondary,
-    textDecorationLine: 'underline',
   },
 });

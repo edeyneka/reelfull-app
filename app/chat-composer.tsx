@@ -32,6 +32,8 @@ import { useApp } from '@/contexts/AppContext';
 import { uploadMediaFiles } from '@/lib/api-helpers';
 import { Fonts } from '@/constants/typography';
 import { LocalChatMessage } from '@/types';
+import { ENABLE_TEST_RUN_MODE } from '@/constants/config';
+import VoiceConfigModal from '@/components/VoiceConfigModal';
 
 const MAX_USER_MESSAGES = 10;
 
@@ -77,7 +79,7 @@ function TypingIndicator() {
   useEffect(() => {
     const interval = setInterval(() => {
       setDotCount(prev => prev >= 3 ? 1 : prev + 1);
-    }, 500);
+    }, 300);
     
     return () => clearInterval(interval);
   }, []);
@@ -292,6 +294,12 @@ export default function ChatComposerScreen() {
   const insets = useSafeAreaInsets();
   const { user, userId, addVideo } = useApp();
   
+  // Fetch backend user for voice configuration check
+  const backendUser = useQuery(
+    api.users.getCurrentUser,
+    userId ? { userId } : "skip"
+  );
+  
   // State
   const [messages, setMessages] = useState<LocalChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
@@ -324,6 +332,16 @@ export default function ChatComposerScreen() {
   // Project settings state
   const [voiceSpeed, setVoiceSpeed] = useState<number>(1.08); // Default: Normal
   const [keepOrder, setKeepOrder] = useState<boolean>(false);
+  
+  // Voice configuration modal state (progressive disclosure)
+  const [showVoiceConfigModal, setShowVoiceConfigModal] = useState(false);
+  const [pendingVoiceAction, setPendingVoiceAction] = useState<{
+    type: 'play' | 'submit';
+    messageId?: string;
+    content?: string;
+  } | null>(null);
+  const hasShownVoicePromptRef = useRef(false);
+  const skipVoiceCheckRef = useRef(false); // Temporary flag to skip voice check after config
   
   const hasAutoOpenedPicker = useRef(false);
   const scrollViewRef = useRef<ScrollView>(null);
@@ -1026,8 +1044,25 @@ export default function ChatComposerScreen() {
     }
   };
   
+  // Check if user needs voice configuration (progressive disclosure)
+  const needsVoiceConfig = !backendUser?.elevenlabsVoiceId;
+  
+  // Helper to check if voice prompt should be shown (computed at call time)
+  const shouldShowVoicePrompt = () => {
+    if (skipVoiceCheckRef.current) return false;
+    if (!needsVoiceConfig) return false;
+    return ENABLE_TEST_RUN_MODE || !hasShownVoicePromptRef.current;
+  };
+  
   // Voice preview handlers
   const handlePlayVoice = async (messageId: string, content: string) => {
+    // Check if voice configuration is needed before playing
+    if (shouldShowVoicePrompt()) {
+      setPendingVoiceAction({ type: 'play', messageId, content });
+      setShowVoiceConfigModal(true);
+      return;
+    }
+    
     // If already playing this message, stop it
     if (playingMessageId === messageId) {
       if (soundRef.current) {
@@ -1046,6 +1081,17 @@ export default function ChatComposerScreen() {
       soundRef.current = null;
     }
     setPlayingMessageId(null);
+    
+    // Set audio mode to play through speaker (important for iOS silent mode)
+    try {
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+      });
+    } catch (error) {
+      console.log('Failed to set audio mode:', error);
+    }
     
     // Check if we have cached audio for this message
     const cachedUrl = audioCache.current.get(messageId);
@@ -1243,6 +1289,13 @@ export default function ChatComposerScreen() {
   const handleApproveAndGenerate = async () => {
     if (isSubmitting) return;
     
+    // Check if voice configuration is needed before submitting
+    if (shouldShowVoicePrompt()) {
+      setPendingVoiceAction({ type: 'submit' });
+      setShowVoiceConfigModal(true);
+      return;
+    }
+    
     setIsSubmitting(true);
     
     try {
@@ -1310,6 +1363,63 @@ export default function ChatComposerScreen() {
       }
       setIsSubmitting(false);
     }
+  };
+  
+  // Voice config modal handlers (progressive disclosure)
+  const handleVoiceConfigComplete = () => {
+    setShowVoiceConfigModal(false);
+    hasShownVoicePromptRef.current = true;
+    
+    // Skip voice check for the next action (voice was just configured)
+    skipVoiceCheckRef.current = true;
+    
+    // Execute the pending action after voice is configured
+    const action = pendingVoiceAction;
+    setPendingVoiceAction(null);
+    
+    // Use setTimeout to ensure modal closes before re-triggering action
+    setTimeout(() => {
+      if (action?.type === 'play' && action.messageId && action.content) {
+        // Re-trigger play voice (now that voice is configured)
+        handlePlayVoice(action.messageId, action.content);
+      } else if (action?.type === 'submit') {
+        // Re-trigger approve and generate
+        handleApproveAndGenerate();
+      }
+      // Reset skip flag after action is triggered
+      skipVoiceCheckRef.current = false;
+    }, 200);
+  };
+  
+  const handleVoiceConfigSkip = () => {
+    setShowVoiceConfigModal(false);
+    hasShownVoicePromptRef.current = true;
+    
+    // Skip voice check for the next action (user chose to skip)
+    skipVoiceCheckRef.current = true;
+    
+    // Execute the pending action with default voice
+    const action = pendingVoiceAction;
+    setPendingVoiceAction(null);
+    
+    // Use setTimeout to ensure modal closes before re-triggering action
+    setTimeout(() => {
+      if (action?.type === 'play' && action.messageId && action.content) {
+        // Re-trigger play voice (will use default voice)
+        handlePlayVoice(action.messageId, action.content);
+      } else if (action?.type === 'submit') {
+        // Re-trigger approve and generate (will use default voice)
+        handleApproveAndGenerate();
+      }
+      // Reset skip flag after action is triggered
+      skipVoiceCheckRef.current = false;
+    }, 200);
+  };
+  
+  const handleVoiceConfigClose = () => {
+    setShowVoiceConfigModal(false);
+    setPendingVoiceAction(null);
+    // Don't mark as shown - user explicitly closed without deciding
   };
   
   const handleClose = async () => {
@@ -1587,6 +1697,14 @@ export default function ChatComposerScreen() {
           <Text style={styles.processingOverlayText}>Loading...</Text>
         </View>
       )}
+      
+      {/* Voice configuration modal (progressive disclosure) */}
+      <VoiceConfigModal
+        visible={showVoiceConfigModal}
+        onComplete={handleVoiceConfigComplete}
+        onSkip={handleVoiceConfigSkip}
+        onClose={handleVoiceConfigClose}
+      />
     </View>
   );
 }
