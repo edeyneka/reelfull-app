@@ -113,6 +113,7 @@ export default function RootLayout() {
           'PPNeueMontreal-Book': require('../assets/fonts/PPNeueMontreal-Book.otf'),
           'PPNeueMontreal-Medium': require('../assets/fonts/PPNeueMontreal-Medium.otf'),
           'PPNeueMontreal-Bold': require('../assets/fonts/PPNeueMontreal-Bold.otf'),
+          'PPNeueMontreal-Italic': require('../assets/fonts/PPNeueMontreal-Italic.otf'),
         });
         setFontsLoaded(true);
       } catch (error) {

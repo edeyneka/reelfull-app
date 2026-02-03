@@ -11,6 +11,9 @@ export const Fonts = {
   // For body text and regular content
   regular: 'PPNeueMontreal-Book',
 
+  // For italic/emphasized text
+  italic: 'PPNeueMontreal-Italic',
+
   // Legacy Inter fonts (for backwards compatibility)
   interBold: 'Inter_700Bold',
   interRegular: 'Inter_400Regular',

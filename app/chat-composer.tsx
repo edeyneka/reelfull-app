@@ -610,7 +610,17 @@ export default function ChatComposerScreen() {
     };
   }, []);
   
+  // Dismiss keyboard when loading overlay is shown
+  useEffect(() => {
+    if (isProcessingMedia) {
+      Keyboard.dismiss();
+    }
+  }, [isProcessingMedia]);
+  
   const pickMedia = async () => {
+    // Dismiss keyboard immediately when opening media picker
+    Keyboard.dismiss();
+    
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Permission Required', 'Please grant permission to access your photos.');
@@ -1444,6 +1454,7 @@ export default function ChatComposerScreen() {
                 horizontal 
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.composerMediaScroll}
+                keyboardShouldPersistTaps="handled"
               >
                 {mediaUris.map((item) => (
                   <View key={item.id} style={styles.composerMediaItem}>
@@ -1654,7 +1665,7 @@ const styles = StyleSheet.create({
   },
   messageText: {
     fontSize: 15,
-    fontFamily: Fonts.regular,
+    fontFamily: Fonts.medium,
     color: Colors.ink,
     lineHeight: 22,
   },
@@ -1668,7 +1679,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 14,
-    fontFamily: Fonts.regular,
+    fontFamily: Fonts.medium,
     color: Colors.textSecondary,
   },
   scriptLoadingContainer: {
@@ -1678,8 +1689,7 @@ const styles = StyleSheet.create({
   },
   scriptLoadingText: {
     fontSize: 14,
-    fontFamily: Fonts.regular,
-    fontStyle: 'italic',
+    fontFamily: Fonts.italic,
     color: Colors.ember,
   },
   editedLabel: {
@@ -1795,7 +1805,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 15,
-    fontFamily: Fonts.regular,
+    fontFamily: Fonts.medium,
     color: Colors.ink,
     maxHeight: 100,
   },
@@ -1822,7 +1832,7 @@ const styles = StyleSheet.create({
   },
   processingOverlayText: {
     fontSize: 16,
-    fontFamily: Fonts.regular,
+    fontFamily: Fonts.medium,
     color: Colors.white,
     marginTop: 12,
   },
