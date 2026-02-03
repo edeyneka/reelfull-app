@@ -1129,6 +1129,7 @@ export default function ChatComposerScreen() {
       const result = await generateScriptPreviewAudio({
         messageId: messageId, // Can be local ID or Convex ID
         script: content,
+        userId: userId || undefined, // Pass userId to use their selected voice
       });
       
       if (result.success && result.audioUrl) {
@@ -1369,6 +1370,9 @@ export default function ChatComposerScreen() {
   const handleVoiceConfigComplete = () => {
     setShowVoiceConfigModal(false);
     hasShownVoicePromptRef.current = true;
+    
+    // Clear audio cache so new audio is generated with the new voice
+    audioCache.current.clear();
     
     // Skip voice check for the next action (voice was just configured)
     skipVoiceCheckRef.current = true;
