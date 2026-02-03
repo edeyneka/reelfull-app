@@ -296,6 +296,7 @@ export default function ChatComposerScreen() {
   const [messages, setMessages] = useState<LocalChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [mediaUris, setMediaUris] = useState<PendingMedia[]>([]);
+  const [sentMediaIds, setSentMediaIds] = useState<Set<string>>(new Set()); // Track media already sent in messages
   const [isGenerating, setIsGenerating] = useState(false);
   const [hasScript, setHasScript] = useState(false);
   const [userMessageCount, setUserMessageCount] = useState(0);
@@ -689,6 +690,9 @@ export default function ChatComposerScreen() {
         : m
     ));
     
+    // Track successfully uploaded items with their storage IDs
+    const successfullyUploadedItems: PendingMedia[] = [];
+    
     for (const item of filesToUpload) {
       try {
         const uploadResult = await uploadMediaFiles(
@@ -696,12 +700,23 @@ export default function ChatComposerScreen() {
           [{ uri: item.uri, type: item.type, assetId: item.assetId }]
         );
         
-        // Update individual item status
+        const storageId = uploadResult[0]?.storageId;
+        
+        // Update individual item status in state
         setMediaUris(prev => prev.map(m => 
           m.id === item.id 
-            ? { ...m, uploadStatus: 'uploaded' as const, storageId: uploadResult[0]?.storageId }
+            ? { ...m, uploadStatus: 'uploaded' as const, storageId }
             : m
         ));
+        
+        // Track this item for later use (with storageId)
+        if (storageId) {
+          successfullyUploadedItems.push({
+            ...item,
+            uploadStatus: 'uploaded',
+            storageId,
+          });
+        }
       } catch (error) {
         console.error('Failed to upload file', item.id, error);
         // Mark as failed but don't block other uploads
@@ -713,26 +728,8 @@ export default function ChatComposerScreen() {
       }
     }
     
-    // Focus input after all uploads
+    // Focus input after all uploads - user can add a prompt and press Send
     setTimeout(() => inputRef.current?.focus(), 100);
-    
-    // If we already have messages and added new media, trigger script regeneration
-    if (messages.length > 0 && hasScript) {
-      await handleNewMediaAdded(newMediaOnly.length);
-    }
-  };
-  
-  const handleNewMediaAdded = async (newMediaCount: number) => {
-    // Add a system message about new media
-    const mediaMessage: LocalChatMessage = {
-      id: `media-${Date.now()}`,
-      role: 'user',
-      content: `Added ${newMediaCount} new photo${newMediaCount > 1 ? 's' : ''}`,
-      createdAt: Date.now(),
-    };
-    
-    setMessages(prev => [...prev, mediaMessage]);
-    await generateScript(`Added ${newMediaCount} new media`, true, newMediaCount);
   };
   
   const removeMedia = (id: string) => {
@@ -746,7 +743,9 @@ export default function ChatComposerScreen() {
   };
   
   const handleSend = async () => {
-    const uploadedMedia = mediaUris.filter(m => m.storageId);
+    // Get pending media (uploaded but not yet sent in a message)
+    const pendingMedia = mediaUris.filter(m => m.storageId && !sentMediaIds.has(m.id));
+    const hasPendingMedia = pendingMedia.length > 0;
     
     // Check message limit
     if (userMessageCount >= MAX_USER_MESSAGES) {
@@ -758,30 +757,54 @@ export default function ChatComposerScreen() {
     }
     
     // Need either media or text for first message
-    if (!hasScript && uploadedMedia.length === 0) {
+    if (!hasScript && pendingMedia.length === 0) {
       Alert.alert('No Media', 'Please add some photos or videos first.');
+      return;
+    }
+    
+    // For follow-up messages, need either text or new media
+    if (hasScript && !inputText.trim() && !hasPendingMedia) {
+      // Nothing to send - this shouldn't happen with proper UI state
       return;
     }
     
     Keyboard.dismiss();
     
-    // Create user message
+    // Create user message with any pending media
     const userMessage: LocalChatMessage = {
       id: `user-${Date.now()}`,
       role: 'user',
       content: inputText.trim(),
-      mediaUris: !hasScript && uploadedMedia.length > 0 ? uploadedMedia : undefined,
+      mediaUris: hasPendingMedia ? pendingMedia.map(m => ({
+        uri: m.uri,
+        type: m.type,
+        storageId: m.storageId,
+      })) : undefined,
       createdAt: Date.now(),
     };
+    
+    // Mark pending media as sent
+    if (hasPendingMedia) {
+      setSentMediaIds(prev => {
+        const newSet = new Set(prev);
+        pendingMedia.forEach(m => newSet.add(m.id));
+        return newSet;
+      });
+    }
     
     setMessages(prev => [...prev, userMessage]);
     setInputText('');
     setUserMessageCount(prev => prev + 1);
     
-    await generateScript(inputText.trim());
+    // Get new media IDs for generateScript
+    const newMediaIds = hasPendingMedia 
+      ? pendingMedia.map(m => m.storageId).filter((id): id is string => !!id)
+      : [];
+    
+    await generateScript(inputText.trim(), hasPendingMedia, pendingMedia.length, newMediaIds);
   };
   
-  const generateScript = async (userInput: string, isNewMedia = false, newMediaCount = 0) => {
+  const generateScript = async (userInput: string, isNewMedia = false, newMediaCount = 0, newMediaIds: string[] = []) => {
     setIsGenerating(true);
     
     // Add loading message
@@ -836,15 +859,25 @@ export default function ChatComposerScreen() {
       // Store user message in backend
       // Get uploaded media for attaching to the first user message
       const uploadedMediaForMessage = mediaUris.filter(m => m.storageId);
+      
+      // Determine which media IDs to attach:
+      // - For first message: all uploaded media
+      // - For follow-up messages with new media: the new media IDs passed in
+      let mediaIdsToAttach: string[] | undefined;
+      if (!hasScript && uploadedMediaForMessage.length > 0) {
+        // First message - attach all media
+        mediaIdsToAttach = uploadedMediaForMessage.map(m => m.storageId).filter(Boolean) as string[];
+      } else if (isNewMedia && newMediaIds.length > 0) {
+        // Follow-up message with new media - attach the new media IDs
+        mediaIdsToAttach = newMediaIds;
+      }
+      
       await addChatMessage({
         projectId: currentProjectId,
         role: 'user',
-        content: userInput || 'Generate a script based on my media',
+        content: userInput || (isNewMedia ? 'Added new media to the project' : 'Generate a script based on my media'),
         messageIndex: userMessageCount + 1,
-        // Attach media IDs to the first message only (when no script exists yet)
-        mediaIds: !hasScript && uploadedMediaForMessage.length > 0 
-          ? uploadedMediaForMessage.map(m => m.storageId).filter(Boolean) as any
-          : undefined,
+        mediaIds: mediaIdsToAttach as any,
       });
       
       // Build conversation history for AI
@@ -1333,21 +1366,23 @@ export default function ChatComposerScreen() {
   
   const isLimitReached = userMessageCount >= MAX_USER_MESSAGES;
   const uploadedMedia = mediaUris.filter(m => m.storageId);
+  const pendingMedia = mediaUris.filter(m => m.storageId && !sentMediaIds.has(m.id));
+  const hasPendingMedia = pendingMedia.length > 0;
   const hasNewInput = inputText.trim().length > 0;
   
   // Before first message: can send if we have media (even without text)
-  // After first message: can only send if we have new text input
+  // After first message: can send if we have new text input OR new pending media
   const canSend = messages.length === 0 
     ? (uploadedMedia.length > 0 && !isGenerating)  // First message: need media
-    : (hasNewInput && !isGenerating && !isLimitReached);  // Subsequent: need text
+    : ((hasNewInput || hasPendingMedia) && !isGenerating && !isLimitReached);  // Subsequent: need text or new media
   
   // Determine if send button should act as "Regenerate" 
   // This happens when coming from video without any modifications
-  const isRegenerateMode = fromVideo && !hasForkedFromVideo && hasScript && !hasNewInput && !isGenerating && !isRegenerating;
+  const isRegenerateMode = fromVideo && !hasForkedFromVideo && hasScript && !hasNewInput && !hasPendingMedia && !isGenerating && !isRegenerating;
   
   // Determine if send button should act as "Approve & Generate"
-  // This happens when we have a script, no new text input, and not generating/submitting (but not regenerate mode)
-  const isApproveMode = !isRegenerateMode && hasScript && !hasNewInput && !isGenerating && !isSubmitting;
+  // This happens when we have a script, no new text input, no pending media, and not generating/submitting (but not regenerate mode)
+  const isApproveMode = !isRegenerateMode && hasScript && !hasNewInput && !hasPendingMedia && !isGenerating && !isSubmitting;
   
   // Find latest assistant message for edit functionality
   const latestAssistantMessageId = messages
@@ -1448,56 +1483,59 @@ export default function ChatComposerScreen() {
           
           {/* Unified card containing media + input */}
           <View style={styles.composerCard}>
-            {/* Media thumbnails inside card - only before first message */}
-            {mediaUris.length > 0 && messages.length === 0 && (
-              <ScrollView 
-                horizontal 
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.composerMediaScroll}
-                keyboardShouldPersistTaps="handled"
-              >
-                {mediaUris.map((item) => (
-                  <View key={item.id} style={styles.composerMediaItem}>
-                    {/* Loading placeholder until thumbnail loads */}
-                    {!item.thumbnailLoaded && (
-                      <View style={styles.composerMediaPlaceholder}>
-                        <ActivityIndicator size="small" color={Colors.white} />
-                      </View>
-                    )}
-                    
-                    {/* Actual thumbnail - hidden until loaded */}
-                    {item.type === 'video' ? (
-                      <VideoThumbnail uri={item.uri} style={styles.composerMediaImage} />
-                    ) : (
-                      <Image 
-                        source={{ uri: item.uri }} 
-                        style={[
-                          styles.composerMediaImage,
-                          !item.thumbnailLoaded && styles.composerMediaImageHidden
-                        ]} 
-                        onLoad={() => markThumbnailLoaded(item.id)}
-                      />
-                    )}
-                    
-                    {/* Upload status overlay */}
-                    {item.uploadStatus === 'uploading' && (
-                      <View style={styles.composerMediaOverlay}>
-                        <ActivityIndicator size="small" color={Colors.white} />
-                      </View>
-                    )}
-                    
-                    {/* Remove button */}
-                    <TouchableOpacity
-                      style={styles.composerMediaRemove}
-                      onPress={() => removeMedia(item.id)}
-                      activeOpacity={0.7}
-                    >
-                      <X size={16} color={Colors.white} strokeWidth={2} />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </ScrollView>
-            )}
+            {/* Media thumbnails inside card - show pending media (not yet sent in a message) */}
+            {(() => {
+              const pendingMedia = mediaUris.filter(m => !sentMediaIds.has(m.id));
+              return pendingMedia.length > 0 && (
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.composerMediaScroll}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  {pendingMedia.map((item) => (
+                    <View key={item.id} style={styles.composerMediaItem}>
+                      {/* Loading placeholder until thumbnail loads */}
+                      {!item.thumbnailLoaded && (
+                        <View style={styles.composerMediaPlaceholder}>
+                          <ActivityIndicator size="small" color={Colors.white} />
+                        </View>
+                      )}
+                      
+                      {/* Actual thumbnail - hidden until loaded */}
+                      {item.type === 'video' ? (
+                        <VideoThumbnail uri={item.uri} style={styles.composerMediaImage} />
+                      ) : (
+                        <Image 
+                          source={{ uri: item.uri }} 
+                          style={[
+                            styles.composerMediaImage,
+                            !item.thumbnailLoaded && styles.composerMediaImageHidden
+                          ]} 
+                          onLoad={() => markThumbnailLoaded(item.id)}
+                        />
+                      )}
+                      
+                      {/* Upload status overlay */}
+                      {item.uploadStatus === 'uploading' && (
+                        <View style={styles.composerMediaOverlay}>
+                          <ActivityIndicator size="small" color={Colors.white} />
+                        </View>
+                      )}
+                      
+                      {/* Remove button */}
+                      <TouchableOpacity
+                        style={styles.composerMediaRemove}
+                        onPress={() => removeMedia(item.id)}
+                        activeOpacity={0.7}
+                      >
+                        <X size={16} color={Colors.white} strokeWidth={2} />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </ScrollView>
+              );
+            })()}
             
             {/* Text input inside card */}
             <TextInput
