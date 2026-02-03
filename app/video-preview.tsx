@@ -26,6 +26,7 @@ import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
 import { Fonts } from '@/constants/typography';
 import { GenerationPhase } from '@/types';
+import { getCachedVideoPath, preCacheVideo } from '@/lib/videoCache';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -180,6 +181,9 @@ export default function VideoPreviewScreen() {
   // Track current video URI (can be updated when generation completes)
   const [videoUri, setVideoUri] = useState(initialVideoUri);
   
+  // Track the resolved video URI (cached local path or remote URL)
+  const [resolvedVideoUri, setResolvedVideoUri] = useState<string | null>(null);
+  
   // Spinner animation
   const spinAnim = useRef(new Animated.Value(0)).current;
   
@@ -231,6 +235,45 @@ export default function VideoPreviewScreen() {
     outputRange: ['0deg', '360deg'],
   });
 
+  // Check for cached video and start pre-caching when video URI changes
+  useEffect(() => {
+    if (!videoUri || isGenerating) {
+      setResolvedVideoUri(null);
+      return;
+    }
+
+    // Skip if already a local file
+    if (videoUri.startsWith('file://')) {
+      setResolvedVideoUri(videoUri);
+      return;
+    }
+
+    let isMounted = true;
+
+    const resolveVideoUri = async () => {
+      // Check if we have a cached version
+      const cachedPath = await getCachedVideoPath(videoUri, projectId);
+      
+      if (!isMounted) return;
+
+      if (cachedPath) {
+        console.log('[video-preview] Using cached video:', cachedPath);
+        setResolvedVideoUri(cachedPath);
+      } else {
+        // Use remote URL and start caching in background
+        console.log('[video-preview] No cache, using remote URL and starting pre-cache');
+        setResolvedVideoUri(videoUri);
+        preCacheVideo(videoUri, projectId);
+      }
+    };
+
+    resolveVideoUri();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [videoUri, projectId, isGenerating]);
+
   // Local state
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
@@ -251,11 +294,11 @@ export default function VideoPreviewScreen() {
   const getFreshVideoUrl = useAction(api.tasks.getFreshProjectVideoUrl);
   const getVideoVariant = useAction(api.tasks.getVideoVariant);
 
-  // Video player
+  // Video player - uses resolved (cached) URI when available
   const videoPlayer = useVideoPlayer(
-    videoUri || null,
+    resolvedVideoUri || null,
     (player) => {
-      if (player && videoUri) {
+      if (player && resolvedVideoUri) {
         player.loop = true;
         player.muted = false;
         player.play();
@@ -362,6 +405,7 @@ export default function VideoPreviewScreen() {
       setDownloadSuccess(false);
       
       let downloadUrl = videoUri;
+      let isLocalFile = false;
       
       // Check if user has customized the video options (not all enabled)
       const isDefaultVariant = voiceoverEnabled && musicEnabled && captionsEnabled;
@@ -397,15 +441,22 @@ export default function VideoPreviewScreen() {
             }
           }
         } else {
-          // Default variant - just get fresh URL
-          try {
-            const freshUrl = await getFreshVideoUrl({ projectId });
-            if (freshUrl) {
-              downloadUrl = freshUrl;
-              console.log('[download] Using fresh URL for download');
+          // Default variant - check if we have a cached version first
+          if (resolvedVideoUri && resolvedVideoUri.startsWith('file://')) {
+            console.log('[download] Using cached local file for download');
+            downloadUrl = resolvedVideoUri;
+            isLocalFile = true;
+          } else {
+            // No cache - get fresh URL
+            try {
+              const freshUrl = await getFreshVideoUrl({ projectId });
+              if (freshUrl) {
+                downloadUrl = freshUrl;
+                console.log('[download] Using fresh URL for download');
+              }
+            } catch (error) {
+              console.error('[download] Failed to fetch fresh URL, using existing:', error);
             }
-          } catch (error) {
-            console.error('[download] Failed to fetch fresh URL, using existing:', error);
           }
         }
       }
@@ -428,31 +479,42 @@ export default function VideoPreviewScreen() {
         link.click();
         setDownloadSuccess(true);
       } else {
-        // Mobile: download to local file first, then save to media library
-        const fileUri = `${FileSystem.documentDirectory}reelfull_${Date.now()}.mp4`;
+        // Mobile: save to media library
+        let fileUriToSave: string;
         
-        console.log('[Download] Downloading video from:', downloadUrl);
-        console.log('[Download] To local path:', fileUri);
-        console.log('[Download] Access privileges:', accessPrivileges);
-        
-        const downloadResult = await FileSystem.downloadAsync(downloadUrl, fileUri);
-        
-        if (downloadResult.status === 200) {
-          console.log('[Download] Download complete, saving to media library...');
-          const asset = await MediaLibrary.createAssetAsync(downloadResult.uri);
+        if (isLocalFile && downloadUrl.startsWith('file://')) {
+          // Use cached file directly - no download needed!
+          console.log('[Download] Using cached file directly:', downloadUrl);
+          fileUriToSave = downloadUrl;
+        } else {
+          // Download to local file first
+          const fileUri = `${FileSystem.documentDirectory}reelfull_${Date.now()}.mp4`;
           
-          // Try to create album, but don't fail if it doesn't work (e.g., limited access)
-          try {
-            await MediaLibrary.createAlbumAsync('Reelful', asset, false);
-          } catch (albumError) {
-            // Album creation can fail with limited access, but the asset is still saved
-            console.log('[Download] Album creation skipped (limited access):', albumError);
+          console.log('[Download] Downloading video from:', downloadUrl);
+          console.log('[Download] To local path:', fileUri);
+          console.log('[Download] Access privileges:', accessPrivileges);
+          
+          const downloadResult = await FileSystem.downloadAsync(downloadUrl, fileUri);
+          
+          if (downloadResult.status !== 200) {
+            throw new Error(`Download failed with status: ${downloadResult.status}`);
           }
           
-          setDownloadSuccess(true);
-        } else {
-          throw new Error(`Download failed with status: ${downloadResult.status}`);
+          fileUriToSave = downloadResult.uri;
         }
+        
+        console.log('[Download] Saving to media library...');
+        const asset = await MediaLibrary.createAssetAsync(fileUriToSave);
+        
+        // Try to create album, but don't fail if it doesn't work (e.g., limited access)
+        try {
+          await MediaLibrary.createAlbumAsync('Reelful', asset, false);
+        } catch (albumError) {
+          // Album creation can fail with limited access, but the asset is still saved
+          console.log('[Download] Album creation skipped (limited access):', albumError);
+        }
+        
+        setDownloadSuccess(true);
       }
     } catch (error) {
       console.error('Error downloading video:', error);
