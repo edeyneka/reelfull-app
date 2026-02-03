@@ -393,12 +393,26 @@ export default function ProfileTab() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
+      {/* Close button */}
+      <TouchableOpacity
+        style={[styles.closeButton, { top: insets.top + 12 }]}
+        onPress={() => router.back()}
+        activeOpacity={0.7}
+      >
+        <X size={24} color={Colors.ink} strokeWidth={2} />
+      </TouchableOpacity>
+
       <ScrollView
         contentContainerStyle={[styles.content, { paddingBottom: TAB_BAR_HEIGHT }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Profile Section */}
         <View style={styles.profileSection}>
+          <View style={styles.profileAvatar}>
+            <Text style={styles.profileAvatarText}>
+              {(user.name || 'U').charAt(0).toUpperCase()}
+            </Text>
+          </View>
           <Text style={styles.profileName}>{user.name || 'User'}</Text>
         </View>
 
@@ -799,6 +813,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.cream,
   },
+  closeButton: {
+    position: 'absolute',
+    left: 16,
+    zIndex: 10,
+    padding: 8,
+  },
   content: {
     paddingTop: 24,
     paddingBottom: 40,
@@ -817,8 +837,22 @@ const styles = StyleSheet.create({
   profileSection: {
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: 16,
+    paddingTop: 48,
     paddingBottom: 24,
+  },
+  profileAvatar: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: Colors.ember,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  profileAvatarText: {
+    fontSize: 28,
+    fontFamily: Fonts.medium,
+    color: Colors.white,
   },
   profileName: {
     fontSize: 24,
@@ -878,7 +912,7 @@ const styles = StyleSheet.create({
   // Logout
   logoutButton: {
     marginHorizontal: 24,
-    paddingVertical: 16,
+    paddingVertical: 5,
     alignItems: 'center',
   },
   logoutText: {
@@ -891,6 +925,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: 32,
     paddingTop: 16,
+    marginTop: 115,
     borderTopWidth: 1,
     borderTopColor: Colors.creamDark,
   },

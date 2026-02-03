@@ -92,6 +92,13 @@ function AppContent() {
           contentStyle: { backgroundColor: 'transparent' },
         }} 
       />
+      <Stack.Screen 
+        name="profile" 
+        options={{ 
+          presentation: "modal",
+          animation: 'slide_from_bottom',
+        }} 
+      />
     </Stack>
   );
 }

@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Loader2, AlertCircle, FileText, Zap, Clock, Calendar } from 'lucide-react-native';
+import { Loader2, AlertCircle, FileText, Zap, Clock, Calendar, Plus } from 'lucide-react-native';
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
   Dimensions,
@@ -42,8 +42,8 @@ const THUMBNAIL_HEIGHT = ITEM_WIDTH * 1.2; // Thumbnail aspect ratio
 const CARD_HEIGHT = THUMBNAIL_HEIGHT + 47; // Extra space for metadata below
 const ACTION_SHEET_HEIGHT = 44; // Approximate height of the delete button
 
-// Bottom padding to account for the floating tab bar
-const TAB_BAR_HEIGHT = 100;
+// Bottom padding to account for the FAB
+const FAB_BOTTOM_PADDING = 100;
 
 // Height of the floating segmented tab control
 const SEGMENTED_TAB_HEIGHT = 60;
@@ -588,6 +588,30 @@ export default function FeedTab() {
 
   const creditsDisplay = getCreditsDisplay();
 
+  // Get user's first initial for avatar
+  const userInitial = backendUser?.name?.charAt(0)?.toUpperCase() || 'U';
+
+  // Handle FAB press - navigate to composer
+  const handleFabPress = useCallback(() => {
+    const generatedCount = videoGenerationStatus?.generatedCount ?? 0;
+    const limit = videoGenerationStatus?.limit ?? 3;
+    
+    const hasReachedLimit = ENABLE_TEST_RUN_MODE 
+      ? generatedCount >= limit 
+      : (videoGenerationStatus?.hasReachedLimit ?? false);
+    
+    const hasAccess = ENABLE_TEST_RUN_MODE 
+      ? hasCompletedPaywallThisSession 
+      : subscriptionState.isPro;
+    
+    if (hasReachedLimit && !hasAccess) {
+      router.push('/paywall');
+      return;
+    }
+    
+    router.push('/chat-composer');
+  }, [videoGenerationStatus, subscriptionState.isPro, hasCompletedPaywallThisSession, router]);
+
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
@@ -606,6 +630,14 @@ export default function FeedTab() {
                 </Text>
               </TouchableOpacity>
             )}
+            {/* Profile Avatar */}
+            <TouchableOpacity
+              style={styles.profileAvatar}
+              onPress={() => router.push('/profile')}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.profileAvatarText}>{userInitial}</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -661,7 +693,7 @@ export default function FeedTab() {
               numColumns={2}
               columnWrapperStyle={styles.row}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={[styles.grid, { paddingTop: SEGMENTED_TAB_HEIGHT + 8, paddingBottom: TAB_BAR_HEIGHT }]}
+              contentContainerStyle={[styles.grid, { paddingTop: SEGMENTED_TAB_HEIGHT + 8, paddingBottom: FAB_BOTTOM_PADDING }]}
               ListEmptyComponent={renderProjectsEmpty}
               refreshControl={
                 <RefreshControl
@@ -681,7 +713,7 @@ export default function FeedTab() {
               numColumns={2}
               columnWrapperStyle={styles.row}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={[styles.grid, { paddingTop: SEGMENTED_TAB_HEIGHT + 8, paddingBottom: TAB_BAR_HEIGHT }]}
+              contentContainerStyle={[styles.grid, { paddingTop: SEGMENTED_TAB_HEIGHT + 8, paddingBottom: FAB_BOTTOM_PADDING }]}
               ListEmptyComponent={renderDraftsEmpty}
               refreshControl={
                 <RefreshControl
@@ -721,7 +753,7 @@ export default function FeedTab() {
                   ? actionSheetPosition.pageX - 108
                   : actionSheetPosition.pageX + actionSheetPosition.width + 8,
                 // Position above the video if it's near the bottom of the screen
-                top: actionSheetPosition.pageY + actionSheetPosition.height + ACTION_SHEET_HEIGHT + TAB_BAR_HEIGHT > SCREEN_HEIGHT
+                top: actionSheetPosition.pageY + actionSheetPosition.height + ACTION_SHEET_HEIGHT + FAB_BOTTOM_PADDING > SCREEN_HEIGHT
                   ? actionSheetPosition.pageY - ACTION_SHEET_HEIGHT + 10 // Above the video
                   : actionSheetPosition.pageY + actionSheetPosition.height - 38, // Below the video (original)
               },
@@ -761,6 +793,15 @@ export default function FeedTab() {
           </View>
         </View>
       )}
+
+      {/* Floating Action Button (FAB) */}
+      <TouchableOpacity
+        style={[styles.fab, { bottom: insets.bottom + 24 }]}
+        onPress={handleFabPress}
+        activeOpacity={0.8}
+      >
+        <Plus size={28} color={Colors.white} strokeWidth={2.5} />
+      </TouchableOpacity>
     </View>
   );
 }
@@ -789,7 +830,7 @@ const styles = StyleSheet.create({
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
   },
   creditsCounter: {
     flexDirection: 'row',
@@ -1121,5 +1162,37 @@ const styles = StyleSheet.create({
     borderColor: Colors.ember,
     borderRadius: 14,
     pointerEvents: 'none',
+  },
+  // Profile Avatar in header
+  profileAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.ember,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  profileAvatarText: {
+    fontSize: 14,
+    fontFamily: Fonts.medium,
+    color: Colors.white,
+    fontWeight: '600',
+  },
+  // Floating Action Button (FAB) - Squircle
+  fab: {
+    position: 'absolute',
+    right: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 16, // Squircle shape
+    backgroundColor: Colors.ember,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: Colors.ember,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
+    zIndex: 100,
   },
 });
