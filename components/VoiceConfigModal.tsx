@@ -1,5 +1,5 @@
-import { X } from 'lucide-react-native';
-import { useState } from 'react';
+import { X, ChevronDown, ChevronUp, Volume2, Check, Play, Square } from 'lucide-react-native';
+import { useState, useEffect } from 'react';
 import {
   Modal,
   StyleSheet,
@@ -9,9 +9,11 @@ import {
   Alert,
   ScrollView,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAction, useMutation } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
+import { Audio } from 'expo-av';
 import { api } from "@/convex/_generated/api";
 import Colors from '@/constants/colors';
 import { Fonts } from '@/constants/typography';
@@ -34,10 +36,129 @@ export default function VoiceConfigModal({
   const insets = useSafeAreaInsets();
   const { userId } = useApp();
   const [isSaving, setIsSaving] = useState(false);
+  const [showVoiceList, setShowVoiceList] = useState(false);
+  const [selectedVoiceId, setSelectedVoiceId] = useState<string | null>(null);
+  const [playingPreviewId, setPlayingPreviewId] = useState<string | null>(null);
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const [cachedSounds, setCachedSounds] = useState<Record<string, Audio.Sound>>({});
+  const [isPreloading, setIsPreloading] = useState(false);
 
   // Convex hooks
   const generateUploadUrl = useMutation(api.users.generateUploadUrl);
   const updateProfile = useAction(api.users.updateProfile);
+  const updateSelectedVoice = useMutation(api.users.updateSelectedVoice);
+  
+  // Query default voices (now includes previewUrl)
+  const defaultVoices = useQuery(api.users.getDefaultVoices);
+
+  // Pre-cache audio when voice list is shown
+  useEffect(() => {
+    if (showVoiceList && defaultVoices && defaultVoices.length > 0 && !isPreloading) {
+      preloadAudioFiles();
+    }
+  }, [showVoiceList, defaultVoices]);
+
+  // Cleanup sounds on unmount
+  useEffect(() => {
+    return () => {
+      // Cleanup current sound
+      if (sound) {
+        sound.unloadAsync().catch(console.error);
+      }
+      // Cleanup cached sounds
+      Object.values(cachedSounds).forEach(s => {
+        s.unloadAsync().catch(console.error);
+      });
+    };
+  }, []);
+
+  const preloadAudioFiles = async () => {
+    if (!defaultVoices || isPreloading) return;
+    
+    setIsPreloading(true);
+    
+    // Preload audio for voices that have preview URLs
+    const loadPromises = defaultVoices
+      .filter((voice: any) => voice.previewUrl && !cachedSounds[voice.voiceId])
+      .map(async (voice: any) => {
+        try {
+          const { sound: preloadedSound } = await Audio.Sound.createAsync(
+            { uri: voice.previewUrl },
+            { shouldPlay: false }
+          );
+          return { voiceId: voice.voiceId, sound: preloadedSound };
+        } catch (error) {
+          console.error(`[VoiceConfigModal] Failed to preload audio for ${voice.name}:`, error);
+          return null;
+        }
+      });
+    
+    const results = await Promise.all(loadPromises);
+    const newCachedSounds: Record<string, Audio.Sound> = {};
+    
+    results.forEach((result: { voiceId: string; sound: Audio.Sound } | null) => {
+      if (result) {
+        newCachedSounds[result.voiceId] = result.sound;
+      }
+    });
+    
+    setCachedSounds(prev => ({ ...prev, ...newCachedSounds }));
+    setIsPreloading(false);
+  };
+
+  const playVoicePreview = async (voiceId: string, previewUrl: string) => {
+    // Stop current preview if playing
+    if (sound) {
+      await sound.stopAsync().catch(console.error);
+    }
+
+    if (playingPreviewId === voiceId) {
+      // Stop if already playing this one
+      setPlayingPreviewId(null);
+      return;
+    }
+
+    setPlayingPreviewId(voiceId);
+
+    try {
+      // Check if we have a cached sound
+      const cachedSound = cachedSounds[voiceId];
+      
+      if (cachedSound) {
+        // Use cached sound - seek to beginning and play
+        await cachedSound.setPositionAsync(0);
+        await cachedSound.playAsync();
+        setSound(cachedSound);
+        
+        // Set up playback status listener
+        cachedSound.setOnPlaybackStatusUpdate((status) => {
+          if (status.isLoaded && status.didJustFinish) {
+            setPlayingPreviewId(null);
+          }
+        });
+      } else {
+        // No cached sound, load and play
+        const { sound: newSound } = await Audio.Sound.createAsync(
+          { uri: previewUrl },
+          { shouldPlay: true }
+        );
+        
+        setSound(newSound);
+        
+        // Cache it for future use
+        setCachedSounds(prev => ({ ...prev, [voiceId]: newSound }));
+
+        newSound.setOnPlaybackStatusUpdate((status) => {
+          if (status.isLoaded && status.didJustFinish) {
+            setPlayingPreviewId(null);
+          }
+        });
+      }
+    } catch (error) {
+      console.error('[VoiceConfigModal] Error playing audio:', error);
+      setPlayingPreviewId(null);
+    }
+  };
 
   // Helper function to upload voice recording to Convex storage
   const uploadVoiceRecording = async (uri: string): Promise<string | null> => {
@@ -108,9 +229,44 @@ export default function VoiceConfigModal({
     }
   };
 
-  const handleSkip = () => {
+  const handleSkipOrDone = () => {
     if (isSaving) return;
-    onSkip();
+    
+    if (selectedVoiceId) {
+      // Voice was selected, call onComplete
+      onComplete();
+    } else {
+      // No voice selected, skip
+      onSkip();
+    }
+  };
+
+  const handleSelectDefaultVoice = async (voiceId: string) => {
+    if (!userId || isSaving) return;
+    
+    // If already selected, deselect
+    if (selectedVoiceId === voiceId) {
+      setSelectedVoiceId(null);
+      return;
+    }
+    
+    setIsSaving(true);
+    try {
+      console.log('[VoiceConfigModal] Selecting default voice:', voiceId);
+      
+      await updateSelectedVoice({
+        userId,
+        voiceId,
+      });
+      
+      console.log('[VoiceConfigModal] Default voice selected successfully!');
+      setSelectedVoiceId(voiceId);
+      setIsSaving(false);
+    } catch (error) {
+      console.error('[VoiceConfigModal] Error selecting default voice:', error);
+      Alert.alert('Error', 'Failed to select voice. Please try again.');
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -160,20 +316,97 @@ export default function VoiceConfigModal({
               disabled={isSaving}
             />
             
-            <View style={styles.noteContainer}>
-              <Text style={styles.noteText}>
-                Don&apos;t want to record? No worries! You can use our default AI voices instead.
-              </Text>
-            </View>
-            
             <TouchableOpacity
-              style={styles.skipButton}
-              onPress={handleSkip}
+              style={styles.noteContainer}
+              onPress={() => setShowVoiceList(!showVoiceList)}
               activeOpacity={0.7}
               disabled={isSaving}
             >
-              <Text style={[styles.skipButtonText, isSaving && styles.skipButtonTextDisabled]}>
-                Skip for now
+              <View style={styles.noteContent}>
+                <Text style={styles.noteText}>
+                  Don&apos;t want to record? No worries!{' '}
+                  <Text style={styles.noteTextLink}>Use our default AI voices instead</Text>
+                </Text>
+                {showVoiceList ? (
+                  <ChevronUp size={18} color={Colors.ember} strokeWidth={2} />
+                ) : (
+                  <ChevronDown size={18} color={Colors.ember} strokeWidth={2} />
+                )}
+              </View>
+            </TouchableOpacity>
+
+            {/* Expandable Voice List */}
+            {showVoiceList && (
+              <View style={styles.voicesList}>
+                {defaultVoices?.map((voice: any) => {
+                  const isSelected = selectedVoiceId === voice.voiceId;
+                  const isPlaying = playingPreviewId === voice.voiceId;
+                  const isCached = !!cachedSounds[voice.voiceId];
+                  
+                  return (
+                    <TouchableOpacity
+                      key={voice._id}
+                      style={[
+                        styles.voiceOption,
+                        isSelected && styles.voiceOptionSelected,
+                      ]}
+                      onPress={() => handleSelectDefaultVoice(voice.voiceId)}
+                      activeOpacity={0.7}
+                      disabled={isSaving}
+                    >
+                      <View style={styles.voiceOptionContent}>
+                        {isSelected ? (
+                          <View style={styles.checkIconContainer}>
+                            <Check size={18} color={Colors.white} strokeWidth={3} />
+                          </View>
+                        ) : (
+                          <Volume2 size={22} color={Colors.ember} strokeWidth={2} />
+                        )}
+                        <View style={styles.voiceOptionTextContainer}>
+                          <Text style={styles.voiceOptionName}>{voice.name}</Text>
+                          <Text style={styles.voiceOptionDesc}>
+                            {voice.description || 'Default voice'}
+                          </Text>
+                        </View>
+                      </View>
+                      <TouchableOpacity
+                        style={[
+                          styles.previewButton,
+                          isPlaying && styles.previewButtonPlaying,
+                        ]}
+                        onPress={() => voice.previewUrl && playVoicePreview(voice.voiceId, voice.previewUrl)}
+                        activeOpacity={0.7}
+                        disabled={!voice.previewUrl}
+                      >
+                        {isPreloading && !isCached ? (
+                          <ActivityIndicator size="small" color={Colors.ember} />
+                        ) : isPlaying ? (
+                          <Square size={14} color={Colors.white} strokeWidth={0} fill={Colors.white} />
+                        ) : (
+                          <Play size={16} color={voice.previewUrl ? Colors.ember : Colors.gray400} strokeWidth={0} fill={voice.previewUrl ? Colors.ember : Colors.gray400} />
+                        )}
+                      </TouchableOpacity>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+            
+            <TouchableOpacity
+              style={[
+                styles.skipButton,
+                selectedVoiceId && styles.doneButton,
+              ]}
+              onPress={handleSkipOrDone}
+              activeOpacity={0.7}
+              disabled={isSaving}
+            >
+              <Text style={[
+                styles.skipButtonText,
+                selectedVoiceId && styles.doneButtonText,
+                isSaving && styles.skipButtonTextDisabled,
+              ]}>
+                {selectedVoiceId ? 'Done' : 'Skip for now'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -236,23 +469,101 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.creamDark,
   },
+  noteContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
   noteText: {
     fontSize: 13,
     lineHeight: 19,
     color: Colors.textSecondary,
-    textAlign: 'center',
     fontFamily: Fonts.regular,
+    textAlign: 'center',
+    flex: 1,
+  },
+  noteTextLink: {
+    color: Colors.ember,
+    fontFamily: Fonts.medium,
+  },
+  voicesList: {
+    marginTop: 12,
+  },
+  voiceOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: Colors.creamMedium,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 2,
+    borderColor: Colors.creamDark,
+  },
+  voiceOptionSelected: {
+    borderColor: Colors.ember,
+    backgroundColor: 'rgba(243, 106, 63, 0.08)',
+  },
+  checkIconContainer: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: Colors.ember,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  previewButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.creamDark,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  previewButtonPlaying: {
+    backgroundColor: Colors.ember,
+  },
+  voiceOptionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 12,
+  },
+  voiceOptionTextContainer: {
+    flex: 1,
+  },
+  voiceOptionName: {
+    fontSize: 15,
+    fontFamily: Fonts.medium,
+    color: Colors.ink,
+    marginBottom: 2,
+  },
+  voiceOptionDesc: {
+    fontSize: 12,
+    fontFamily: Fonts.regular,
+    color: Colors.textSecondary,
   },
   skipButton: {
     marginTop: 20,
     padding: 16,
     alignItems: 'center',
   },
+  doneButton: {
+    backgroundColor: Colors.ember,
+    borderRadius: 12,
+    marginHorizontal: 0,
+  },
   skipButtonText: {
     fontSize: 16,
     fontFamily: Fonts.regular,
     color: Colors.textSecondary,
     textDecorationLine: 'underline',
+  },
+  doneButtonText: {
+    color: Colors.white,
+    fontFamily: Fonts.medium,
+    textDecorationLine: 'none',
   },
   skipButtonTextDisabled: {
     opacity: 0.5,

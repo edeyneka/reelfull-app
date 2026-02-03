@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { User, Palette, Mic, Volume2, Headphones, Info, ChevronRight, Crown, Gift, Check, Trash2, X } from 'lucide-react-native';
+import { User, Palette, Mic, Volume2, Headphones, Info, ChevronRight, Crown, Gift, Check, Trash2, X, Play, Square } from 'lucide-react-native';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   ScrollView,
@@ -58,15 +58,10 @@ export default function ProfileTab() {
   const [editedName, setEditedName] = useState('');
   const [editedStyle, setEditedStyle] = useState<StylePreference | null>(null);
   const [playingPreviewId, setPlayingPreviewId] = useState<string | null>(null);
-  const [previewStorageId, setPreviewStorageId] = useState<string | null>(null);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const [cachedSounds, setCachedSounds] = useState<Record<string, Audio.Sound>>({});
+  const [isPreloading, setIsPreloading] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  
-  // Get preview URL for the voice being previewed
-  const previewUrl = useQuery(
-    api.users.getVoicePreviewUrl,
-    previewStorageId ? { storageId: previewStorageId as any } : "skip"
-  );
 
   // Initialize edited values from user data
   useEffect(() => {
@@ -76,51 +71,60 @@ export default function ProfileTab() {
     }
   }, [user]);
 
-  // Cleanup sound on unmount
+  // Pre-cache audio when voice selection modal is shown
+  useEffect(() => {
+    if (isSelectingVoice && defaultVoices && defaultVoices.length > 0 && !isPreloading) {
+      preloadAudioFiles();
+    }
+  }, [isSelectingVoice, defaultVoices]);
+
+  // Cleanup sounds on unmount
   useEffect(() => {
     return () => {
+      // Cleanup current sound
       if (sound) {
         sound.unloadAsync().catch(console.error);
       }
+      // Cleanup cached sounds
+      Object.values(cachedSounds).forEach(s => {
+        s.unloadAsync().catch(console.error);
+      });
     };
-  }, [sound]);
-
-  const playPreviewAudio = useCallback(async (url: string) => {
-    try {
-      await Audio.setAudioModeAsync({
-        playsInSilentModeIOS: true,
-        allowsRecordingIOS: false,
-        staysActiveInBackground: false,
-      });
-
-      const { sound: newSound } = await Audio.Sound.createAsync(
-        { uri: url },
-        { shouldPlay: true }
-      );
-
-      setSound(newSound);
-
-      newSound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) {
-          setPlayingPreviewId(null);
-          setPreviewStorageId(null);
-          setSound(null);
-        }
-      });
-    } catch (error) {
-      console.error('Play preview error:', error);
-      Alert.alert('Error', 'Failed to play preview');
-      setPlayingPreviewId(null);
-      setPreviewStorageId(null);
-    }
   }, []);
 
-  // Play preview when URL is available
-  useEffect(() => {
-    if (previewUrl && previewStorageId && playingPreviewId) {
-      playPreviewAudio(previewUrl);
-    }
-  }, [previewUrl, previewStorageId, playingPreviewId, playPreviewAudio]);
+  const preloadAudioFiles = async () => {
+    if (!defaultVoices || isPreloading) return;
+    
+    setIsPreloading(true);
+    
+    // Preload audio for voices that have preview URLs
+    const loadPromises = defaultVoices
+      .filter((voice: any) => voice.previewUrl && !cachedSounds[voice.voiceId])
+      .map(async (voice: any) => {
+        try {
+          const { sound: preloadedSound } = await Audio.Sound.createAsync(
+            { uri: voice.previewUrl },
+            { shouldPlay: false }
+          );
+          return { voiceId: voice.voiceId, sound: preloadedSound };
+        } catch (error) {
+          console.error(`[Profile] Failed to preload audio for ${voice.name}:`, error);
+          return null;
+        }
+      });
+    
+    const results = await Promise.all(loadPromises);
+    const newCachedSounds: Record<string, Audio.Sound> = {};
+    
+    results.forEach((result: { voiceId: string; sound: Audio.Sound } | null) => {
+      if (result) {
+        newCachedSounds[result.voiceId] = result.sound;
+      }
+    });
+    
+    setCachedSounds(prev => ({ ...prev, ...newCachedSounds }));
+    setIsPreloading(false);
+  };
 
   const handleSaveName = async () => {
     if (!userId || !editedName.trim()) {
@@ -242,20 +246,64 @@ export default function ProfileTab() {
     }
   };
 
-  const playVoicePreview = (storageId: string, voiceId: string) => {
+  const playVoicePreview = async (voiceId: string, previewUrl: string) => {
+    // Stop current preview if playing
     if (sound) {
-      sound.unloadAsync().catch(console.error);
-      setSound(null);
+      await sound.stopAsync().catch(console.error);
     }
 
     if (playingPreviewId === voiceId) {
+      // Stop if already playing this one
       setPlayingPreviewId(null);
-      setPreviewStorageId(null);
       return;
     }
 
-    setPreviewStorageId(storageId);
     setPlayingPreviewId(voiceId);
+
+    try {
+      await Audio.setAudioModeAsync({
+        playsInSilentModeIOS: true,
+        allowsRecordingIOS: false,
+        staysActiveInBackground: false,
+      });
+
+      // Check if we have a cached sound
+      const cachedSound = cachedSounds[voiceId];
+      
+      if (cachedSound) {
+        // Use cached sound - seek to beginning and play
+        await cachedSound.setPositionAsync(0);
+        await cachedSound.playAsync();
+        setSound(cachedSound);
+        
+        // Set up playback status listener
+        cachedSound.setOnPlaybackStatusUpdate((status) => {
+          if (status.isLoaded && status.didJustFinish) {
+            setPlayingPreviewId(null);
+          }
+        });
+      } else {
+        // No cached sound, load and play
+        const { sound: newSound } = await Audio.Sound.createAsync(
+          { uri: previewUrl },
+          { shouldPlay: true }
+        );
+        
+        setSound(newSound);
+        
+        // Cache it for future use
+        setCachedSounds(prev => ({ ...prev, [voiceId]: newSound }));
+
+        newSound.setOnPlaybackStatusUpdate((status) => {
+          if (status.isLoaded && status.didJustFinish) {
+            setPlayingPreviewId(null);
+          }
+        });
+      }
+    } catch (error) {
+      console.error('[Profile] Error playing audio:', error);
+      setPlayingPreviewId(null);
+    }
   };
 
   const handleLogout = async () => {
@@ -717,59 +765,53 @@ export default function ProfileTab() {
                       <Text style={styles.voiceOptionDesc}>Custom AI voice clone</Text>
                     </View>
                   </View>
-                  {user.voicePreviewStorageId && (
-                    <TouchableOpacity
-                      style={styles.previewButton}
-                      onPress={() => playVoicePreview(user.voicePreviewStorageId!, user.elevenlabsVoiceId)}
-                      activeOpacity={0.7}
-                      disabled={playingPreviewId === user.elevenlabsVoiceId && !previewUrl}
-                    >
-                      {playingPreviewId === user.elevenlabsVoiceId && !previewUrl ? (
-                        <ActivityIndicator size="small" color={Colors.ember} />
-                      ) : (
-                        <Volume2 size={18} color={Colors.ember} strokeWidth={2} />
-                      )}
-                    </TouchableOpacity>
-                  )}
                 </TouchableOpacity>
               )}
 
               {/* Default Voices */}
-              {defaultVoices?.map((voice: any) => (
-                <TouchableOpacity
-                  key={voice._id}
-                  style={[
-                    styles.voiceOption,
-                    user.selectedVoiceId === voice.voiceId && styles.voiceOptionSelected,
-                  ]}
-                  onPress={() => handleSelectVoice(voice.voiceId)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.voiceOptionContent}>
-                    <Volume2 size={24} color={Colors.ember} strokeWidth={2} />
-                    <View style={styles.voiceOptionTextContainer}>
-                      <Text style={styles.voiceOptionName}>{voice.name}</Text>
-                      <Text style={styles.voiceOptionDesc}>
-                        {voice.description || 'Default voice'}
-                      </Text>
+              {defaultVoices?.map((voice: any) => {
+                const isPlaying = playingPreviewId === voice.voiceId;
+                const isCached = !!cachedSounds[voice.voiceId];
+                
+                return (
+                  <TouchableOpacity
+                    key={voice._id}
+                    style={[
+                      styles.voiceOption,
+                      user.selectedVoiceId === voice.voiceId && styles.voiceOptionSelected,
+                    ]}
+                    onPress={() => handleSelectVoice(voice.voiceId)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.voiceOptionContent}>
+                      <Volume2 size={24} color={Colors.ember} strokeWidth={2} />
+                      <View style={styles.voiceOptionTextContainer}>
+                        <Text style={styles.voiceOptionName}>{voice.name}</Text>
+                        <Text style={styles.voiceOptionDesc}>
+                          {voice.description || 'Default voice'}
+                        </Text>
+                      </View>
                     </View>
-                  </View>
-                  {voice.previewStorageId && (
                     <TouchableOpacity
-                      style={styles.previewButton}
-                      onPress={() => playVoicePreview(voice.previewStorageId!, voice.voiceId)}
+                      style={[
+                        styles.previewButton,
+                        isPlaying && styles.previewButtonPlaying,
+                      ]}
+                      onPress={() => voice.previewUrl && playVoicePreview(voice.voiceId, voice.previewUrl)}
                       activeOpacity={0.7}
-                      disabled={playingPreviewId === voice.voiceId && !previewUrl}
+                      disabled={!voice.previewUrl}
                     >
-                      {playingPreviewId === voice.voiceId && !previewUrl ? (
+                      {isPreloading && !isCached ? (
                         <ActivityIndicator size="small" color={Colors.ember} />
+                      ) : isPlaying ? (
+                        <Square size={14} color={Colors.white} strokeWidth={0} fill={Colors.white} />
                       ) : (
-                        <Volume2 size={18} color={Colors.ember} strokeWidth={2} />
+                        <Play size={16} color={voice.previewUrl ? Colors.ember : Colors.gray400} strokeWidth={0} fill={voice.previewUrl ? Colors.ember : Colors.gray400} />
                       )}
                     </TouchableOpacity>
-                  )}
-                </TouchableOpacity>
-              ))}
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
           </View>
         </View>
@@ -1115,6 +1157,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.creamDark,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  previewButtonPlaying: {
+    backgroundColor: Colors.ember,
   },
   // About Modal
   aboutContent: {
