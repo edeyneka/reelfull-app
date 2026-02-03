@@ -438,7 +438,7 @@ export default function VideoPreviewScreen() {
               disabled={isGenerating}
             >
               {voiceoverEnabled ? (
-                <Mic size={18} color={isGenerating ? Colors.textSecondary : Colors.white} strokeWidth={2} />
+                <Mic size={18} color={isGenerating ? Colors.textSecondary : Colors.ink} strokeWidth={2} />
               ) : (
                 <MicOff size={18} color={Colors.textSecondary} strokeWidth={2} />
               )}
@@ -459,7 +459,7 @@ export default function VideoPreviewScreen() {
               disabled={isGenerating}
             >
               {musicEnabled ? (
-                <Music size={18} color={isGenerating ? Colors.textSecondary : Colors.white} strokeWidth={2} />
+                <Music size={18} color={isGenerating ? Colors.textSecondary : Colors.ink} strokeWidth={2} />
               ) : (
                 <Music2 size={18} color={Colors.textSecondary} strokeWidth={2} />
               )}
@@ -479,7 +479,7 @@ export default function VideoPreviewScreen() {
               activeOpacity={isGenerating ? 1 : 0.7}
               disabled={isGenerating}
             >
-              <Subtitles size={18} color={(captionsEnabled && !isGenerating) ? Colors.white : Colors.grayLight} strokeWidth={2} />
+              <Subtitles size={18} color={(captionsEnabled && !isGenerating) ? Colors.ink : Colors.grayLight} strokeWidth={2} />
               <Text style={[
                 styles.videoOptionLabel,
                 (!captionsEnabled || isGenerating) && styles.videoOptionLabelInactive
