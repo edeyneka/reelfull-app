@@ -990,7 +990,7 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 12,
     fontFamily: Fonts.regular,
-    color: Colors.error,
+    color: Colors.ember,
     marginTop: 8,
     textAlign: 'center',
   },
