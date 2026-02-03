@@ -587,10 +587,11 @@ export default function ChatComposerScreen() {
       return;
     }
     
-    // Set processing state BEFORE opening picker
-    // This will be hidden behind the native picker while browsing,
-    // but becomes visible when picker dismisses (during iOS media processing)
-    setIsProcessingMedia(true);
+    // Add a 2 second delay before showing the loading indicator
+    // This prevents the overlay from flashing for quick operations
+    const loadingTimeout = setTimeout(() => {
+      setIsProcessingMedia(true);
+    }, 2000);
     
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -626,6 +627,8 @@ export default function ChatComposerScreen() {
     } catch (error) {
       console.error('Error picking media:', error);
     } finally {
+      // Cancel the loading timeout if operation finished before 2 seconds
+      clearTimeout(loadingTimeout);
       // Clear processing state after ImagePicker returns
       setIsProcessingMedia(false);
     }
@@ -1393,7 +1396,7 @@ export default function ChatComposerScreen() {
         </ScrollView>
         
         {/* Unified Composer */}
-        <View style={[styles.composerContainer]}>
+        <View style={[styles.composerContainer, { paddingBottom: insets.bottom }]}>
           {/* Add media button - outside card */}
           <TouchableOpacity 
             style={styles.addMediaButton}
