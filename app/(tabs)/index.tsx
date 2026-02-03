@@ -668,7 +668,7 @@ export default function FeedTab() {
                     {
                       translateX: tabIndicatorAnim.interpolate({
                         inputRange: [0, 1],
-                        outputRange: [0, (SCREEN_WIDTH - 80 - 8) / 2],
+                        outputRange: [0, (SCREEN_WIDTH - 80 - 10) / 2],
                       }),
                     },
                   ],
@@ -894,16 +894,16 @@ const styles = StyleSheet.create({
     padding: 4,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(38, 38, 38, 0.08)',
+    borderColor: 'rgba(38, 38, 38, 0.04)',
   },
   tabIndicator: {
     position: 'absolute',
-    height: '100%',
+    top: 4,
+    bottom: 4,
+    left: 4,
+    width: (SCREEN_WIDTH - 80 - 10) / 2, // 80 = margins, 8 = padding, 2 = border
     backgroundColor: Colors.white,
     borderRadius: 24,
-    top: 4,
-    left: 4,
-    width: (SCREEN_WIDTH - 80 - 8) / 2,
     shadowColor: Colors.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
