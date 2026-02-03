@@ -420,6 +420,8 @@ export default function ChatComposerScreen() {
               type: (isVideo ? 'video' : 'image') as 'video' | 'image',
               id: `existing-${index}`,
               storageId: metadata?.storageId,
+              uploadStatus: 'uploaded' as const,
+              thumbnailLoaded: true,
             };
           })
           .filter((item: any): item is typeof mediaUris[0] => item !== null);
@@ -467,6 +469,14 @@ export default function ChatComposerScreen() {
         // Check if there's already a script
         const hasAssistantMessage = loadedMessages.some(m => m.role === 'assistant');
         setHasScript(hasAssistantMessage);
+        
+        // Mark all existing media as "sent" so they don't appear in the composer
+        // (they were already sent in previous chat messages)
+        const existingMediaIds = new Set<string>();
+        for (let i = 0; i < (existingProject.fileUrls?.length || 0); i++) {
+          existingMediaIds.add(`existing-${i}`);
+        }
+        setSentMediaIds(existingMediaIds);
       }
     }
   }, [existingProject, existingMessages, projectId]);
