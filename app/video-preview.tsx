@@ -13,6 +13,8 @@ import {
   Animated,
   Image,
   Dimensions,
+  GestureResponderEvent,
+  LayoutChangeEvent,
 } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as MediaLibrary from 'expo-media-library';
@@ -285,6 +287,13 @@ export default function VideoPreviewScreen() {
   const [duration, setDuration] = useState(0);
   const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
+  // Timeline scrubbing state
+  const [isScrubbing, setIsScrubbing] = useState(false);
+  const [scrubProgress, setScrubProgress] = useState(0);
+  const timelineWidthRef = useRef(0);
+  const timelineLeftRef = useRef(0);
+  const wasPlayingBeforeScrub = useRef(false);
+  
   // Video option toggles
   const [voiceoverEnabled, setVoiceoverEnabled] = useState(true);
   const [musicEnabled, setMusicEnabled] = useState(true);
@@ -321,12 +330,15 @@ export default function VideoPreviewScreen() {
     const interval = setInterval(() => {
       if (videoPlayer.duration > 0) {
         setDuration(videoPlayer.duration);
-        setProgress(videoPlayer.currentTime / videoPlayer.duration);
+        // Don't update progress while user is scrubbing
+        if (!isScrubbing) {
+          setProgress(videoPlayer.currentTime / videoPlayer.duration);
+        }
       }
     }, 100);
     
     return () => clearInterval(interval);
-  }, [videoPlayer, isGenerating]);
+  }, [videoPlayer, isGenerating, isScrubbing]);
   
   // Auto-hide controls after 3 seconds
   const resetControlsTimeout = useCallback(() => {
@@ -364,6 +376,77 @@ export default function VideoPreviewScreen() {
       }
     };
   }, []);
+  
+  // Timeline layout handler
+  const handleTimelineLayout = useCallback((event: LayoutChangeEvent) => {
+    timelineWidthRef.current = event.nativeEvent.layout.width;
+    // Store the x position using pageX from measure
+    event.target.measure?.((x, y, width, height, pageX, pageY) => {
+      timelineLeftRef.current = pageX;
+    });
+  }, []);
+  
+  // Calculate progress from touch position
+  const getProgressFromPageX = useCallback((pageX: number) => {
+    const touchX = pageX - timelineLeftRef.current;
+    const width = timelineWidthRef.current;
+    if (width <= 0) return progress;
+    return Math.max(0, Math.min(1, touchX / width));
+  }, [progress]);
+  
+  // Timeline touch handlers
+  const handleTimelineTouchStart = useCallback((event: GestureResponderEvent) => {
+    if (!videoPlayer || !duration) return;
+    
+    // Update layout position on touch start for accuracy
+    const { pageX, locationX } = event.nativeEvent;
+    timelineLeftRef.current = pageX - locationX;
+    
+    // Pause video while scrubbing
+    wasPlayingBeforeScrub.current = isPlaying;
+    if (isPlaying) {
+      videoPlayer.pause();
+    }
+    
+    setIsScrubbing(true);
+    setShowControls(true);
+    
+    // Clear any hide timeout while scrubbing
+    if (controlsTimeoutRef.current) {
+      clearTimeout(controlsTimeoutRef.current);
+    }
+    
+    // Calculate and apply initial scrub position
+    const newProgress = getProgressFromPageX(pageX);
+    setScrubProgress(newProgress);
+  }, [videoPlayer, duration, isPlaying, getProgressFromPageX]);
+  
+  const handleTimelineTouchMove = useCallback((event: GestureResponderEvent) => {
+    if (!isScrubbing || !videoPlayer || !duration) return;
+    
+    const { pageX } = event.nativeEvent;
+    const newProgress = getProgressFromPageX(pageX);
+    setScrubProgress(newProgress);
+  }, [isScrubbing, videoPlayer, duration, getProgressFromPageX]);
+  
+  const handleTimelineTouchEnd = useCallback(() => {
+    if (!isScrubbing || !videoPlayer || !duration) return;
+    
+    // Seek to the final scrub position
+    const seekTime = scrubProgress * duration;
+    videoPlayer.currentTime = seekTime;
+    setProgress(scrubProgress);
+    
+    setIsScrubbing(false);
+    
+    // Resume playing if it was playing before
+    if (wasPlayingBeforeScrub.current) {
+      videoPlayer.play();
+    }
+    
+    // Reset controls hide timeout
+    resetControlsTimeout();
+  }, [isScrubbing, videoPlayer, duration, scrubProgress, resetControlsTimeout]);
 
   // Animate toast when download succeeds
   useEffect(() => {
@@ -684,9 +767,26 @@ export default function VideoPreviewScreen() {
       
       {/* Video timeline progress bar - shows when controls are visible */}
       {!isGenerating && showControls && (
-        <View style={[styles.timelineContainer, { bottom: insets.bottom + 40 }]}>
-          <View style={styles.timelineTrack}>
-            <View style={[styles.timelineProgress, { width: `${progress * 100}%` }]} />
+        <View 
+          style={[styles.timelineContainer, { bottom: insets.bottom + 40 }]}
+          onLayout={handleTimelineLayout}
+          onStartShouldSetResponder={() => true}
+          onMoveShouldSetResponder={() => true}
+          onResponderGrant={handleTimelineTouchStart}
+          onResponderMove={handleTimelineTouchMove}
+          onResponderRelease={handleTimelineTouchEnd}
+          onResponderTerminate={handleTimelineTouchEnd}
+        >
+          {/* Larger touch target area */}
+          <View style={styles.timelineTouchArea}>
+            <View style={[styles.timelineTrack, isScrubbing && styles.timelineTrackActive]}>
+              <View 
+                style={[
+                  styles.timelineProgress, 
+                  { width: `${(isScrubbing ? scrubProgress : progress) * 100}%` }
+                ]} 
+              />
+            </View>
           </View>
         </View>
       )}
@@ -780,11 +880,20 @@ const styles = StyleSheet.create({
     right: 16,
     zIndex: 10,
   },
+  timelineTouchArea: {
+    height: 40,
+    justifyContent: 'center',
+    paddingVertical: 16,
+  },
   timelineTrack: {
     height: 3,
     backgroundColor: 'rgba(255,255,255,0.3)',
     borderRadius: 1.5,
-    overflow: 'hidden',
+    overflow: 'visible',
+  },
+  timelineTrackActive: {
+    height: 5,
+    backgroundColor: 'rgba(255,255,255,0.4)',
   },
   timelineProgress: {
     height: '100%',
