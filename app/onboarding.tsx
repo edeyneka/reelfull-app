@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -33,8 +33,21 @@ export default function OnboardingScreen() {
   const [selectedStyle, setSelectedStyle] = useState<StylePreference | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   
+  // Ref for auto-focus
+  const nameInputRef = useRef<TextInput>(null);
+  
   // Convex hooks
   const completeOnboardingAction = useAction(api.users.completeOnboarding);
+  
+  // Auto-focus name input when step changes to 1
+  useEffect(() => {
+    if (step === 1) {
+      const timer = setTimeout(() => {
+        nameInputRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [step]);
 
   // Helper function to map local style to backend style
   const mapStyleToBackend = (style: StylePreference): 'playful' | 'professional' | 'travel' => {
@@ -146,6 +159,7 @@ export default function OnboardingScreen() {
                 <View style={styles.inputGroup}>
                   <Text style={styles.label}>What&apos;s your name?</Text>
                   <TextInput
+                    ref={nameInputRef}
                     testID="nameInput"
                     style={styles.input}
                     placeholder="Enter your name"
@@ -154,6 +168,7 @@ export default function OnboardingScreen() {
                     onChangeText={setName}
                     autoCapitalize="words"
                     autoCorrect={false}
+                    autoFocus
                   />
                 </View>
 

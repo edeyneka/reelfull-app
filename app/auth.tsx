@@ -363,6 +363,11 @@ export default function AuthScreen() {
   const isPasswordValid = password.trim().length > 0;
   const hasAutoVerified = useRef(false);
   
+  // Refs for auto-focus
+  const phoneInputRef = useRef<TextInput>(null);
+  const codeInputRef = useRef<TextInput>(null);
+  const passwordInputRef = useRef<TextInput>(null);
+  
   // Auto-verify when 6-digit code is entered
   useEffect(() => {
     if (step === 'code' && /^\d{6}$/.test(code) && !isLoading && !hasAutoVerified.current) {
@@ -377,6 +382,21 @@ export default function AuthScreen() {
       hasAutoVerified.current = false;
     }
   }, [code]);
+  
+  // Auto-focus input when step changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (step === 'phone') {
+        phoneInputRef.current?.focus();
+      } else if (step === 'code') {
+        codeInputRef.current?.focus();
+      } else if (step === 'password') {
+        passwordInputRef.current?.focus();
+      }
+    }, 100); // Small delay to ensure component is mounted
+    
+    return () => clearTimeout(timer);
+  }, [step]);
   
   
   return (
@@ -425,6 +445,7 @@ export default function AuthScreen() {
                       />
                       <View style={styles.divider} />
                       <TextInput
+                        ref={phoneInputRef}
                         testID="phoneInput"
                         style={styles.phoneInput}
                         placeholder={selectedCountry.code === 'US' || selectedCountry.code === 'CA' 
@@ -435,6 +456,7 @@ export default function AuthScreen() {
                         onChangeText={(text) => setPhoneNumber(formatPhoneNumber(text, selectedCountry))}
                         keyboardType="phone-pad"
                         maxLength={20}
+                        autoFocus
                       />
                     </View>
                   </View>
@@ -474,6 +496,7 @@ export default function AuthScreen() {
                   <View style={styles.inputGroup}>
                     <Text style={styles.label}>Password</Text>
                     <TextInput
+                      ref={passwordInputRef}
                       testID="passwordInput"
                       style={styles.codeInput}
                       placeholder="Enter password"
@@ -519,6 +542,7 @@ export default function AuthScreen() {
                   <View style={styles.inputGroup}>
                     <Text style={styles.label}>Verification Code</Text>
                     <TextInput
+                      ref={codeInputRef}
                       style={styles.codeInput}
                       placeholder="000000"
                       placeholderTextColor={Colors.gray400}

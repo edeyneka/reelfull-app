@@ -1010,10 +1010,11 @@ export default function ChatComposerScreen() {
     
     if (!targetProjectId) return;
     
-    // Update local message
+    // Update local message - only mark as edited if content actually changed
+    const wasActuallyEdited = newScript !== editingScript;
     setMessages(prev => prev.map(m => 
       m.id === editingMessageId 
-        ? { ...m, content: newScript, isEdited: true }
+        ? { ...m, content: newScript, isEdited: m.isEdited || wasActuallyEdited }
         : m
     ));
     
