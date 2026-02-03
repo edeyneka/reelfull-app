@@ -39,7 +39,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const ITEM_SPACING = 12;
 const ITEM_WIDTH = (SCREEN_WIDTH - ITEM_SPACING * 3) / 2;
-const THUMBNAIL_HEIGHT = ITEM_WIDTH * 1.2; // Thumbnail aspect ratio
+const THUMBNAIL_HEIGHT = ITEM_WIDTH * 1.4; // Thumbnail aspect ratio
 const CARD_HEIGHT = THUMBNAIL_HEIGHT + 47; // Extra space for metadata below
 const ACTION_SHEET_HEIGHT = 44; // Approximate height of the delete button
 
@@ -839,6 +839,7 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontFamily: Fonts.medium,
     color: Colors.ink,
+    letterSpacing: 1,
   },
   headerRight: {
     flexDirection: 'row',
@@ -921,11 +922,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: Fonts.regular,
     color: 'rgba(38, 38, 38, 0.5)',
+    letterSpacing: 0.6,
   },
   tabTextActive: {
     color: Colors.ink,
     fontFamily: Fonts.medium,
     fontWeight: '500',
+    letterSpacing: 0.6,
   },
   row: {
     flexDirection: 'row',
@@ -937,7 +940,7 @@ const styles = StyleSheet.create({
     width: ITEM_WIDTH,
     height: CARD_HEIGHT,
     backgroundColor: Colors.white,
-    borderRadius: 24,
+    borderRadius: 10,
     padding: 8,
     shadowColor: Colors.ink,
     shadowOffset: { width: 0, height: 2 },
@@ -951,14 +954,14 @@ const styles = StyleSheet.create({
   thumbnailCard: {
     width: '100%',
     height: THUMBNAIL_HEIGHT - 16, // Account for padding
-    borderRadius: 14,
+    borderRadius: 10,
     overflow: 'hidden',
     backgroundColor: Colors.creamDark,
   },
   thumbnail: {
     width: '100%',
     height: '100%',
-    borderRadius: 14,
+    borderRadius: 10,
   },
   metadataContainer: {
     paddingTop: 8,
