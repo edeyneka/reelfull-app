@@ -658,9 +658,43 @@ export default function VideoPreviewScreen() {
     }
   };
 
+  // Determine if we're in a loading/transition state where video is becoming ready
+  // This happens when project query is still loading or video URI is being resolved
+  const isLoadingVideo = !videoUri && projectId && project === undefined;
+  const isVideoTransitioning = !videoUri && !isGenerating && project?.renderedVideoUrl;
+  const showLoadingState = isLoadingVideo || isVideoTransitioning;
+  
+  // Show loading state with thumbnail while video is loading/transitioning
+  if (showLoadingState) {
+    return (
+      <View style={styles.container}>
+        {/* Show thumbnail while loading */}
+        <View style={styles.fullscreenVideo}>
+          {effectiveThumbnailUrl ? (
+            <Image
+              source={{ uri: effectiveThumbnailUrl }}
+              style={styles.generatingThumbnail}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={styles.generatingPlaceholder} />
+          )}
+        </View>
+        
+        {/* Top controls */}
+        <View style={[styles.topControls, { paddingTop: insets.top + 16 }]}>
+          <IconButton onPress={handleClose}>
+            <X size={28} color={Colors.white} strokeWidth={2.5} />
+          </IconButton>
+          <View style={styles.topControlsRight} />
+        </View>
+      </View>
+    );
+  }
+
   // Show error only if no video URI AND not generating AND no rendered video from project
-  // This prevents the error screen from flashing when status updates but local state hasn't caught up
-  if (!videoUri && !isGenerating && !project?.renderedVideoUrl) {
+  // AND project query has finished loading (not undefined)
+  if (!videoUri && !isGenerating && !project?.renderedVideoUrl && project !== undefined) {
     return (
       <View style={styles.container}>
         {/* Top controls */}
