@@ -904,7 +904,7 @@ export default function ChatComposerScreen() {
       await addChatMessage({
         projectId: currentProjectId,
         role: 'user',
-        content: userInput || (isNewMedia ? 'Added new media to the project' : 'Generate a script based on my media'),
+        content: userInput || '',
         messageIndex: userMessageCount + 1,
         mediaIds: mediaIdsToAttach as any,
       });
