@@ -350,6 +350,10 @@ export default function VideoPreviewScreen() {
   
   // Subscribe to player status changes
   const { isPlaying: playerIsPlaying } = useEvent(videoPlayer, 'playingChange', { isPlaying: videoPlayer.playing });
+  const { status: playerStatus } = useEvent(videoPlayer, 'statusChange', { status: videoPlayer.status });
+  
+  // Track if video is ready to play (loaded enough to display)
+  const isVideoReady = playerStatus === 'readyToPlay';
   
   // Update local isPlaying state when player state changes
   useEffect(() => {
@@ -715,8 +719,17 @@ export default function VideoPreviewScreen() {
               nativeControls={false}
             />
             
+            {/* Thumbnail overlay while video is loading */}
+            {!isVideoReady && effectiveThumbnailUrl && (
+              <Image
+                source={{ uri: effectiveThumbnailUrl }}
+                style={[StyleSheet.absoluteFill, styles.generatingThumbnail]}
+                resizeMode="cover"
+              />
+            )}
+            
             {/* Play/Pause indicator overlay - shows briefly when toggling */}
-            {showControls && (
+            {showControls && isVideoReady && (
               <View style={styles.playPauseOverlay}>
                 <View style={styles.playPauseIcon}>
                   {isPlaying ? (
