@@ -929,11 +929,16 @@ export default function ChatComposerScreen() {
         .map(m => m.storageId)
         .filter((id): id is string => !!id);
       
+      // Use pre-computed media descriptions if available (from Gemini captioning)
+      // This makes script generation much faster and cheaper
+      const cachedDescriptions = existingProject?.mediaDescriptions;
+      
       // Generate script (saveAndNotify: true means backend saves script and sends notification)
       const result = await generateChatScript({
         projectId: currentProjectId,
         conversationHistory,
         storageIds,
+        cachedMediaDescriptions: cachedDescriptions,
         isFirstMessage: !hasScript,
         isNewMedia,
         newMediaCount,
