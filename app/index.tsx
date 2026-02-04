@@ -18,7 +18,11 @@ import { Fonts } from '@/constants/typography';
 import { ENABLE_TEST_RUN_MODE } from '@/constants/config';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const REEL_SIZE = SCREEN_WIDTH * 2;
+
+// Base reel size for non-logged-in users
+const REEL_SIZE_DEFAULT = SCREEN_WIDTH * 2;
+// Larger reel size for logged-in users (no buttons shown)
+const REEL_SIZE_LOGGED_IN = SCREEN_WIDTH * 2.5;
 
 export default function IntroScreen() {
   const router = useRouter();
@@ -26,6 +30,10 @@ export default function IntroScreen() {
   const { userId, isLoading } = useApp();
   const [hasNavigated, setHasNavigated] = useState(false);
   const [showButtons, setShowButtons] = useState(false);
+
+  // Dynamic reel size based on login state
+  const isLoggedIn = !!userId;
+  const reelSize = isLoggedIn ? REEL_SIZE_LOGGED_IN : REEL_SIZE_DEFAULT;
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -86,11 +94,18 @@ export default function IntroScreen() {
     if (isLoading) return;
 
     if (userId) {
-      // User is already authenticated - show intro for 2 seconds then go to feed
-      const timer = setTimeout(() => {
-        navigateToNextScreen();
-      }, 2000);
-      return () => clearTimeout(timer);
+      // User is already authenticated
+      if (ENABLE_TEST_RUN_MODE) {
+        // Test mode: wait for user to tap anywhere on screen
+        // Navigation will happen via handleScreenTap
+        return;
+      } else {
+        // Normal mode: show intro for 2 seconds then go to feed
+        const timer = setTimeout(() => {
+          navigateToNextScreen();
+        }, 2000);
+        return () => clearTimeout(timer);
+      }
     } else {
       // New user - show buttons after 1.5 seconds with fade-in animation
       const timer = setTimeout(() => {
@@ -105,13 +120,28 @@ export default function IntroScreen() {
     }
   }, [fadeAnim, userId, isLoading]);
 
+  // Handle tap on screen (for test mode when logged in)
+  const handleScreenTap = () => {
+    if (ENABLE_TEST_RUN_MODE && userId && !hasNavigated) {
+      navigateToNextScreen();
+    }
+  };
+
   const spin = reelRotation.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg'],
   });
 
+  // Show tap hint for test mode when logged in
+  const showTapHint = ENABLE_TEST_RUN_MODE && isLoggedIn && !isLoading;
+
   return (
-    <View style={styles.container}>
+    <TouchableOpacity 
+      style={styles.container} 
+      activeOpacity={1}
+      onPress={handleScreenTap}
+      disabled={!showTapHint}
+    >
       {/* Title at top left */}
       <Animated.View
         style={[
@@ -126,14 +156,26 @@ export default function IntroScreen() {
       <Animated.View
         style={[
           styles.reelContainer,
-          { opacity: reelFade },
+          {
+            opacity: reelFade,
+            // Dynamic sizing based on login state
+            width: reelSize,
+            height: reelSize,
+            right: -reelSize * (isLoggedIn ? 0.54 : 0.52),
+            top: isLoggedIn ? '52%' : '48%',
+            marginTop: -reelSize * 0.5,
+          },
         ]}
       >
         <Animated.Image
           source={require('../assets/images/reel.png')}
           style={[
             styles.reelImage,
-            { transform: [{ rotate: spin }] },
+            {
+              transform: [{ rotate: spin }],
+              width: reelSize * 0.95,
+              height: reelSize * 0.95,
+            },
           ]}
           resizeMode="contain"
         />
@@ -185,7 +227,14 @@ export default function IntroScreen() {
           <ActivityIndicator size="large" color={Colors.ember} />
         </View>
       )}
-    </View>
+
+      {/* Tap hint for test mode */}
+      {showTapHint && (
+        <Animated.View style={[styles.tapHintContainer, { opacity: reelFade }]}>
+          <Text style={styles.tapHintText}>Tap anywhere to continue</Text>
+        </Animated.View>
+      )}
+    </TouchableOpacity>
   );
 }
 
@@ -207,18 +256,13 @@ const styles = StyleSheet.create({
   },
   reelContainer: {
     position: 'absolute',
-    right: -REEL_SIZE * 0.52,
-    top: '48%',
-    marginTop: -REEL_SIZE * 0.5,
-    width: REEL_SIZE,
-    height: REEL_SIZE,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1,
+    // Dynamic values (width, height, right, top, marginTop) set inline
   },
   reelImage: {
-    width: REEL_SIZE * 0.95,
-    height: REEL_SIZE * 0.95,
+    // Dynamic values (width, height) set inline
   },
   bottomSection: {
     position: 'absolute',
@@ -261,5 +305,17 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: 'center',
+  },
+  tapHintContainer: {
+    position: 'absolute',
+    bottom: 60,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  tapHintText: {
+    fontSize: 14,
+    fontFamily: Fonts.regular,
+    color: Colors.textSecondary,
   },
 });
