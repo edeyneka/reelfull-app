@@ -134,6 +134,8 @@ export default function IntroScreen() {
 
   // Show tap hint for test mode when logged in
   const showTapHint = ENABLE_TEST_RUN_MODE && isLoggedIn && !isLoading;
+  // Show skip button for normal mode when logged in
+  const showSkipButton = !ENABLE_TEST_RUN_MODE && isLoggedIn && !isLoading;
 
   return (
     <TouchableOpacity 
@@ -234,6 +236,19 @@ export default function IntroScreen() {
           <Text style={styles.tapHintText}>Tap anywhere to continue</Text>
         </Animated.View>
       )}
+
+      {/* Skip intro button for normal mode */}
+      {showSkipButton && (
+        <Animated.View style={[styles.tapHintContainer, { opacity: reelFade }]}>
+          <TouchableOpacity
+            style={styles.skipButton}
+            onPress={navigateToNextScreen}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.tapHintText}>Skip intro</Text>
+          </TouchableOpacity>
+        </Animated.View>
+      )}
     </TouchableOpacity>
   );
 }
@@ -317,5 +332,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: Fonts.regular,
     color: Colors.textSecondary,
+  },
+  skipButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
   },
 });
