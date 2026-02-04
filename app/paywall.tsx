@@ -1127,7 +1127,7 @@ const styles = StyleSheet.create({
   
   // Footer
   footer: {
-    marginTop: 'auto',
+    marginTop: 0,
     paddingTop: 16,
   },
   primaryButton: {
