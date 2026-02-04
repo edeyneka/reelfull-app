@@ -1,12 +1,13 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Stack } from "expo-router";
+import { Stack, router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ConvexProvider, ConvexReactClient } from "convex/react";
 import { AppProvider, useApp } from "@/contexts/AppContext";
 import { PaywallProvider } from "@/contexts/PaywallContext";
 import * as Font from 'expo-font';
+import * as Notifications from 'expo-notifications';
 import { registerForPushNotificationsAsync } from "@/lib/videoPollingService";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -14,6 +15,34 @@ import Constants from 'expo-constants';
 import Colors from "@/constants/colors";
 
 SplashScreen.preventAutoHideAsync();
+
+// Configure notification behavior when app is in foreground
+Notifications.setNotificationHandler({
+  handleNotification: async (notification) => {
+    const data = notification.request.content.data as { type?: string };
+    
+    // Don't show "Script generated" notifications when app is open
+    // (user is already in the app and can see the script)
+    if (data?.type === 'script_ready') {
+      return {
+        shouldShowAlert: false,
+        shouldPlaySound: false,
+        shouldSetBadge: false,
+        shouldShowBanner: false,
+        shouldShowList: false,
+      };
+    }
+    
+    // Show other notifications (like video_ready) even when app is open
+    return {
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    };
+  },
+});
 
 const queryClient = new QueryClient();
 
@@ -39,6 +68,8 @@ console.log('[App] Convex client created with URL:', convexUrl);
 function AppContent() {
   const { userId } = useApp();
   const updatePushToken = useMutation(api.users.updatePushToken);
+  const notificationListener = useRef<Notifications.EventSubscription | null>(null);
+  const responseListener = useRef<Notifications.EventSubscription | null>(null);
 
   useEffect(() => {
     // Register for push notifications when user is authenticated
@@ -60,6 +91,52 @@ function AppContent() {
         });
     }
   }, [userId]);
+
+  // Handle notification taps (when user taps on a notification)
+  useEffect(() => {
+    // Handle notifications received while app is in foreground
+    notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
+      console.log('[App] Notification received in foreground:', notification);
+    });
+
+    // Handle notification taps (user interaction)
+    responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
+      const data = response.notification.request.content.data as { type?: string; projectId?: string };
+      console.log('[App] Notification tapped:', data);
+
+      if (data?.type === 'script_ready' && data?.projectId) {
+        // Navigate to chat composer to view/refine the script
+        console.log('[App] Navigating to chat-composer for project:', data.projectId);
+        router.push({
+          pathname: '/chat-composer',
+          params: { projectId: data.projectId as string },
+        });
+      } else if (data?.type === 'video_ready' && data?.projectId) {
+        // Navigate to video preview screen
+        console.log('[App] Navigating to video-preview for project:', data.projectId);
+        router.push({
+          pathname: '/video-preview',
+          params: { projectId: data.projectId as string },
+        });
+      } else if (data?.type === 'video_failed' && data?.projectId) {
+        // Navigate to script review so user can retry
+        console.log('[App] Navigating to script-review for failed project:', data.projectId);
+        router.push({
+          pathname: '/script-review',
+          params: { projectId: data.projectId as string },
+        });
+      }
+    });
+
+    return () => {
+      if (notificationListener.current) {
+        notificationListener.current.remove();
+      }
+      if (responseListener.current) {
+        responseListener.current.remove();
+      }
+    };
+  }, []);
 
   return (
     <Stack screenOptions={{

@@ -233,6 +233,9 @@ export default function VideoPreviewScreen() {
   const generationPhase = isGenerating ? getGenerationPhase(project) : null;
   const phaseText = getPhaseText(generationPhase, project?.renderProgress);
   
+  // Use live project thumbnail if available, fallback to params
+  const effectiveThumbnailUrl = project?.thumbnailUrl || thumbnailUrl;
+  
   // Update video URI when generation completes
   useEffect(() => {
     if (project?.status === 'completed' && project?.renderedVideoUrl && isGeneratingParam) {
@@ -651,8 +654,9 @@ export default function VideoPreviewScreen() {
     }
   };
 
-  // Show error only if no video URI AND not generating
-  if (!videoUri && !isGenerating) {
+  // Show error only if no video URI AND not generating AND no rendered video from project
+  // This prevents the error screen from flashing when status updates but local state hasn't caught up
+  if (!videoUri && !isGenerating && !project?.renderedVideoUrl) {
     return (
       <View style={styles.container}>
         {/* Top controls */}
@@ -683,9 +687,9 @@ export default function VideoPreviewScreen() {
       {isGenerating ? (
         // Generating state - show thumbnail with spinner overlay
         <View style={styles.fullscreenVideo}>
-          {thumbnailUrl ? (
+          {effectiveThumbnailUrl ? (
             <Image
-              source={{ uri: thumbnailUrl }}
+              source={{ uri: effectiveThumbnailUrl }}
               style={styles.generatingThumbnail}
               resizeMode="cover"
             />

@@ -23,7 +23,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { VideoExportPreset } from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { VideoView, useVideoPlayer } from 'expo-video';
-import { useMutation, useAction, useQuery } from "convex/react";
+import { useMutation, useAction, useQuery, useConvex } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import * as Clipboard from 'expo-clipboard';
 import { Audio } from 'expo-av';
@@ -348,6 +348,7 @@ export default function ChatComposerScreen() {
   const inputRef = useRef<TextInput>(null);
   
   // Convex hooks
+  const convex = useConvex();
   const generateUploadUrl = useMutation(api.tasks.generateUploadUrl);
   const createChatProject = useMutation(api.tasks.createChatProject);
   const addChatMessage = useMutation(api.tasks.addChatMessage);
@@ -928,7 +929,7 @@ export default function ChatComposerScreen() {
         .map(m => m.storageId)
         .filter((id): id is string => !!id);
       
-      // Generate script
+      // Generate script (saveAndNotify: true means backend saves script and sends notification)
       const result = await generateChatScript({
         projectId: currentProjectId,
         conversationHistory,
@@ -936,6 +937,7 @@ export default function ChatComposerScreen() {
         isFirstMessage: !hasScript,
         isNewMedia,
         newMediaCount,
+        saveAndNotify: true,
       });
       
       // Remove loading message and add real response
@@ -979,8 +981,54 @@ export default function ChatComposerScreen() {
         
         setHasScript(true);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating script:', error);
+      
+      // Check if this is a "Connection lost" error - the script may have been generated successfully
+      const isConnectionLost = error?.message?.includes('Connection lost');
+      
+      if (isConnectionLost && createdProjectId) {
+        console.log('[chat-composer] Connection lost - checking if script was generated...');
+        
+        // Wait a moment for any in-flight updates to settle
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        try {
+          // Fetch the project to check if script exists
+          const project = await convex.query(api.tasks.getProject, { id: createdProjectId as any });
+          
+          if (project?.script) {
+            console.log('[chat-composer] Script was actually generated! Recovering...');
+            
+            // Remove loading message and add the script as assistant message
+            setMessages(prev => {
+              const withoutLoading = prev.filter(m => !m.isLoading);
+              const assistantMessage: LocalChatMessage = {
+                id: `assistant-${Date.now()}`,
+                role: 'assistant',
+                content: project.script!,
+                createdAt: Date.now(),
+              };
+              return [...withoutLoading, assistantMessage];
+            });
+            
+            // Store assistant message in backend
+            await addChatMessage({
+              projectId: createdProjectId,
+              role: 'assistant',
+              content: project.script!,
+            });
+            
+            setHasScript(true);
+            setIsGenerating(false);
+            return; // Successfully recovered
+          }
+        } catch (recoveryError) {
+          console.error('[chat-composer] Recovery check failed:', recoveryError);
+        }
+      }
+      
+      // If we couldn't recover, show error
       setMessages(prev => prev.filter(m => !m.isLoading));
       Alert.alert('Error', 'Failed to generate script. Please try again.');
     } finally {
