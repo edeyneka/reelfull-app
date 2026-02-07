@@ -136,7 +136,7 @@ function ChatBubble({
     <View style={[styles.messageBubbleContainer, isUser && styles.messageBubbleContainerUser]}>
       {/* Media display for user messages */}
       {message.mediaUris && message.mediaUris.length > 0 && (
-        <View style={styles.messageMediaGrid}>
+        <View style={[styles.messageMediaGrid, isUser && styles.messageMediaGridUser]}>
           {message.mediaUris.map((media, index) => (
             <View key={index} style={styles.messageMediaItem}>
               {media.type === 'video' ? (
@@ -1858,12 +1858,16 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 4,
     marginBottom: 8,
-    maxWidth: '80%',
+    maxWidth: '85%',
+  },
+  messageMediaGridUser: {
+    alignSelf: 'flex-end',
+    justifyContent: 'flex-end',
   },
   messageMediaItem: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
+    width: 75,
+    height: 75,
+    borderRadius: 10,
     overflow: 'hidden',
   },
   messageMediaImage: {
