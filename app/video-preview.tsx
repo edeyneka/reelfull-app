@@ -311,6 +311,7 @@ export default function VideoPreviewScreen() {
 
   // Local state
   const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
   
   // Video playback state
@@ -523,6 +524,7 @@ export default function VideoPreviewScreen() {
     try {
       setIsDownloading(true);
       setDownloadSuccess(false);
+      setDownloadProgress(0);
       
       let downloadUrl = videoUri;
       let isLocalFile = false;
@@ -561,13 +563,27 @@ export default function VideoPreviewScreen() {
             }
           }
         } else {
-          // Default variant - check if we have a cached version first
-          if (resolvedVideoUri && resolvedVideoUri.startsWith('file://')) {
+          // Default variant - try to use cached/existing URL to avoid round-trips
+          
+          // 1. Re-check cache first - pre-cache may have completed while user was watching
+          const cachedPath = projectId ? await getCachedVideoPath(videoUri, projectId) : null;
+          
+          if (cachedPath) {
+            console.log('[download] Pre-cache completed! Using cached local file');
+            downloadUrl = cachedPath;
+            isLocalFile = true;
+          } else if (resolvedVideoUri && resolvedVideoUri.startsWith('file://')) {
+            // 2. resolvedVideoUri is already a local file
             console.log('[download] Using cached local file for download');
             downloadUrl = resolvedVideoUri;
             isLocalFile = true;
+          } else if (resolvedVideoUri) {
+            // 3. We have a working remote URL (video is playing from it) - use it directly
+            //    Skip the Convex action round-trip since this URL is already working
+            console.log('[download] Using existing remote URL (skipping fresh URL fetch)');
+            downloadUrl = resolvedVideoUri;
           } else {
-            // No cache - get fresh URL
+            // 4. Last resort - fetch fresh URL from backend
             try {
               const freshUrl = await getFreshVideoUrl({ projectId });
               if (freshUrl) {
@@ -607,17 +623,30 @@ export default function VideoPreviewScreen() {
           console.log('[Download] Using cached file directly:', downloadUrl);
           fileUriToSave = downloadUrl;
         } else {
-          // Download to local file first
+          // Download to local file first with progress tracking
           const fileUri = `${FileSystem.documentDirectory}reelfull_${Date.now()}.mp4`;
           
           console.log('[Download] Downloading video from:', downloadUrl);
           console.log('[Download] To local path:', fileUri);
           console.log('[Download] Access privileges:', accessPrivileges);
           
-          const downloadResult = await FileSystem.downloadAsync(downloadUrl, fileUri);
+          setDownloadProgress(0);
+          const downloadResumable = FileSystem.createDownloadResumable(
+            downloadUrl,
+            fileUri,
+            {},
+            (progress) => {
+              if (progress.totalBytesExpectedToWrite > 0) {
+                const pct = progress.totalBytesWritten / progress.totalBytesExpectedToWrite;
+                setDownloadProgress(pct);
+              }
+            }
+          );
           
-          if (downloadResult.status !== 200) {
-            throw new Error(`Download failed with status: ${downloadResult.status}`);
+          const downloadResult = await downloadResumable.downloadAsync();
+          
+          if (!downloadResult || downloadResult.status !== 200) {
+            throw new Error(`Download failed with status: ${downloadResult?.status}`);
           }
           
           fileUriToSave = downloadResult.uri;
@@ -805,7 +834,14 @@ export default function VideoPreviewScreen() {
             disabled={isDownloading}
           >
             {isDownloading ? (
-              <ActivityIndicator size="small" color={Colors.white} />
+              <View style={{ alignItems: 'center' }}>
+                <ActivityIndicator size="small" color={Colors.white} />
+                {downloadProgress > 0 && downloadProgress < 1 && (
+                  <Text style={{ color: Colors.white, fontSize: 10, marginTop: 2, fontFamily: Fonts.medium }}>
+                    {Math.round(downloadProgress * 100)}%
+                  </Text>
+                )}
+              </View>
             ) : (
               <Download size={26} color={Colors.white} strokeWidth={2} />
             )}
