@@ -1109,7 +1109,8 @@ export default function ChatComposerScreen() {
   };
   
   // Check if user needs voice configuration (progressive disclosure)
-  const needsVoiceConfig = !backendUser?.elevenlabsVoiceId;
+  // Use selectedVoiceId which covers both custom voice clones AND default voice selections
+  const needsVoiceConfig = !backendUser?.selectedVoiceId && !backendUser?.elevenlabsVoiceId;
   
   // Helper to check if voice prompt should be shown (computed at call time)
   const shouldShowVoicePrompt = () => {
