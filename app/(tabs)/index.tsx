@@ -86,6 +86,7 @@ function VideoThumbnail({
   onLongPress: (event: any) => void;
   isSelected: boolean;
 }) {
+  const router = useRouter();
   const spinAnim = useRef(new Animated.Value(0)).current;
   const thumbnailRef = useRef<View>(null);
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -307,7 +308,15 @@ function VideoThumbnail({
     lastPressTimeRef.current = now;
     
     if (item.status === 'failed') {
-      Alert.alert('Generation Failed', item.error || 'Video generation failed. Please try again.');
+      if (item.projectId) {
+        // Navigate to chat composer so user can retry
+        router.push({
+          pathname: '/chat-composer',
+          params: { projectId: item.projectId },
+        });
+      } else {
+        Alert.alert('Generation Failed', item.error || 'Video generation failed. Please try again.');
+      }
       return;
     }
     // Allow tapping on processing/pending videos to view generation progress
