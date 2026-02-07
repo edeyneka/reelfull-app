@@ -221,6 +221,7 @@ export default function VideoPreviewScreen() {
   
   // Toast animation
   const toastOpacity = useRef(new Animated.Value(0)).current;
+  const composingToastOpacity = useRef(new Animated.Value(0)).current;
   
   // Query project status when generating
   const project = useQuery(
@@ -313,6 +314,7 @@ export default function VideoPreviewScreen() {
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
+  const [isComposing, setIsComposing] = useState(false);
   
   // Video playback state
   const [isPlaying, setIsPlaying] = useState(true);
@@ -486,6 +488,23 @@ export default function VideoPreviewScreen() {
     resetControlsTimeout();
   }, [isScrubbing, videoPlayer, duration, scrubProgress, resetControlsTimeout]);
 
+  // Animate composing toast - stays visible during entire composing process
+  useEffect(() => {
+    if (isComposing) {
+      Animated.timing(composingToastOpacity, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(composingToastOpacity, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [isComposing, composingToastOpacity]);
+
   // Animate toast when download succeeds
   useEffect(() => {
     if (downloadSuccess) {
@@ -536,6 +555,7 @@ export default function VideoPreviewScreen() {
         if (!isDefaultVariant) {
           // User wants a custom variant - call getVideoVariant to compose it
           console.log('[download] Getting custom variant:', { voice: voiceoverEnabled, music: musicEnabled, captions: captionsEnabled });
+          setIsComposing(true);
           try {
             const variantResult = await getVideoVariant({
               projectId: projectId,
@@ -561,6 +581,8 @@ export default function VideoPreviewScreen() {
             if (freshUrl) {
               downloadUrl = freshUrl;
             }
+          } finally {
+            setIsComposing(false);
           }
         } else {
           // Default variant - try to use cached/existing URL to avoid round-trips
@@ -908,6 +930,25 @@ export default function VideoPreviewScreen() {
         </View>
       )}
       
+      {/* Composing toast - visible during entire variant composing process */}
+      <Animated.View 
+        style={[
+          styles.toast, 
+          { 
+            opacity: composingToastOpacity,
+            top: insets.top + 60,
+          }
+        ]}
+        pointerEvents="none"
+      >
+        <BlurView intensity={40} tint="dark" style={styles.toastBlur}>
+          <View style={styles.composingToastRow}>
+            <ActivityIndicator size="small" color={Colors.white} />
+            <Text style={styles.toastText}>Composing your video...</Text>
+          </View>
+        </BlurView>
+      </Animated.View>
+
       {/* Download success toast */}
       <Animated.View 
         style={[
@@ -1071,6 +1112,12 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.medium,
     color: Colors.white,
     textAlign: 'center',
+  },
+  composingToastRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
   },
   errorContainer: {
     flex: 1,
