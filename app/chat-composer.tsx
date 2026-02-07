@@ -137,7 +137,7 @@ function ChatBubble({
       {/* Media display for user messages */}
       {message.mediaUris && message.mediaUris.length > 0 && (
         <View style={styles.messageMediaGrid}>
-          {message.mediaUris.slice(0, 4).map((media, index) => (
+          {message.mediaUris.map((media, index) => (
             <View key={index} style={styles.messageMediaItem}>
               {media.type === 'video' ? (
                 <VideoThumbnail uri={media.uri} style={styles.messageMediaImage} />
