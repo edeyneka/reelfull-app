@@ -119,10 +119,10 @@ function AppContent() {
           params: { projectId: data.projectId as string },
         });
       } else if (data?.type === 'video_failed' && data?.projectId) {
-        // Navigate to script review so user can retry
-        console.log('[App] Navigating to script-review for failed project:', data.projectId);
+        // Navigate to chat composer so user can retry
+        console.log('[App] Navigating to chat-composer for failed project:', data.projectId);
         router.push({
-          pathname: '/script-review',
+          pathname: '/chat-composer',
           params: { projectId: data.projectId as string },
         });
       }
@@ -149,7 +149,6 @@ function AppContent() {
       <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
       <Stack.Screen name="composer" options={{ gestureEnabled: false }} />
       <Stack.Screen name="chat-composer" options={{ gestureEnabled: false }} />
-      <Stack.Screen name="script-review" options={{ gestureEnabled: false }} />
       <Stack.Screen name="video-preview" options={{ gestureEnabled: false }} />
       <Stack.Screen name="loader" options={{ gestureEnabled: false }} />
       <Stack.Screen name="result" options={{ gestureEnabled: false, animation: 'none' }} />
