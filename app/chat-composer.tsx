@@ -1392,7 +1392,13 @@ export default function ChatComposerScreen() {
         return;
       }
       
-      // Add video to context with processing status
+      // Mark project as submitted FIRST (changes backend status to 'processing')
+      // This must happen before addVideo to prevent a race condition:
+      // If addVideo runs first, the polling service sees local status 'processing' but backend still 'failed',
+      // which triggers a false failure notification
+      await markProjectSubmitted({ id: targetProjectId as any });
+      
+      // Now add video to context with processing status (polling will see consistent state)
       addVideo({
         id: targetProjectId,
         uri: '',
@@ -1415,9 +1421,6 @@ export default function ChatComposerScreen() {
           }
         }]
       );
-      
-      // Mark project as submitted (triggers backend generation)
-      await markProjectSubmitted({ id: targetProjectId as any });
     } catch (error) {
       console.error('Error approving:', error);
       const errorMessage = error instanceof Error ? error.message : String(error);
