@@ -1392,6 +1392,14 @@ export default function ChatComposerScreen() {
         return;
       }
       
+      // Save the latest script to the project BEFORE submitting
+      // This ensures the script is persisted in the DB even if it was only edited locally
+      // (e.g. after forking from history, the forked project may not have the edited script yet)
+      await updateProjectScript({
+        id: targetProjectId as any,
+        script: latestScript.replace(/\?(?!\?\?)/g, '???'),
+      });
+      
       // Mark project as submitted FIRST (changes backend status to 'processing')
       // This must happen before addVideo to prevent a race condition:
       // If addVideo runs first, the polling service sees local status 'processing' but backend still 'failed',
