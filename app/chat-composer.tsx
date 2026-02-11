@@ -772,6 +772,14 @@ export default function ChatComposerScreen() {
   };
   
   const handleSend = async () => {
+    const selectedMedia = mediaUris.filter(m => !sentMediaIds.has(m.id));
+    const mediaNotReady = selectedMedia.some(
+      (media) => media.uploadStatus !== 'uploaded' || !media.thumbnailLoaded
+    );
+    if (mediaNotReady) {
+      return;
+    }
+
     // Get pending media (uploaded but not yet sent in a message)
     const pendingMedia = mediaUris.filter(m => m.storageId && !sentMediaIds.has(m.id));
     const hasPendingMedia = pendingMedia.length > 0;
@@ -1555,16 +1563,20 @@ export default function ChatComposerScreen() {
   };
   
   const isLimitReached = userMessageCount >= MAX_USER_MESSAGES;
+  const selectedMedia = mediaUris.filter(m => !sentMediaIds.has(m.id));
   const uploadedMedia = mediaUris.filter(m => m.storageId);
   const pendingMedia = mediaUris.filter(m => m.storageId && !sentMediaIds.has(m.id));
   const hasPendingMedia = pendingMedia.length > 0;
   const hasNewInput = inputText.trim().length > 0;
+  const allSelectedMediaReady = selectedMedia.every(
+    (media) => media.uploadStatus === 'uploaded' && media.thumbnailLoaded
+  );
   
   // Before first message: can send if we have media (even without text)
   // After first message: can send if we have new text input OR new pending media
   const canSend = messages.length === 0 
-    ? (uploadedMedia.length > 0 && !isGenerating)  // First message: need media
-    : ((hasNewInput || hasPendingMedia) && !isGenerating && !isLimitReached);  // Subsequent: need text or new media
+    ? (uploadedMedia.length > 0 && allSelectedMediaReady && !isGenerating)  // First message: need media
+    : ((hasNewInput || hasPendingMedia) && allSelectedMediaReady && !isGenerating && !isLimitReached);  // Subsequent: need text or new media
   
   // Determine if send button should act as "Regenerate" 
   // This happens when coming from video without any modifications
