@@ -1,3 +1,13 @@
+import { Redirect as RedirectLegacy } from 'expo-router';
+
+function ComposerRedirectLegacy() {
+  return <RedirectLegacy href="/chat-composer" />;
+}
+import { Redirect } from 'expo-router';
+
+export default function ComposerRedirect() {
+  return <Redirect href="/chat-composer" />;
+}
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Camera, X, ArrowRight } from 'lucide-react-native';
 import { useState, useEffect, useRef } from 'react';
@@ -82,7 +92,7 @@ function OverlayLoader({
   );
 }
 
-export default function ComposerScreen() {
+function ComposerScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ projectId?: string }>();
   const projectId = params.projectId as any;

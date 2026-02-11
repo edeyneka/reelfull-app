@@ -147,7 +147,6 @@ function AppContent() {
       <Stack.Screen name="auth" />
       <Stack.Screen name="onboarding" />
       <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
-      <Stack.Screen name="composer" options={{ gestureEnabled: false }} />
       <Stack.Screen name="chat-composer" options={{ gestureEnabled: false }} />
       <Stack.Screen name="video-preview" options={{ gestureEnabled: false }} />
       <Stack.Screen name="loader" options={{ gestureEnabled: false }} />
