@@ -568,7 +568,7 @@ export default function FeedTab() {
       return;
     }
     
-    router.push('/composer');
+    router.push('/chat-composer');
   }, [videoGenerationStatus, subscriptionState.isPro, hasCompletedPaywallThisSession, router]);
 
   const renderProjectsEmpty = useCallback(() => (
