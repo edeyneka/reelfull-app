@@ -382,6 +382,7 @@ export default function FeedTab() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'projects' | 'drafts'>('projects');
   const tabIndicatorAnim = useRef(new Animated.Value(0)).current;
+  const navigationLockRef = useRef<{ key: string; startedAt: number } | null>(null);
   
   const hasPendingVideos = useMemo(() =>
     videos.some(v => v.status === 'pending' || v.status === 'processing' || v.status === 'preparing'),
@@ -483,6 +484,30 @@ export default function FeedTab() {
     });
   };
 
+  const tryAcquireNavigationLock = useCallback((key: string) => {
+    const now = Date.now();
+    const lock = navigationLockRef.current;
+    // Keep lock long enough to survive laggy async work before push.
+    if (lock && now - lock.startedAt < 3500) {
+      return false;
+    }
+    navigationLockRef.current = { key, startedAt: now };
+    return true;
+  }, []);
+
+  const releaseNavigationLock = useCallback((key: string, delayMs = 0) => {
+    const unlock = () => {
+      if (navigationLockRef.current?.key === key) {
+        navigationLockRef.current = null;
+      }
+    };
+    if (delayMs > 0) {
+      setTimeout(unlock, delayMs);
+      return;
+    }
+    unlock();
+  }, []);
+
   const renderItem = useCallback(({ item, index }: { item: VideoType; index: number }) => {
     const columnIndex = index % 2; // 0 for left column, 1 for right column
     
@@ -491,11 +516,17 @@ export default function FeedTab() {
         item={item} 
         isSelected={actionSheetVideo?.id === item.id}
         onPress={async () => {
+          const lockKey = item.id;
+          if (!tryAcquireNavigationLock(lockKey)) {
+            return;
+          }
+
           if (item.status === 'draft' && item.projectId) {
             router.push({
               pathname: '/chat-composer',
               params: { projectId: item.projectId },
             });
+            releaseNavigationLock(lockKey, 750);
           }
           else if (item.status === 'ready' && item.uri && item.uri.length > 0) {
             let videoUrl = item.uri;
@@ -522,8 +553,10 @@ export default function FeedTab() {
                 thumbnailUrl: item.thumbnailUrl || '',
               },
             });
+            releaseNavigationLock(lockKey, 750);
           } else if (item.status === 'ready' && (!item.uri || item.uri.length === 0)) {
             Alert.alert('Error', 'Video is not available. Please try again or contact support.');
+            releaseNavigationLock(lockKey);
           } else if (item.status === 'pending' || item.status === 'processing' || item.status === 'preparing') {
             // Navigate to video-preview in generating mode to show progress
             if (item.projectId) {
@@ -539,7 +572,12 @@ export default function FeedTab() {
                   isGenerating: 'true',
                 },
               });
+              releaseNavigationLock(lockKey, 750);
+            } else {
+              releaseNavigationLock(lockKey);
             }
+          } else {
+            releaseNavigationLock(lockKey);
           }
         }}
         onLongPress={(position) => {
@@ -549,7 +587,7 @@ export default function FeedTab() {
         }}
       />
     );
-  }, [actionSheetVideo?.id, router, getFreshVideoUrl]);
+  }, [actionSheetVideo?.id, router, getFreshVideoUrl, tryAcquireNavigationLock, releaseNavigationLock]);
 
   const handleCreateNew = useCallback(() => {
     const generatedCount = videoGenerationStatus?.generatedCount ?? 0;
