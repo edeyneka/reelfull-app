@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Stack, router } from "expo-router";
+import { Stack, router, useGlobalSearchParams, usePathname } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ConvexProvider, ConvexReactClient } from "convex/react";
 import { AppProvider, useApp } from "@/contexts/AppContext";
@@ -21,15 +21,15 @@ Notifications.setNotificationHandler({
   handleNotification: async (notification) => {
     const data = notification.request.content.data as { type?: string };
     
-    // Don't show "Script generated" notifications when app is open
-    // (user is already in the app and can see the script)
+    // Show "Script generated" notifications in foreground as a lightweight banner
+    // so users who navigated away still get a clear completion signal.
     if (data?.type === 'script_ready') {
       return {
-        shouldShowAlert: false,
+        shouldShowAlert: true,
         shouldPlaySound: false,
         shouldSetBadge: false,
-        shouldShowBanner: false,
-        shouldShowList: false,
+        shouldShowBanner: true,
+        shouldShowList: true,
       };
     }
     
@@ -70,6 +70,35 @@ function AppContent() {
   const updatePushToken = useMutation(api.users.updatePushToken);
   const notificationListener = useRef<Notifications.EventSubscription | null>(null);
   const responseListener = useRef<Notifications.EventSubscription | null>(null);
+  const lastHandledNavigationRef = useRef<string | null>(null);
+  const pathname = usePathname();
+  const globalParams = useGlobalSearchParams<{ projectId?: string | string[] }>();
+
+  const navigateToProjectChat = useCallback((projectId: string) => {
+    const dedupeKey = `script_ready:${projectId}`;
+    if (lastHandledNavigationRef.current === dedupeKey) {
+      return;
+    }
+    lastHandledNavigationRef.current = dedupeKey;
+    setTimeout(() => {
+      if (lastHandledNavigationRef.current === dedupeKey) {
+        lastHandledNavigationRef.current = null;
+      }
+    }, 1500);
+
+    const currentProjectId = Array.isArray(globalParams.projectId)
+      ? globalParams.projectId[0]
+      : globalParams.projectId;
+
+    if (pathname === '/chat-composer' && currentProjectId === projectId) {
+      return;
+    }
+
+    router.navigate({
+      pathname: '/chat-composer',
+      params: { projectId },
+    });
+  }, [globalParams.projectId, pathname]);
 
   useEffect(() => {
     // Register for push notifications when user is authenticated
@@ -107,10 +136,7 @@ function AppContent() {
       if (data?.type === 'script_ready' && data?.projectId) {
         // Navigate to chat composer to view/refine the script
         console.log('[App] Navigating to chat-composer for project:', data.projectId);
-        router.push({
-          pathname: '/chat-composer',
-          params: { projectId: data.projectId as string },
-        });
+        navigateToProjectChat(data.projectId as string);
       } else if (data?.type === 'video_ready' && data?.projectId) {
         // Navigate to video preview screen
         console.log('[App] Navigating to video-preview for project:', data.projectId);
@@ -121,10 +147,7 @@ function AppContent() {
       } else if (data?.type === 'video_failed' && data?.projectId) {
         // Navigate to chat composer so user can retry
         console.log('[App] Navigating to chat-composer for failed project:', data.projectId);
-        router.push({
-          pathname: '/chat-composer',
-          params: { projectId: data.projectId as string },
-        });
+        navigateToProjectChat(data.projectId as string);
       }
     });
 
@@ -136,7 +159,7 @@ function AppContent() {
         responseListener.current.remove();
       }
     };
-  }, []);
+  }, [navigateToProjectChat]);
 
   return (
     <Stack screenOptions={{

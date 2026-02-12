@@ -36,6 +36,19 @@ import { ENABLE_TEST_RUN_MODE } from '@/constants/config';
 import VoiceConfigModal from '@/components/VoiceConfigModal';
 
 const MAX_USER_MESSAGES = 10;
+const SCRIPT_LOADING_PHRASES = [
+  "Generating script",
+  "Composing your story",
+  "Wow, what a twist",
+  "Your content creator era begins here",
+  "Threading your clips into a narrative",
+  "Finding the strongest hook",
+  "Turning moments into a scroll-stopper",
+  "Polishing your plotline",
+  "Building your binge-worthy draft",
+  "Syncing vibe, voice, and visuals",
+  "Cooking up your next viral cut",
+];
 
 // Voice speed options
 const VOICE_SPEED_OPTIONS = [
@@ -75,6 +88,7 @@ function VideoThumbnail({ uri, style }: { uri: string; style: any }) {
 // Typing indicator with animated dots
 function TypingIndicator() {
   const [dotCount, setDotCount] = useState(1);
+  const [phrase, setPhrase] = useState(SCRIPT_LOADING_PHRASES[0]);
   
   useEffect(() => {
     const interval = setInterval(() => {
@@ -83,6 +97,29 @@ function TypingIndicator() {
     
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    let phraseInterval: ReturnType<typeof setInterval> | null = null;
+    const firstRotationTimeout = setTimeout(() => {
+      setPhrase((currentPhrase) => {
+        const candidates = SCRIPT_LOADING_PHRASES.slice(1).filter((p) => p !== currentPhrase);
+        return candidates[Math.floor(Math.random() * candidates.length)] || SCRIPT_LOADING_PHRASES[0];
+      });
+      phraseInterval = setInterval(() => {
+        setPhrase((currentPhrase) => {
+          const candidates = SCRIPT_LOADING_PHRASES.slice(1).filter((p) => p !== currentPhrase);
+          return candidates[Math.floor(Math.random() * candidates.length)] || SCRIPT_LOADING_PHRASES[0];
+        });
+      }, 2800);
+    }, 3200);
+
+    return () => {
+      clearTimeout(firstRotationTimeout);
+      if (phraseInterval) {
+        clearInterval(phraseInterval);
+      }
+    };
+  }, []);
   
   const dots = '.'.repeat(dotCount);
   // Pad with invisible dots to prevent text from shifting
@@ -90,7 +127,7 @@ function TypingIndicator() {
   
   return (
     <Text style={styles.scriptLoadingText}>
-      Generating script{dots}{padding}
+      {phrase}{dots}{padding}
     </Text>
   );
 }
@@ -346,6 +383,8 @@ export default function ChatComposerScreen() {
   const hasAutoOpenedPicker = useRef(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const inputRef = useRef<TextInput>(null);
+  const isMountedRef = useRef(true);
+  const scriptBackfillRef = useRef<Set<string>>(new Set());
   
   // Convex hooks
   const convex = useConvex();
@@ -367,6 +406,12 @@ export default function ChatComposerScreen() {
   
   // Track if we've already tried to refresh R2 URLs for this project
   const hasAttemptedR2Refresh = useRef(false);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
   
   // Fetch current project data (tracks newly created/forked chat projects too)
   const existingProject = useQuery(
@@ -465,12 +510,42 @@ export default function ChatComposerScreen() {
                 .filter((item: any): item is { uri: string; type: 'video' | 'image'; storageId: string } => item !== null)
             : undefined,
         }));
-        setMessages(loadedMessages);
+        const hasAssistantMessage = loadedMessages.some(m => m.role === 'assistant');
+        const hasProjectScript = !!existingProject.script?.trim();
+        let hydratedMessages = loadedMessages;
+
+        // Background generation can complete after this screen unmounts, which may leave
+        // project.script populated but chatMessages missing the assistant response.
+        // Backfill the UI and persist once so notification-opened chats remain consistent.
+        if (!hasAssistantMessage && hasProjectScript) {
+          hydratedMessages = [
+            ...loadedMessages,
+            {
+              id: `script-backfill-${existingProject._id}`,
+              role: 'assistant',
+              content: existingProject.script!,
+              createdAt: existingProject.scriptGeneratedAt || existingProject.createdAt || Date.now(),
+            },
+          ];
+
+          const projectKey = String(existingProject._id);
+          if (!scriptBackfillRef.current.has(projectKey)) {
+            scriptBackfillRef.current.add(projectKey);
+            addChatMessage({
+              projectId: existingProject._id,
+              role: 'assistant',
+              content: existingProject.script!,
+            }).catch((error) => {
+              console.error('[chat-composer] Failed to backfill assistant script message:', error);
+            });
+          }
+        }
+
+        setMessages(hydratedMessages);
         setUserMessageCount(existingProject.userMessageCount || 0);
         
-        // Check if there's already a script
-        const hasAssistantMessage = loadedMessages.some(m => m.role === 'assistant');
-        setHasScript(hasAssistantMessage);
+        // Consider script present if either assistant chat exists or project.script is set.
+        setHasScript(hasAssistantMessage || hasProjectScript);
         
         // Mark all existing media as "sent" so they don't appear in the composer
         // (they were already sent in previous chat messages)
@@ -843,7 +918,9 @@ export default function ChatComposerScreen() {
   };
   
   const generateScript = async (userInput: string, isNewMedia = false, newMediaCount = 0, newMediaIds: string[] = []) => {
+    if (!isMountedRef.current) return;
     setIsGenerating(true);
+    let requestProjectId: string | null = createdProjectId;
     
     // Add loading message
     const loadingMessage: LocalChatMessage = {
@@ -857,12 +934,15 @@ export default function ChatComposerScreen() {
     
     try {
       // If coming from a video, fork the project first (never modify original)
-      let currentProjectId = createdProjectId;
+      let currentProjectId = requestProjectId;
       if (fromVideo && !hasForkedFromVideo) {
         currentProjectId = await forkProjectIfNeeded();
+        requestProjectId = currentProjectId;
         if (!currentProjectId) {
-          setMessages(prev => prev.filter(m => !m.isLoading));
-          setIsGenerating(false);
+          if (isMountedRef.current) {
+            setMessages(prev => prev.filter(m => !m.isLoading));
+            setIsGenerating(false);
+          }
           return;
         }
       }
@@ -882,8 +962,11 @@ export default function ChatComposerScreen() {
           fileMetadata,
           thumbnail: uploadedMedia[0]?.storageId,
         });
+        requestProjectId = currentProjectId;
         
-        setCreatedProjectId(currentProjectId);
+        if (isMountedRef.current) {
+          setCreatedProjectId(currentProjectId);
+        }
         
         // Update prompt
         if (userInput) {
@@ -1014,7 +1097,8 @@ export default function ChatComposerScreen() {
       });
       
       // Remove loading message and add real response
-      setMessages(prev => {
+      if (isMountedRef.current) {
+        setMessages(prev => {
         const withoutLoading = prev.filter(m => !m.isLoading);
         
         if (result.success && result.script) {
@@ -1036,31 +1120,26 @@ export default function ChatComposerScreen() {
           };
           return [...withoutLoading, errorMessage];
         }
-      });
+        });
+      }
       
-      // Store assistant message in backend
+      // Backend generateChatScript(saveAndNotify=true) already saves script + assistant
+      // message. Keep local UI in sync but avoid duplicate persistence here.
       if (result.success && result.script) {
-        await addChatMessage({
-          projectId: currentProjectId,
-          role: 'assistant',
-          content: result.script,
-        });
-        
-        // Update project script
-        await updateProjectScript({
-          id: currentProjectId,
-          script: result.script,
-        });
-        
-        setHasScript(true);
+        if (isMountedRef.current) {
+          setHasScript(true);
+        }
       }
     } catch (error: any) {
-      console.error('Error generating script:', error);
-      
-      // Check if this is a "Connection lost" error - the script may have been generated successfully
+      // Check if this is a known transient case where backend may still succeed.
       const isConnectionLost = error?.message?.includes('Connection lost');
+      if (!isConnectionLost) {
+        console.error('Error generating script:', error);
+      } else {
+        console.log('[chat-composer] Connection lost while request in flight; attempting recovery');
+      }
       
-      if (isConnectionLost && createdProjectId) {
+      if (isConnectionLost && requestProjectId) {
         console.log('[chat-composer] Connection lost - checking if script was generated...');
         
         // Wait a moment for any in-flight updates to settle
@@ -1068,32 +1147,29 @@ export default function ChatComposerScreen() {
         
         try {
           // Fetch the project to check if script exists
-          const project = await convex.query(api.tasks.getProject, { id: createdProjectId as any });
+          const project = await convex.query(api.tasks.getProject, { id: requestProjectId as any });
           
           if (project?.script) {
             console.log('[chat-composer] Script was actually generated! Recovering...');
             
             // Remove loading message and add the script as assistant message
-            setMessages(prev => {
-              const withoutLoading = prev.filter(m => !m.isLoading);
-              const assistantMessage: LocalChatMessage = {
-                id: `assistant-${Date.now()}`,
-                role: 'assistant',
-                content: project.script!,
-                createdAt: Date.now(),
-              };
-              return [...withoutLoading, assistantMessage];
-            });
+            if (isMountedRef.current) {
+              setMessages(prev => {
+                const withoutLoading = prev.filter(m => !m.isLoading);
+                const assistantMessage: LocalChatMessage = {
+                  id: `assistant-${Date.now()}`,
+                  role: 'assistant',
+                  content: project.script!,
+                  createdAt: Date.now(),
+                };
+                return [...withoutLoading, assistantMessage];
+              });
+            }
             
-            // Store assistant message in backend
-            await addChatMessage({
-              projectId: createdProjectId,
-              role: 'assistant',
-              content: project.script!,
-            });
-            
-            setHasScript(true);
-            setIsGenerating(false);
+            if (isMountedRef.current) {
+              setHasScript(true);
+              setIsGenerating(false);
+            }
             return; // Successfully recovered
           }
         } catch (recoveryError) {
@@ -1102,10 +1178,14 @@ export default function ChatComposerScreen() {
       }
       
       // If we couldn't recover, show error
-      setMessages(prev => prev.filter(m => !m.isLoading));
-      Alert.alert('Error', 'Failed to generate script. Please try again.');
+      if (isMountedRef.current) {
+        setMessages(prev => prev.filter(m => !m.isLoading));
+        Alert.alert('Error', 'Failed to generate script. Please try again.');
+      }
     } finally {
-      setIsGenerating(false);
+      if (isMountedRef.current) {
+        setIsGenerating(false);
+      }
     }
   };
   
@@ -1571,6 +1651,21 @@ export default function ChatComposerScreen() {
   };
   
   const handleClose = async () => {
+    if (isGenerating) {
+      Alert.alert(
+        'Script is still generating',
+        'You can safely leave this screen. We will keep generating in the background and notify you when it is ready.',
+        [
+          { text: 'Stay', style: 'cancel' },
+          {
+            text: 'Continue in background',
+            onPress: () => router.back(),
+          },
+        ]
+      );
+      return;
+    }
+
     // Check if this is an existing draft that was opened (projectId param was provided)
     const isExistingDraft = !!projectId && !fromVideo;
     
@@ -1698,7 +1793,7 @@ export default function ChatComposerScreen() {
             <View style={styles.welcomeContainer}>
               <Text style={styles.welcomeTitle}>Hello, {user?.name || 'there'}!</Text>
               <Text style={styles.welcomeSubtitle}>
-                upload media for a video you'd like to create
+                upload media for a video you would like to create
               </Text>
             </View>
           )}

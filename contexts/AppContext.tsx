@@ -133,7 +133,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
       // Add pending/processing videos
       const processingVideos: Video[] = backendProjects
         .filter(project => 
-          (project.status === 'processing' || project.status === 'rendering') && 
+          (project.status === 'processing' || project.status === 'rendering' || project.status === 'script_generating') && 
           !project.renderedVideoUrl
         )
         .map(project => ({
@@ -143,7 +143,10 @@ export const [AppProvider, useApp] = createContextHook(() => {
           name: project.name, // AI-generated project name
           script: transformScript(project.script),
           createdAt: project.createdAt,
-          status: project.status === 'rendering' ? 'processing' as const : 'pending' as const,
+          status:
+            project.status === 'rendering'
+              ? 'processing' as const
+              : 'pending' as const,
           projectId: project._id,
           thumbnailUrl: project.thumbnailUrl, // Include thumbnail URL even for processing videos
         }));
