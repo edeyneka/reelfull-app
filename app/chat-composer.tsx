@@ -122,13 +122,15 @@ function TypingIndicator() {
   }, []);
   
   const dots = '.'.repeat(dotCount);
-  // Pad with invisible dots to prevent text from shifting
-  const padding = '\u00A0'.repeat(3 - dotCount);
+  const estimatedBubbleWidth = phrase.length * 6.1 + 15;
   
   return (
-    <Text style={styles.scriptLoadingText}>
-      {phrase}{dots}{padding}
-    </Text>
+    <View style={[styles.scriptLoadingContainer, { width: estimatedBubbleWidth }]}>
+      <Text style={styles.scriptLoadingText}>
+        {phrase}
+        <Text style={styles.scriptLoadingDots}>{dots}</Text>
+      </Text>
+    </View>
   );
 }
 
@@ -2068,7 +2070,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.creamDark,
   },
   messageBubbleLoading: {
-    minWidth: 200,
+    minWidth: 0,
   },
   messageText: {
     fontSize: 15,
@@ -2098,6 +2100,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: Fonts.italic,
     color: Colors.ember,
+    flexShrink: 1,
+    lineHeight: 20,
+  },
+  scriptLoadingDots: {
+    minWidth: 14,
   },
   editedLabel: {
     fontSize: 11,
