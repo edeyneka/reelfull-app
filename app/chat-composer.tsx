@@ -351,6 +351,7 @@ export default function ChatComposerScreen() {
   const convex = useConvex();
   const generateUploadUrl = useMutation(api.tasks.generateUploadUrl);
   const createChatProject = useMutation(api.tasks.createChatProject);
+  const addFilesToProject = useMutation(api.tasks.addFilesToProject);
   const addChatMessage = useMutation(api.tasks.addChatMessage);
   const updateChatMessage = useMutation(api.tasks.updateChatMessage);
   const updateChatProjectPrompt = useMutation(api.tasks.updateChatProjectPrompt);
@@ -367,10 +368,10 @@ export default function ChatComposerScreen() {
   // Track if we've already tried to refresh R2 URLs for this project
   const hasAttemptedR2Refresh = useRef(false);
   
-  // Fetch existing project data if projectId is provided
+  // Fetch current project data (tracks newly created/forked chat projects too)
   const existingProject = useQuery(
     api.tasks.getProject,
-    projectId ? { id: projectId } : "skip"
+    createdProjectId ? { id: createdProjectId as any } : "skip"
   );
   
   // Fetch existing chat messages
@@ -916,6 +917,64 @@ export default function ChatComposerScreen() {
         messageIndex: userMessageCount + 1,
         mediaIds: mediaIdsToAttach as any,
       });
+
+      // Keep project-level media in sync for follow-up messages with new uploads.
+      // Composition/rendering reads project.files + project.fileMetadata.
+      const isFollowUpWithNewMedia = hasScript && isNewMedia && newMediaIds.length > 0;
+      let newMediaFilesForCaptioning:
+        | { url: string; filename: string; contentType: string }[]
+        | undefined;
+      if (isFollowUpWithNewMedia) {
+        const newMediaIdSet = new Set(newMediaIds);
+        const uniqueNewMedia = Array.from(
+          new Map(
+            mediaUris
+              .filter(m => m.storageId && newMediaIdSet.has(m.storageId))
+              .map(m => [String(m.storageId), m])
+          ).values()
+        );
+
+        if (uniqueNewMedia.length > 0) {
+          const filesToAdd = uniqueNewMedia
+            .map(m => m.storageId)
+            .filter((id): id is string => !!id);
+
+          const fileMetadataToAdd = uniqueNewMedia
+            .filter((m): m is PendingMedia & { storageId: string } => !!m.storageId)
+            .map((m) => ({
+              storageId: m.storageId as any,
+              filename: `${m.type}_${m.id}.${m.type === 'video' ? 'mp4' : 'jpg'}`,
+              contentType: m.type === 'video' ? 'video/mp4' : 'image/jpeg',
+              size: 0,
+            }));
+
+          if (filesToAdd.length > 0 && fileMetadataToAdd.length > 0) {
+            await addFilesToProject({
+              projectId: currentProjectId,
+              files: filesToAdd as any,
+              fileMetadata: fileMetadataToAdd as any,
+            });
+          }
+
+          const newMediaFilesRaw = await Promise.all(
+            uniqueNewMedia.map(async (media) => {
+              if (!media.storageId) return null;
+              const url = await convex.query(api.tasks.getStorageUrl, {
+                storageId: media.storageId as any,
+              });
+              if (!url) return null;
+              return {
+                url,
+                filename: `${media.type}_${media.id}.${media.type === 'video' ? 'mp4' : 'jpg'}`,
+                contentType: media.type === 'video' ? 'video/mp4' : 'image/jpeg',
+              };
+            })
+          );
+          newMediaFilesForCaptioning = newMediaFilesRaw.filter(
+            (item): item is { url: string; filename: string; contentType: string } => item !== null
+          );
+        }
+      }
       
       // Build conversation history for AI
       const conversationHistory = messages
@@ -947,6 +1006,7 @@ export default function ChatComposerScreen() {
         conversationHistory,
         storageIds,
         cachedMediaDescriptions: cachedDescriptions,
+        newMediaFiles: newMediaFilesForCaptioning,
         isFirstMessage: !hasScript,
         isNewMedia,
         newMediaCount,
