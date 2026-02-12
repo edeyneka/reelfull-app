@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, router, useGlobalSearchParams, usePathname } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useCallback, useEffect, useRef } from "react";
+import { AppState, AppStateStatus } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ConvexProvider, ConvexReactClient } from "convex/react";
 import { AppProvider, useApp } from "@/contexts/AppContext";
@@ -16,14 +17,43 @@ import Colors from "@/constants/colors";
 
 SplashScreen.preventAutoHideAsync();
 
+const foregroundNotificationContext: {
+  pathname: string;
+  appState: AppStateStatus;
+  activeChatProjectId?: string;
+} = {
+  pathname: "",
+  appState: AppState.currentState,
+  activeChatProjectId: undefined,
+};
+
 // Configure notification behavior when app is in foreground
 Notifications.setNotificationHandler({
   handleNotification: async (notification) => {
-    const data = notification.request.content.data as { type?: string };
+    const data = notification.request.content.data as { type?: string; projectId?: string };
     
-    // Show "Script generated" notifications in foreground as a lightweight banner
-    // so users who navigated away still get a clear completion signal.
+    // Suppress script-ready notifications when user is actively on chat composer
+    // (same chat, or unknown active project while composing a new chat).
     if (data?.type === 'script_ready') {
+      const incomingProjectId = typeof data.projectId === "string" ? data.projectId : undefined;
+      const isOnChatComposer =
+        foregroundNotificationContext.appState === "active" &&
+        foregroundNotificationContext.pathname === "/chat-composer";
+      const isDifferentChat =
+        !!incomingProjectId &&
+        !!foregroundNotificationContext.activeChatProjectId &&
+        incomingProjectId !== foregroundNotificationContext.activeChatProjectId;
+
+      if (isOnChatComposer && !isDifferentChat) {
+        return {
+          shouldShowAlert: false,
+          shouldPlaySound: false,
+          shouldSetBadge: false,
+          shouldShowBanner: false,
+          shouldShowList: false,
+        };
+      }
+
       return {
         shouldShowAlert: true,
         shouldPlaySound: false,
@@ -73,6 +103,7 @@ function AppContent() {
   const lastHandledNavigationRef = useRef<string | null>(null);
   const pathname = usePathname();
   const globalParams = useGlobalSearchParams<{ projectId?: string | string[] }>();
+  const appStateRef = useRef<AppStateStatus>(AppState.currentState);
 
   const navigateToProjectChat = useCallback((projectId: string) => {
     const dedupeKey = `script_ready:${projectId}`;
@@ -120,6 +151,26 @@ function AppContent() {
         });
     }
   }, [userId]);
+
+  useEffect(() => {
+    const currentProjectId = Array.isArray(globalParams.projectId)
+      ? globalParams.projectId[0]
+      : globalParams.projectId;
+
+    foregroundNotificationContext.pathname = pathname;
+    foregroundNotificationContext.appState = appStateRef.current;
+    foregroundNotificationContext.activeChatProjectId =
+      pathname === "/chat-composer" && currentProjectId ? String(currentProjectId) : undefined;
+  }, [pathname, globalParams.projectId]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      appStateRef.current = nextState;
+      foregroundNotificationContext.appState = nextState;
+    });
+
+    return () => subscription.remove();
+  }, []);
 
   // Handle notification taps (when user taps on a notification)
   useEffect(() => {
