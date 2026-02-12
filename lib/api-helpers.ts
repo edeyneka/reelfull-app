@@ -268,7 +268,7 @@ export async function uploadMediaFiles(
         // 7. Add metadata
         uploads.push({
           storageId: storageId as Id<"_storage">,
-          filename: `${media.type}_${Date.now()}.${media.type === "video" ? "mp4" : "jpg"}`,
+          filename: `${media.type}_${Date.now().toString().slice(0, 13)}.${media.type === "video" ? "mp4" : "jpg"}`,
           contentType,
           size: blob.size,
         });
@@ -317,7 +317,7 @@ export async function uploadMediaFilesToR2(
   // 1. Prepare file metadata
   const fileMetadata = mediaUris.map((media, index) => {
     const ext = media.type === "video" ? "mp4" : "jpg";
-    const filename = media.filename || `${media.type}_${Date.now()}_${index}.${ext}`;
+    const filename = media.filename || `${media.type}_${Date.now().toString().slice(0, 13)}_${index}.${ext}`;
     const contentType = media.type === "video" ? "video/mp4" : "image/jpeg";
     
     return { filename, contentType };

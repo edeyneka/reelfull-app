@@ -279,7 +279,9 @@ function ComposerScreen() {
         // Show overlay immediately
         setShowUploadOverlay(true);
         
-        const baseTimestamp = Date.now();
+        // Use consistent 13-digit timestamp for media IDs
+        const ts = Date.now();
+        const baseTimestamp = parseInt(ts.toString().slice(0, 13).padEnd(13, '0'), 10);
         const newMedia = result.assets.map((asset, index) => ({
           uri: asset.uri,
           type: (asset.type === 'video' ? 'video' : 'image') as 'video' | 'image',

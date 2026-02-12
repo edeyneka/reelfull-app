@@ -58,6 +58,17 @@ const VOICE_SPEED_OPTIONS = [
   { label: 'Very Fast', value: 1.25 },
 ];
 
+// Generate a consistent 13-digit numeric ID for media files.
+// Ensures all batches produce the same length IDs regardless of timing.
+function generateMediaTimestamp(): number {
+  const ts = Date.now();
+  // Ensure exactly 13 digits: pad with trailing zeros if too short, truncate if too long
+  const str = ts.toString();
+  if (str.length === 13) return ts;
+  if (str.length < 13) return parseInt(str.padEnd(13, '0'), 10);
+  return parseInt(str.slice(0, 13), 10);
+}
+
 // Extended media type with upload status for inline attachments
 interface PendingMedia {
   uri: string;
@@ -753,7 +764,7 @@ export default function ChatComposerScreen() {
       });
       
       if (!result.canceled && result.assets.length > 0) {
-        const baseTimestamp = Date.now();
+        const baseTimestamp = generateMediaTimestamp();
         // Create media items with thumbnailLoaded: false to show placeholder
         // Videos are marked as loaded immediately since VideoView doesn't have onLoad
         const newMedia: PendingMedia[] = result.assets.map((asset, index) => ({
