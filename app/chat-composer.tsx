@@ -135,11 +135,12 @@ function TypingIndicator() {
   }, []);
   
   const dots = '.'.repeat(dotCount);
-  const estimatedBubbleWidth = phrase.length * 6.1 + 15;
+  // Always reserve space for the maximum 3 dots to prevent text reflow
+  const estimatedBubbleWidth = (phrase.length + 3) * 6.1 + 15;
   
   return (
     <View style={[styles.scriptLoadingContainer, { width: estimatedBubbleWidth }]}>
-      <Text style={styles.scriptLoadingText}>
+      <Text style={styles.scriptLoadingText} numberOfLines={1}>
         {phrase}
         <Text style={styles.scriptLoadingDots}>{dots}</Text>
       </Text>
