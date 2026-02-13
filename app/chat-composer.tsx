@@ -259,6 +259,11 @@ function ChatBubble({
               <Volume2 size={14} color={Colors.textSecondary} />
             )}
           </TouchableOpacity>
+          
+          {/* Script hint for latest assistant message */}
+          {isLatestAssistant && (
+            <Text style={styles.scriptHint}>this message will be used as script</Text>
+          )}
         </View>
       )}
     </View>
@@ -2282,6 +2287,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: Fonts.regular,
     color: Colors.ember,
+  },
+  scriptHint: {
+    fontSize: 11,
+    fontFamily: Fonts.regular,
+    color: Colors.textSecondary,
+    marginLeft: 2,
   },
   limitWarning: {
     backgroundColor: 'rgba(243, 106, 63, 0.08)',
