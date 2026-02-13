@@ -5,6 +5,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -75,8 +76,13 @@ export default function AuthScreen() {
   const [selectedCountry, setSelectedCountry] = useState<Country>(DEFAULT_COUNTRY);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [code, setCode] = useState('');
+  const [isCodeFocused, setIsCodeFocused] = useState(false);
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
+  
+  // Ref for hidden code input
+  const hiddenCodeInputRef = useRef<TextInput>(null);
 
   const formatPhoneNumber = (value: string, country: Country) => {
     // Remove all non-digit characters
@@ -250,6 +256,7 @@ export default function AuthScreen() {
         Alert.alert('Error', 'Invalid code. Please try again.');
       }
       setCode('');
+      setTimeout(() => hiddenCodeInputRef.current?.focus(), 100);
     } finally {
       setIsLoading(false);
     }
@@ -309,6 +316,27 @@ export default function AuthScreen() {
     setPassword('');
     setUseTwilioVerify(false);
     setIsBackdoorMode(false);
+    setResendTimer(0);
+  };
+  
+  // Handle code input change (hidden input handles both typing and paste)
+  const handleCodeChange = (text: string) => {
+    const digits = text.replace(/\D/g, '').slice(0, 6);
+    setCode(digits);
+  };
+  
+  const focusCodeInput = () => {
+    hiddenCodeInputRef.current?.focus();
+  };
+  
+  const startResendTimer = () => {
+    setResendTimer(30);
+  };
+  
+  const handleResendCode = async () => {
+    if (resendTimer > 0) return;
+    startResendTimer();
+    await handleSendCode();
   };
 
   const handleTestAccount = async () => {
@@ -365,7 +393,6 @@ export default function AuthScreen() {
   
   // Refs for auto-focus
   const phoneInputRef = useRef<TextInput>(null);
-  const codeInputRef = useRef<TextInput>(null);
   const passwordInputRef = useRef<TextInput>(null);
   
   // Auto-verify when 6-digit code is entered
@@ -389,7 +416,8 @@ export default function AuthScreen() {
       if (step === 'phone') {
         phoneInputRef.current?.focus();
       } else if (step === 'code') {
-        codeInputRef.current?.focus();
+        hiddenCodeInputRef.current?.focus();
+        startResendTimer();
       } else if (step === 'password') {
         passwordInputRef.current?.focus();
       }
@@ -397,6 +425,21 @@ export default function AuthScreen() {
     
     return () => clearTimeout(timer);
   }, [step]);
+  
+  // Resend timer countdown
+  useEffect(() => {
+    if (resendTimer <= 0) return;
+    const interval = setInterval(() => {
+      setResendTimer((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [resendTimer]);
   
   
   return (
@@ -422,14 +465,14 @@ export default function AuthScreen() {
                 />
               </View>
               <Text style={styles.title}>
-                {step === 'phone' ? 'Welcome!' : step === 'password' ? 'Enter Password' : 'Enter Verification Code'}
+                {step === 'phone' ? 'Welcome!' : step === 'password' ? 'Enter Password' : 'Enter the code we'}
               </Text>
               <Text style={styles.subtitle}>
                 {step === 'phone'
                   ? 'Enter your phone number to continue'
                   : step === 'password'
                   ? 'Enter your password to continue'
-                  : `We sent a code to ${selectedCountry.dialCode} ${formatPhoneNumber(phoneNumber, selectedCountry)}`}
+                  : `sent to ${selectedCountry.dialCode} ${formatPhoneNumber(phoneNumber, selectedCountry)}`}
               </Text>
             </View>
 
@@ -539,38 +582,64 @@ export default function AuthScreen() {
                 </>
               ) : (
                 <>
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Verification Code</Text>
-                    <TextInput
-                      ref={codeInputRef}
-                      style={styles.codeInput}
-                      placeholder="000000"
-                      placeholderTextColor={Colors.gray400}
-                      value={code}
-                      onChangeText={setCode}
-                      keyboardType="number-pad"
-                      maxLength={6}
-                    />
-                  </View>
+                  {/* Hidden input handles all keyboard/paste/autofill input */}
+                  <TextInput
+                    ref={hiddenCodeInputRef}
+                    style={styles.hiddenCodeInput}
+                    value={code}
+                    onChangeText={handleCodeChange}
+                    onFocus={() => setIsCodeFocused(true)}
+                    onBlur={() => setIsCodeFocused(false)}
+                    keyboardType="number-pad"
+                    textContentType="oneTimeCode"
+                    autoComplete="sms-otp"
+                    maxLength={6}
+                    caretHidden
+                  />
+                  {/* Visual code slots */}
+                  <Pressable style={styles.codeSlotsContainer} onPress={focusCodeInput}>
+                    {[0, 1, 2, 3, 4, 5].map((index) => {
+                      const digit = code[index] || '';
+                      const isCurrent = isCodeFocused && code.length === index;
+                      const isFilled = digit !== '';
+                      return (
+                        <View
+                          key={index}
+                          style={[
+                            styles.codeSlot,
+                            isCurrent && styles.codeSlotFocused,
+                            isFilled && styles.codeSlotFilled,
+                          ]}
+                        >
+                          <Text style={styles.codeSlotText}>{digit}</Text>
+                        </View>
+                      );
+                    })}
+                  </Pressable>
 
-                  <TouchableOpacity
-                    style={[
-                      styles.button,
-                      { backgroundColor: isCodeValid && !isLoading ? Colors.ember : Colors.creamDark },
-                      !isCodeValid && styles.buttonDisabled,
-                    ]}
-                    onPress={handleVerifyCode}
-                    disabled={!isCodeValid || isLoading}
-                    activeOpacity={0.8}
-                  >
-                    <View style={styles.buttonInner}>
-                      {isLoading ? (
-                        <ActivityIndicator color={Colors.white} />
-                      ) : (
-                        <Text style={[styles.buttonText, !isCodeValid && styles.buttonTextDisabled]}>Verify</Text>
-                      )}
+                  {isLoading && (
+                    <View style={styles.verifyingContainer}>
+                      <ActivityIndicator color={Colors.ember} />
                     </View>
-                  </TouchableOpacity>
+                  )}
+
+                  <View style={styles.resendSection}>
+                    <Text style={styles.didntReceiveText}>Didn't receive it?</Text>
+                    <TouchableOpacity
+                      onPress={handleResendCode}
+                      disabled={resendTimer > 0 || isLoading}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[
+                        styles.resendTimerText,
+                        resendTimer > 0 && styles.resendTimerTextDisabled,
+                      ]}>
+                        {resendTimer > 0
+                          ? `Resend code (0:${resendTimer.toString().padStart(2, '0')})`
+                          : 'Resend code'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
 
                   <TouchableOpacity
                     style={styles.changePhoneButton}
@@ -578,15 +647,6 @@ export default function AuthScreen() {
                     activeOpacity={0.7}
                   >
                     <Text style={styles.changePhoneText}>Change phone number</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.resendButton}
-                    onPress={handleSendCode}
-                    disabled={isLoading}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.resendText}>Resend code</Text>
                   </TouchableOpacity>
                 </>
               )}
@@ -678,11 +738,69 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: Colors.creamDark,
   },
+  hiddenCodeInput: {
+    position: 'absolute',
+    width: 1,
+    height: 1,
+    opacity: 0,
+  },
+  codeSlotsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 10,
+    marginBottom: 32,
+  },
+  codeSlot: {
+    width: 52,
+    height: 56,
+    borderRadius: 12,
+    backgroundColor: Colors.white,
+    borderWidth: 1.5,
+    borderColor: Colors.creamDark,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  codeSlotFocused: {
+    borderColor: Colors.ember,
+    borderWidth: 1.5,
+  },
+  codeSlotFilled: {
+    borderColor: Colors.creamDarker,
+  },
+  codeSlotText: {
+    fontSize: 22,
+    fontFamily: Fonts.medium,
+    color: Colors.ink,
+  },
+  verifyingContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  resendSection: {
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  didntReceiveText: {
+    fontSize: 15,
+    fontFamily: Fonts.regular,
+    color: Colors.textSecondary,
+    marginBottom: 4,
+  },
+  resendTimerText: {
+    fontSize: 15,
+    fontFamily: Fonts.regular,
+    color: Colors.ink,
+    textDecorationLine: 'underline',
+  },
+  resendTimerTextDisabled: {
+    color: Colors.textSecondary,
+    textDecorationLine: 'none',
+  },
   button: {
     marginTop: 8,
     borderRadius: 100,
     overflow: 'hidden',
-    height: 64,
+    height: 52,
   },
   buttonDisabled: {
     opacity: 0.7,
@@ -712,17 +830,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.regular,
     color: Colors.ember,
   },
-  resendButton: {
-    marginTop: 0,
-    padding: 0,
-    alignItems: 'center',
-  },
-  resendText: {
-    fontSize: 16,
-    fontFamily: Fonts.regular,
-    color: Colors.textSecondary,
-    textDecorationLine: 'underline',
-  },
+  // resendButton and resendText removed - replaced by resendSection
   testAccountButton: {
     marginTop: 24,
     padding: 16,

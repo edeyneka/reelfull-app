@@ -868,40 +868,44 @@ export default function SettingsScreen() {
 
                 <ScrollView style={styles.voicesList}>
                   {/* Custom Voice Option */}
-                  {user.elevenlabsVoiceId && (
-                    <TouchableOpacity
-                      style={[
-                        styles.voiceOption,
-                        user.selectedVoiceId === user.elevenlabsVoiceId && styles.voiceOptionSelected,
-                      ]}
-                      onPress={() => handleSelectVoice(user.elevenlabsVoiceId)}
-                      activeOpacity={0.7}
-                    >
-                      <View style={styles.voiceOptionContent}>
-                        <Headphones size={24} color={Colors.ember} strokeWidth={2} />
-                        <View style={styles.voiceOptionText}>
-                          <Text style={styles.voiceOptionName}>
-                            {user.name ? `${user.name}'s Voice` : 'Your Voice'}
-                          </Text>
-                          <Text style={styles.voiceOptionDesc}>Custom AI voice clone</Text>
+                  {user.elevenlabsVoiceId && (() => {
+                    // Fall back to original recording if TTS preview not available
+                    const clonePreviewStorageId = user.voicePreviewStorageId || user.voiceRecordingStorageId;
+                    return (
+                      <TouchableOpacity
+                        style={[
+                          styles.voiceOption,
+                          user.selectedVoiceId === user.elevenlabsVoiceId && styles.voiceOptionSelected,
+                        ]}
+                        onPress={() => handleSelectVoice(user.elevenlabsVoiceId)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={styles.voiceOptionContent}>
+                          <Headphones size={24} color={Colors.ember} strokeWidth={2} />
+                          <View style={styles.voiceOptionText}>
+                            <Text style={styles.voiceOptionName}>
+                              {user.name ? `${user.name}'s Voice` : 'Your Voice'}
+                            </Text>
+                            <Text style={styles.voiceOptionDesc}>Custom AI voice clone</Text>
+                          </View>
                         </View>
-                      </View>
-                      {user.voicePreviewStorageId && (
-                        <TouchableOpacity
-                          style={styles.previewButton}
-                          onPress={() => playVoicePreview(user.voicePreviewStorageId!, user.elevenlabsVoiceId)}
-                          activeOpacity={0.7}
-                          disabled={playingPreviewId === user.elevenlabsVoiceId && !previewUrl}
-                        >
-                          {playingPreviewId === user.elevenlabsVoiceId && !previewUrl ? (
-                            <ActivityIndicator size="small" color={Colors.ember} />
-                          ) : (
-                            <Volume2 size={18} color={Colors.ember} strokeWidth={2} />
-                          )}
-                        </TouchableOpacity>
-                      )}
-                    </TouchableOpacity>
-                  )}
+                        {clonePreviewStorageId && (
+                          <TouchableOpacity
+                            style={styles.previewButton}
+                            onPress={() => playVoicePreview(clonePreviewStorageId, user.elevenlabsVoiceId)}
+                            activeOpacity={0.7}
+                            disabled={playingPreviewId === user.elevenlabsVoiceId && !previewUrl}
+                          >
+                            {playingPreviewId === user.elevenlabsVoiceId && !previewUrl ? (
+                              <ActivityIndicator size="small" color={Colors.ember} />
+                            ) : (
+                              <Volume2 size={18} color={Colors.ember} strokeWidth={2} />
+                            )}
+                          </TouchableOpacity>
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })()}
 
                   {/* Default Voices */}
                   {defaultVoices?.map((voice: any) => (
