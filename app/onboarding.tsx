@@ -335,7 +335,7 @@ const styles = StyleSheet.create({
     marginTop: 24,
     borderRadius: 100,
     overflow: 'hidden',
-    height: 64,
+    height: 52,
   },
   buttonDisabled: {
     opacity: 0.7,
