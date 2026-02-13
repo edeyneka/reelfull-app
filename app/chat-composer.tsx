@@ -1938,15 +1938,15 @@ export default function ChatComposerScreen() {
             
             {/* Keep Clips Order */}
             <View style={styles.menuItem}>
-              <ListOrdered size={18} color={Colors.ink} />
-              <Text style={[styles.menuItemText, { flex: 1 }]}>Keep Clips Order</Text>
+              <ListOrdered size={18} color={Colors.ink} style={{ flexShrink: 0 }} />
+              <Text style={[styles.menuItemText, { flex: 1, flexShrink: 1 }]}>Keep Clips Order</Text>
               <Switch
                 value={keepOrder}
                 onValueChange={() => handleToggleKeepOrder()}
                 trackColor={{ false: Colors.creamDark, true: Colors.ember }}
                 thumbColor={Colors.white}
                 ios_backgroundColor={Colors.creamDark}
-                style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
+                style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }], flexShrink: 0 }}
               />
             </View>
             
@@ -2274,6 +2274,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.12,
     shadowRadius: 16,
     elevation: 8,
+    overflow: 'hidden',
   },
   menuItem: {
     flexDirection: 'row',
