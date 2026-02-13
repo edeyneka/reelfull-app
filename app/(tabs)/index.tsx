@@ -187,7 +187,7 @@ function VideoThumbnail({
               resizeMode="cover"
             />
             <LinearGradient
-              colors={['#FFEEE8', Colors.creamLight]}
+              colors={['#FFEEE8', "#FAF9F5"]}
               locations={[0, 1]}
               start={{ x: 0, y: 0.5 }}
               end={{ x: 1, y: 0.5 }}
