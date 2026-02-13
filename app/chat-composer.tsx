@@ -1,5 +1,5 @@
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
-import { ArrowLeft, Plus, Send, X, Check, Info, Copy, MessageSquare, Volume2, Gauge, ListOrdered, Loader2, VolumeX } from 'lucide-react-native';
+import { ArrowLeft, Plus, Send, X, Check, Info, Copy, MessageSquare, Volume2, Mic, Gauge, ListOrdered, MoreHorizontal, VolumeX } from 'lucide-react-native';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Alert,
@@ -18,6 +18,7 @@ import {
   Animated,
   ActionSheetIOS,
   InteractionManager,
+  Switch,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { VideoExportPreset } from 'expo-image-picker';
@@ -155,10 +156,6 @@ function ChatBubble({
   onPlayVoice,
   isPlayingVoice,
   isGeneratingVoice,
-  voiceSpeed,
-  onChangeSpeed,
-  keepOrder,
-  onToggleKeepOrder,
 }: { 
   message: LocalChatMessage;
   onEditTap?: () => void;
@@ -168,19 +165,9 @@ function ChatBubble({
   onPlayVoice?: () => void;
   isPlayingVoice?: boolean;
   isGeneratingVoice?: boolean;
-  voiceSpeed?: number;
-  onChangeSpeed?: () => void;
-  keepOrder?: boolean;
-  onToggleKeepOrder?: () => void;
 }) {
   const isUser = message.role === 'user';
   const isAssistant = message.role === 'assistant';
-  
-  // Get speed label for display
-  const getSpeedLabel = () => {
-    const option = VOICE_SPEED_OPTIONS.find(o => o.value === voiceSpeed);
-    return option?.label || 'Normal';
-  };
   
   return (
     <View style={[styles.messageBubbleContainer, isUser && styles.messageBubbleContainerUser]}>
@@ -272,19 +259,6 @@ function ChatBubble({
               <Volume2 size={14} color={Colors.textSecondary} />
             )}
           </TouchableOpacity>
-          
-          {/* Speed selector button */}
-          <TouchableOpacity onPress={onChangeSpeed} style={styles.actionButton}>
-            <Gauge size={14} color={Colors.textSecondary} />
-          </TouchableOpacity>
-          
-          {/* Keep order toggle */}
-          <TouchableOpacity 
-            onPress={onToggleKeepOrder} 
-            style={[styles.actionButton, keepOrder && styles.actionButtonActive]}
-          >
-            <ListOrdered size={14} color={keepOrder ? Colors.accent : Colors.grayLight} />
-          </TouchableOpacity>
         </View>
       )}
     </View>
@@ -367,6 +341,7 @@ export default function ChatComposerScreen() {
   const [isProcessingMedia, setIsProcessingMedia] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   
   // Track if we've forked from a completed video project
   const [hasForkedFromVideo, setHasForkedFromVideo] = useState(false);
@@ -1768,15 +1743,70 @@ export default function ChatComposerScreen() {
         </TouchableOpacity>
         
         <TouchableOpacity 
-          style={styles.infoButton}
-          onPress={() => Alert.alert(
-            'How it works',
-            'The last generated script will be used for your video creation. You can edit or regenerate the script before approving.'
-          )}
+          style={styles.threeDotsButton}
+          onPress={() => setShowMenu(prev => !prev)}
         >
-          <Info size={20} color={Colors.textSecondary} />
+          <MoreHorizontal size={20} color={Colors.ink} />
         </TouchableOpacity>
       </View>
+      
+      {/* Three-dots popover menu */}
+      {showMenu && (
+        <>
+          <Pressable style={styles.menuOverlay} onPress={() => setShowMenu(false)} />
+          <View style={[styles.menuContainer, { top: insets.top + 60 }]}>
+            {/* Voice Clone */}
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setShowMenu(false);
+                setPendingVoiceAction(null);
+                setShowVoiceConfigModal(true);
+              }}
+              activeOpacity={0.6}
+            >
+              <Mic size={18} color={Colors.ink} />
+              <Text style={styles.menuItemText}>Voice Clone</Text>
+            </TouchableOpacity>
+            
+            <View style={styles.menuDivider} />
+            
+            {/* Voiceover Speed */}
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setShowMenu(false);
+                handleChangeSpeed();
+              }}
+              activeOpacity={0.6}
+            >
+              <Gauge size={18} color={Colors.ink} />
+              <View style={styles.menuItemTextContainer}>
+                <Text style={styles.menuItemText}>Voiceover Speed</Text>
+                <Text style={styles.menuItemSecondary}>
+                  {VOICE_SPEED_OPTIONS.find(o => o.value === voiceSpeed)?.label || 'Normal'}
+                </Text>
+              </View>
+            </TouchableOpacity>
+            
+            <View style={styles.menuDivider} />
+            
+            {/* Keep Clips Order */}
+            <View style={styles.menuItem}>
+              <ListOrdered size={18} color={Colors.ink} />
+              <Text style={[styles.menuItemText, { flex: 1 }]}>Keep Clips Order</Text>
+              <Switch
+                value={keepOrder}
+                onValueChange={() => handleToggleKeepOrder()}
+                trackColor={{ false: Colors.creamDark, true: Colors.ember }}
+                thumbColor={Colors.white}
+                ios_backgroundColor={Colors.creamDark}
+                style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
+              />
+            </View>
+          </View>
+        </>
+      )}
       
       {/* Chat Area */}
       <KeyboardAvoidingView
@@ -1823,10 +1853,6 @@ export default function ChatComposerScreen() {
               onPlayVoice={() => handlePlayVoice(message.id, message.content)}
               isPlayingVoice={playingMessageId === message.id}
               isGeneratingVoice={generatingVoiceMessageId === message.id}
-              voiceSpeed={voiceSpeed}
-              onChangeSpeed={handleChangeSpeed}
-              keepOrder={keepOrder}
-              onToggleKeepOrder={handleToggleKeepOrder}
             />
           ))}
           
@@ -1977,9 +2003,9 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingBottom: 12,
-    gap: 12,
   },
   headerButton: {
     width: 40,
@@ -1989,11 +2015,63 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  infoButton: {
-    width: 36,
-    height: 36,
+  threeDotsButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.creamDark,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  menuOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 50,
+  },
+  menuContainer: {
+    position: 'absolute',
+    right: 16,
+    width: 220,
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    paddingVertical: 6,
+    zIndex: 51,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    gap: 12,
+  },
+  menuItemTextContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  menuItemText: {
+    fontSize: 15,
+    fontFamily: Fonts.medium,
+    color: Colors.ink,
+  },
+  menuItemSecondary: {
+    fontSize: 13,
+    fontFamily: Fonts.regular,
+    color: Colors.textSecondary,
+  },
+  menuDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: Colors.creamDark,
+    marginHorizontal: 16,
   },
   keyboardView: {
     flex: 1,

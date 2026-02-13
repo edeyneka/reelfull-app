@@ -1,4 +1,4 @@
-import { X, ChevronDown, ChevronUp, Volume2, Check, Play, Square } from 'lucide-react-native';
+import { X, ChevronDown, ChevronUp, Volume2, Check, Play, Square, Mic } from 'lucide-react-native';
 import { useState, useEffect } from 'react';
 import {
   Modal,
@@ -50,6 +50,37 @@ export default function VoiceConfigModal({
   
   // Query default voices (now includes previewUrl)
   const defaultVoices = useQuery(api.users.getDefaultVoices);
+  
+  // Query current user to check for existing voice clone
+  const backendUser = useQuery(
+    api.users.getCurrentUser,
+    userId ? { userId } : "skip"
+  );
+  const hasVoiceClone = !!backendUser?.elevenlabsVoiceId;
+  
+  // Get preview URL for user's cloned voice
+  // Try voicePreviewStorageId first (TTS preview), fall back to voiceRecordingStorageId (original recording)
+  const clonePreviewStorageId = backendUser?.voicePreviewStorageId || backendUser?.voiceRecordingStorageId;
+  const clonePreviewUrl = useQuery(
+    api.tasks.getStorageUrl,
+    clonePreviewStorageId
+      ? { storageId: clonePreviewStorageId }
+      : "skip"
+  );
+
+  // Initialize selectedVoiceId from backend user when modal opens
+  useEffect(() => {
+    if (visible && backendUser?.selectedVoiceId) {
+      setSelectedVoiceId(backendUser.selectedVoiceId);
+    }
+  }, [visible, backendUser?.selectedVoiceId]);
+  
+  // Auto-expand voice list when user already has a clone (so they can see it)
+  useEffect(() => {
+    if (visible && hasVoiceClone) {
+      setShowVoiceList(true);
+    }
+  }, [visible, hasVoiceClone]);
 
   // Pre-cache audio when voice list is shown
   useEffect(() => {
@@ -338,6 +369,60 @@ export default function VoiceConfigModal({
             {/* Expandable Voice List */}
             {showVoiceList && (
               <View style={styles.voicesList}>
+                {/* User's cloned voice - shown first */}
+                {hasVoiceClone && backendUser?.elevenlabsVoiceId && (() => {
+                  const cloneVoiceId = backendUser.elevenlabsVoiceId!;
+                  const isSelected = selectedVoiceId === cloneVoiceId;
+                  const isPlaying = playingPreviewId === cloneVoiceId;
+                  const isCached = !!cachedSounds[cloneVoiceId];
+                  const hasPreview = !!clonePreviewUrl;
+                  
+                  return (
+                    <TouchableOpacity
+                      key="my-voice-clone"
+                      style={[
+                        styles.voiceOption,
+                        isSelected && styles.voiceOptionSelected,
+                      ]}
+                      onPress={() => handleSelectDefaultVoice(cloneVoiceId)}
+                      activeOpacity={0.7}
+                      disabled={isSaving}
+                    >
+                      <View style={styles.voiceOptionContent}>
+                        {isSelected ? (
+                          <View style={styles.checkIconContainer}>
+                            <Check size={18} color={Colors.white} strokeWidth={3} />
+                          </View>
+                        ) : (
+                          <Mic size={22} color={Colors.ember} strokeWidth={2} />
+                        )}
+                        <View style={styles.voiceOptionTextContainer}>
+                          <Text style={styles.voiceOptionName}>My Voice</Text>
+                          <Text style={styles.voiceOptionDesc}>
+                            Your cloned voice
+                          </Text>
+                        </View>
+                      </View>
+                      <TouchableOpacity
+                        style={[
+                          styles.previewButton,
+                          isPlaying && styles.previewButtonPlaying,
+                        ]}
+                        onPress={() => hasPreview && playVoicePreview(cloneVoiceId, clonePreviewUrl!)}
+                        activeOpacity={0.7}
+                        disabled={!hasPreview}
+                      >
+                        {isPlaying ? (
+                          <Square size={14} color={Colors.white} strokeWidth={0} fill={Colors.white} />
+                        ) : (
+                          <Play size={16} color={hasPreview ? Colors.ember : Colors.gray400} strokeWidth={0} fill={hasPreview ? Colors.ember : Colors.gray400} />
+                        )}
+                      </TouchableOpacity>
+                    </TouchableOpacity>
+                  );
+                })()}
+                
+                {/* Default voices */}
                 {defaultVoices?.map((voice: any) => {
                   const isSelected = selectedVoiceId === voice.voiceId;
                   const isPlaying = playingPreviewId === voice.voiceId;
