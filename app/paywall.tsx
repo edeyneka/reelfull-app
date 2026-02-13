@@ -481,12 +481,12 @@ export default function PaywallScreen() {
               style={styles.scrollView}
               contentContainerStyle={[
                 styles.scrollContent,
-                isKeyboardVisible && { paddingBottom: 0 }
+                isKeyboardVisible && { paddingBottom: 120 }
               ]}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
-              bounces={false}
-              scrollEnabled={false}
+              bounces={isKeyboardVisible}
+              scrollEnabled={isKeyboardVisible}
             >
               {/* Hero Section */}
               <View style={styles.heroSection}>
