@@ -35,6 +35,7 @@ import { Fonts } from '@/constants/typography';
 import { LocalChatMessage } from '@/types';
 import { ENABLE_TEST_RUN_MODE } from '@/constants/config';
 import VoiceConfigModal from '@/components/VoiceConfigModal';
+import ChatOnboarding, { SpotlightRect } from '@/components/ChatOnboarding';
 
 const MAX_USER_MESSAGES = 10;
 const SCRIPT_LOADING_PHRASES = [
@@ -373,6 +374,14 @@ export default function ChatComposerScreen() {
   const hasShownVoicePromptRef = useRef(false);
   const skipVoiceCheckRef = useRef(false); // Temporary flag to skip voice check after config
   
+  // Chat onboarding tips state
+  const [showChatOnboarding, setShowChatOnboarding] = useState(false);
+  const [spotlightRects, setSpotlightRects] = useState<(SpotlightRect | null)[]>([null, null, null, null]);
+  const scriptBubbleRef = useRef<View>(null);
+  const threeDotsRef = useRef<View>(null);
+  const composerRef = useRef<View>(null);
+  const generateButtonRef = useRef<View>(null);
+  
   const hasAutoOpenedPicker = useRef(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const inputRef = useRef<TextInput>(null);
@@ -396,6 +405,7 @@ export default function ChatComposerScreen() {
   const updateProjectKeepOrder = useMutation(api.tasks.updateProjectKeepOrder);
   const refreshProjectR2Urls = useAction(api.tasks.refreshProjectR2Urls);
   const regenerateProjectEditing = useMutation(api.tasks.regenerateProjectEditing);
+  const completeChatTips = useMutation(api.users.completeChatTips);
   
   // Track if we've already tried to refresh R2 URLs for this project
   const hasAttemptedR2Refresh = useRef(false);
@@ -1121,6 +1131,7 @@ export default function ChatComposerScreen() {
       if (result.success && result.script) {
         if (isMountedRef.current) {
           setHasScript(true);
+          triggerChatOnboarding();
         }
       }
     } catch (error: any) {
@@ -1162,6 +1173,7 @@ export default function ChatComposerScreen() {
             if (isMountedRef.current) {
               setHasScript(true);
               setIsGenerating(false);
+              triggerChatOnboarding();
             }
             return; // Successfully recovered
           }
@@ -1653,6 +1665,55 @@ export default function ChatComposerScreen() {
     // Don't mark as shown - user explicitly closed without deciding
   };
   
+  // Chat onboarding tips: measure target elements and show overlay
+  const measureSpotlightRects = useCallback(() => {
+    const refs = [scriptBubbleRef, threeDotsRef, composerRef, generateButtonRef];
+    const measured: (SpotlightRect | null)[] = [];
+    let remaining = refs.length;
+    
+    refs.forEach((ref, index) => {
+      if (ref.current) {
+        ref.current.measureInWindow((x, y, width, height) => {
+          measured[index] = { x, y, width, height };
+          remaining--;
+          if (remaining === 0) {
+            setSpotlightRects([...measured]);
+          }
+        });
+      } else {
+        measured[index] = null;
+        remaining--;
+        if (remaining === 0) {
+          setSpotlightRects([...measured]);
+        }
+      }
+    });
+  }, []);
+
+  const triggerChatOnboarding = useCallback(() => {
+    const shouldShowTips = ENABLE_TEST_RUN_MODE || !backendUser?.chatTipsCompleted;
+    if (shouldShowTips) {
+      // Wait for the script bubble to render, then measure and show immediately
+      InteractionManager.runAfterInteractions(() => {
+        requestAnimationFrame(() => {
+          measureSpotlightRects();
+          setShowChatOnboarding(true);
+        });
+      });
+    }
+  }, [backendUser, measureSpotlightRects]);
+  
+  const handleChatOnboardingComplete = useCallback(async () => {
+    setShowChatOnboarding(false);
+    if (userId && !ENABLE_TEST_RUN_MODE) {
+      try {
+        await completeChatTips({ userId });
+      } catch (e) {
+        console.error('Failed to save chat tips completion:', e);
+      }
+    }
+  }, [userId, completeChatTips]);
+  
   const handleClose = async () => {
     if (isGenerating) {
       Alert.alert(
@@ -1763,6 +1824,7 @@ export default function ChatComposerScreen() {
         
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <TouchableOpacity
+            ref={generateButtonRef}
             style={[styles.generateButton, !isGenerateActive && styles.generateButtonDisabled]}
             onPress={isRegenerateMode ? handleRegenerateFromVideo : handleApproveAndGenerate}
             disabled={!isGenerateActive || isGenerateBusy}
@@ -1775,6 +1837,7 @@ export default function ChatComposerScreen() {
             )}
           </TouchableOpacity>
           <TouchableOpacity 
+            ref={threeDotsRef}
             style={styles.threeDotsButton}
             onPress={() => setShowMenu(prev => !prev)}
           >
@@ -1875,19 +1938,35 @@ export default function ChatComposerScreen() {
           )}
           
           {/* Chat messages */}
-          {messages.map((message) => (
-            <ChatBubble
-              key={message.id}
-              message={message}
-              onEditTap={() => handleEditScript(message.id, message.content)}
-              onCopy={() => handleCopy(message.id, message.content)}
-              isLatestAssistant={message.id === latestAssistantMessageId}
-              isCopied={copiedMessageId === message.id}
-              onPlayVoice={() => handlePlayVoice(message.id, message.content)}
-              isPlayingVoice={playingMessageId === message.id}
-              isGeneratingVoice={generatingVoiceMessageId === message.id}
-            />
-          ))}
+          {(() => {
+            const firstAssistantIndex = messages.findIndex(m => m.role === 'assistant' && !m.isLoading);
+            return messages.map((message, index) => {
+              const isFirstAssistant = index === firstAssistantIndex;
+              
+              const bubble = (
+                <ChatBubble
+                  key={isFirstAssistant ? undefined : message.id}
+                  message={message}
+                  onEditTap={() => handleEditScript(message.id, message.content)}
+                  onCopy={() => handleCopy(message.id, message.content)}
+                  isLatestAssistant={message.id === latestAssistantMessageId}
+                  isCopied={copiedMessageId === message.id}
+                  onPlayVoice={() => handlePlayVoice(message.id, message.content)}
+                  isPlayingVoice={playingMessageId === message.id}
+                  isGeneratingVoice={generatingVoiceMessageId === message.id}
+                />
+              );
+              
+              if (isFirstAssistant) {
+                return (
+                  <View key={message.id} ref={scriptBubbleRef} collapsable={false}>
+                    {bubble}
+                  </View>
+                );
+              }
+              return bubble;
+            });
+          })()}
           
           {/* Message limit warning */}
           {isLimitReached && (
@@ -1900,7 +1979,7 @@ export default function ChatComposerScreen() {
         </ScrollView>
         
         {/* Unified Composer */}
-        <View style={[styles.composerContainer, { paddingBottom: keyboardVisible ? 10 : insets.bottom }]}>
+        <View ref={composerRef} style={[styles.composerContainer, { paddingBottom: keyboardVisible ? 10 : insets.bottom }]}>
           {/* Add media button - outside card */}
           <TouchableOpacity 
             style={styles.addMediaButton}
@@ -2023,6 +2102,14 @@ export default function ChatComposerScreen() {
         onComplete={handleVoiceConfigComplete}
         onSkip={handleVoiceConfigSkip}
         onClose={handleVoiceConfigClose}
+      />
+      
+      {/* Chat onboarding tips overlay */}
+      <ChatOnboarding
+        visible={showChatOnboarding}
+        onComplete={handleChatOnboardingComplete}
+        spotlightRects={spotlightRects}
+        safeAreaTop={insets.top}
       />
     </View>
   );
