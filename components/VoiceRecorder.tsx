@@ -33,6 +33,12 @@ export default function VoiceRecorder({
   const [duration, setDuration] = useState(0);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const recordingRef = useRef<Audio.Recording | null>(null);
+  const soundRef = useRef<Audio.Sound | null>(null);
+
+  // Keep refs in sync with state for cleanup
+  useEffect(() => { recordingRef.current = recording; }, [recording]);
+  useEffect(() => { soundRef.current = sound; }, [sound]);
 
   // Check permission status on mount (without requesting)
   useEffect(() => {
@@ -45,19 +51,19 @@ export default function VoiceRecorder({
 
   useEffect(() => {
     return () => {
-      // Cleanup on unmount only
+      // Cleanup on unmount using refs for current values
       if (durationIntervalRef.current) {
         clearInterval(durationIntervalRef.current);
       }
-      if (recording) {
-        recording.getStatusAsync().then((status) => {
+      if (recordingRef.current) {
+        recordingRef.current.getStatusAsync().then((status) => {
           if (status.isRecording || status.canRecord) {
-            recording.stopAndUnloadAsync().catch(console.error);
+            recordingRef.current?.stopAndUnloadAsync().catch(console.error);
           }
         }).catch(console.error);
       }
-      if (sound) {
-        sound.unloadAsync().catch(console.error);
+      if (soundRef.current) {
+        soundRef.current.unloadAsync().catch(console.error);
       }
     };
   }, []); // Empty deps - only run on unmount
@@ -157,6 +163,27 @@ export default function VoiceRecorder({
     }
   };
 
+  const restartRecording = async () => {
+    // Stop and discard the current recording, then start fresh
+    if (recording) {
+      try {
+        await recording.stopAndUnloadAsync();
+      } catch (e) {
+        console.error('Failed to stop recording for restart:', e);
+      }
+      setRecording(null);
+    }
+    if (durationIntervalRef.current) {
+      clearInterval(durationIntervalRef.current);
+      durationIntervalRef.current = null;
+    }
+    setIsRecording(false);
+    setRecordingUri(undefined);
+    setDuration(0);
+    // Start fresh recording after a short delay to let audio system settle
+    setTimeout(() => startRecording(), 100);
+  };
+
   const playRecording = async () => {
     if (!recordingUri) return;
 
@@ -199,11 +226,17 @@ export default function VoiceRecorder({
     }
   };
 
-  const resetRecording = () => {
+  const resetRecording = async () => {
     if (sound) {
-      sound.unloadAsync().catch(console.error);
+      await sound.unloadAsync().catch(console.error);
       setSound(null);
     }
+    // Reset audio mode to be ready for recording again
+    // (playRecording sets allowsRecordingIOS to false)
+    await Audio.setAudioModeAsync({
+      allowsRecordingIOS: true,
+      playsInSilentModeIOS: true,
+    }).catch(console.error);
     setRecordingUri(undefined);
     setIsPlaying(false);
     setDuration(0);
@@ -260,6 +293,16 @@ export default function VoiceRecorder({
                 ? 'Tap to enable microphone'
                 : 'Tap to start recording'}
             </Text>
+            {isRecording && (
+              <TouchableOpacity
+                style={styles.restartButton}
+                onPress={restartRecording}
+                activeOpacity={0.7}
+              >
+                <RotateCcw size={16} color={Colors.textSecondary} strokeWidth={2} />
+                <Text style={styles.restartButtonText}>Restart</Text>
+              </TouchableOpacity>
+            )}
           </>
         ) : (
           <>
@@ -360,6 +403,19 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: 'center',
     marginTop: 4,
+  },
+  restartButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    marginTop: 4,
+  },
+  restartButtonText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    fontWeight: '500' as const,
   },
   playbackControls: {
     flexDirection: 'row',

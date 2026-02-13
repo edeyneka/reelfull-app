@@ -152,6 +152,14 @@ export default function VoiceConfigModal({
     setPlayingPreviewId(voiceId);
 
     try {
+      // Ensure audio plays through the speaker (not earpiece)
+      // allowsRecordingIOS must be false for speaker output on iOS
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+      });
+
       // Check if we have a cached sound
       const cachedSound = cachedSounds[voiceId];
       
