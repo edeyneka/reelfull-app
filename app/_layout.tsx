@@ -188,17 +188,29 @@ function AppContent() {
         // Navigate to chat composer to view/refine the script
         console.log('[App] Navigating to chat-composer for project:', data.projectId);
         navigateToProjectChat(data.projectId as string);
-      } else if (data?.type === 'video_ready' && data?.projectId) {
-        // Navigate to video preview screen
-        console.log('[App] Navigating to video-preview for project:', data.projectId);
-        router.push({
-          pathname: '/video-preview',
-          params: { projectId: data.projectId as string },
-        });
-      } else if (data?.type === 'video_failed' && data?.projectId) {
-        // Navigate to chat composer so user can retry
-        console.log('[App] Navigating to chat-composer for failed project:', data.projectId);
-        navigateToProjectChat(data.projectId as string);
+      } else if (data?.type === 'video_ready') {
+        if (data?.projectId) {
+          // Navigate to video preview screen
+          console.log('[App] Navigating to video-preview for project:', data.projectId);
+          router.push({
+            pathname: '/video-preview',
+            params: { projectId: data.projectId as string },
+          });
+        } else {
+          // No projectId (older local notification) — navigate to feed where user can see the ready video
+          console.log('[App] video_ready notification without projectId, navigating to feed');
+          router.navigate('/(tabs)');
+        }
+      } else if (data?.type === 'video_failed') {
+        if (data?.projectId) {
+          // Navigate to chat composer so user can retry
+          console.log('[App] Navigating to chat-composer for failed project:', data.projectId);
+          navigateToProjectChat(data.projectId as string);
+        } else {
+          // No projectId — navigate to feed
+          console.log('[App] video_failed notification without projectId, navigating to feed');
+          router.navigate('/(tabs)');
+        }
       }
     });
 

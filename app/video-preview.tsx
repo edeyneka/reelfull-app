@@ -237,17 +237,21 @@ export default function VideoPreviewScreen() {
   // Use live project thumbnail if available, fallback to params
   const effectiveThumbnailUrl = project?.thumbnailUrl || thumbnailUrl;
   
-  // Update video URI when generation completes
+  // Update video URI when generation completes or when opened with only projectId (e.g. from notification tap)
   useEffect(() => {
-    if (project?.status === 'completed' && project?.renderedVideoUrl && isGeneratingParam) {
-      console.log('[video-preview] Generation completed, updating video URI');
-      setVideoUri(project.renderedVideoUrl);
-      // Update the local video status
-      if (videoId) {
-        updateVideoStatus(videoId, 'ready', project.renderedVideoUrl, undefined, project.thumbnailUrl);
+    if (project?.status === 'completed' && project?.renderedVideoUrl) {
+      // Set videoUri from project data when:
+      // 1. Generation just completed (isGeneratingParam), OR
+      // 2. Navigated with only projectId and no initial videoUri (e.g. notification tap)
+      if (isGeneratingParam || !initialVideoUri) {
+        console.log('[video-preview] Setting video URI from project data');
+        setVideoUri(project.renderedVideoUrl);
+        if (videoId) {
+          updateVideoStatus(videoId, 'ready', project.renderedVideoUrl, undefined, project.thumbnailUrl);
+        }
       }
     }
-  }, [project?.status, project?.renderedVideoUrl, isGeneratingParam, videoId, updateVideoStatus, project?.thumbnailUrl]);
+  }, [project?.status, project?.renderedVideoUrl, isGeneratingParam, initialVideoUri, videoId, updateVideoStatus, project?.thumbnailUrl]);
   
   // Animate spinner when generating
   useEffect(() => {
@@ -743,28 +747,29 @@ export default function VideoPreviewScreen() {
     );
   }
 
-  // Show error only if no video URI AND not generating AND no rendered video from project
-  // AND project query has finished loading (not undefined)
-  if (!videoUri && !isGenerating && !project?.renderedVideoUrl && project !== undefined) {
+  // If no video URI and not generating, show loading state (thumbnail + close)
+  // instead of an error — the Convex query may still resolve the video URL
+  if (!videoUri && !isGenerating) {
     return (
       <View style={styles.container}>
+        <View style={styles.fullscreenVideo}>
+          {effectiveThumbnailUrl ? (
+            <Image
+              source={{ uri: effectiveThumbnailUrl }}
+              style={styles.generatingThumbnail}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={styles.generatingPlaceholder} />
+          )}
+        </View>
+        
         {/* Top controls */}
         <View style={[styles.topControls, { paddingTop: insets.top + 16 }]}>
           <IconButton onPress={handleClose}>
             <X size={28} color={Colors.white} strokeWidth={2.5} />
           </IconButton>
           <View style={styles.topControlsRight} />
-        </View>
-        
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Video not available</Text>
-          <TouchableOpacity
-            style={styles.errorButton}
-            onPress={handleClose}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.errorButtonText}>Go Back</Text>
-          </TouchableOpacity>
         </View>
       </View>
     );
@@ -1118,27 +1123,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 16,
-  },
-  errorText: {
-    fontSize: 16,
-    fontFamily: Fonts.regular,
-    color: Colors.white,
-  },
-  errorButton: {
-    backgroundColor: Colors.ember,
-    borderRadius: 100,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-  },
-  errorButtonText: {
-    fontSize: 16,
-    fontFamily: Fonts.medium,
-    color: Colors.white,
   },
 });
