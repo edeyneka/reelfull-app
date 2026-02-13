@@ -7,8 +7,34 @@ import {
   Dimensions,
   Animated,
 } from 'react-native';
+import { ChevronRight, ChevronLeft, Check } from 'lucide-react-native';
+import Svg, { Defs, RadialGradient, Stop, Circle as SvgCircle } from 'react-native-svg';
 import Colors from '@/constants/colors';
 import { Fonts } from '@/constants/typography';
+
+const BACKDROP_SIZE = 52;
+
+function SoftCircleBackdrop({ children }: { children: React.ReactNode }) {
+  return (
+    <View style={{ width: BACKDROP_SIZE, height: BACKDROP_SIZE, alignItems: 'center', justifyContent: 'center' }}>
+      <Svg
+        width={BACKDROP_SIZE}
+        height={BACKDROP_SIZE}
+        style={StyleSheet.absoluteFill}
+      >
+        <Defs>
+          <RadialGradient id="softGlow" cx="50%" cy="50%" r="50%">
+            <Stop offset="0%" stopColor="black" stopOpacity="0.2" />
+            <Stop offset="40%" stopColor="black" stopOpacity="0.1" />
+            <Stop offset="80%" stopColor="black" stopOpacity="0" />
+          </RadialGradient>
+        </Defs>
+        <SvgCircle cx={BACKDROP_SIZE / 2} cy={BACKDROP_SIZE / 2} r={BACKDROP_SIZE / 2} fill="url(#softGlow)" />
+      </Svg>
+      {children}
+    </View>
+  );
+}
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -93,6 +119,12 @@ export default function ChatOnboarding({
     }
   }, [currentSlide, onComplete, fadeAnim]);
 
+  const handlePrev = useCallback(() => {
+    if (currentSlide > 0) {
+      setCurrentSlide(prev => prev - 1);
+    }
+  }, [currentSlide]);
+
   if (!visible) return null;
 
   const slide = SLIDES[currentSlide];
@@ -112,7 +144,7 @@ export default function ChatOnboarding({
       }
     : null;
 
-  // Calculate tooltip position
+  // Calculate tooltip position -- dynamically flip if it would overflow
   const getTooltipStyle = () => {
     if (!cutout) {
       return {
@@ -124,8 +156,19 @@ export default function ChatOnboarding({
     }
 
     const tooltipMargin = 16;
+    const estimatedTooltipHeight = 100;
 
-    if (slide.tooltipPosition === 'above') {
+    // Determine effective position, flipping if it would go off-screen
+    let position = slide.tooltipPosition;
+    if (position === 'below') {
+      const bottomEdge = cutout.y + cutout.height + tooltipMargin + estimatedTooltipHeight;
+      if (bottomEdge > SCREEN_HEIGHT) position = 'above';
+    } else {
+      const topEdge = cutout.y - tooltipMargin - estimatedTooltipHeight;
+      if (topEdge < safeAreaTop) position = 'below';
+    }
+
+    if (position === 'above') {
       return {
         position: 'absolute' as const,
         left: 24,
@@ -157,21 +200,36 @@ export default function ChatOnboarding({
             borderColor: 'rgba(0, 0, 0, 0.6)',
             borderRadius: OVERLAY_BORDER + CUTOUT_BORDER_RADIUS,
           }}
+          pointerEvents="none"
         />
       ) : (
         /* Full overlay when no cutout */
-        <View style={styles.fullOverlay} />
+        <View style={styles.fullOverlay} pointerEvents="none" />
       )}
 
+      {/* Left tap zone - go to previous slide */}
+      <TouchableOpacity
+        style={styles.tapZoneLeft}
+        onPress={handlePrev}
+        activeOpacity={1}
+      />
+
+      {/* Right tap zone - go to next slide */}
+      <TouchableOpacity
+        style={styles.tapZoneRight}
+        onPress={handleNext}
+        activeOpacity={1}
+      />
+
       {/* Tooltip */}
-      <View style={getTooltipStyle()}>
+      <View style={getTooltipStyle()} pointerEvents="none">
         <View style={styles.tooltipCard}>
           <Text style={styles.tooltipText}>{slide.text}</Text>
         </View>
       </View>
 
       {/* Dot indicators fixed at top center */}
-      <View style={[styles.navRow, { top: safeAreaTop + 8 }]}>
+      <View style={[styles.navRow, { top: safeAreaTop + 8 }]} pointerEvents="none">
         <View style={styles.dotsContainer}>
           {SLIDES.map((_, index) => (
             <View
@@ -185,16 +243,37 @@ export default function ChatOnboarding({
         </View>
       </View>
 
-      {/* Next / Got it -- fixed position, centered, above composer-area tooltip */}
-      <TouchableOpacity
-        style={styles.nextButton}
-        onPress={handleNext}
-        activeOpacity={0.7}
-      >
-        <Text style={styles.nextButtonText}>
-          {isLastSlide ? 'Got it!' : 'Next'}
-        </Text>
-      </TouchableOpacity>
+      {/* Left arrow - visible from the second slide onwards */}
+      {currentSlide > 0 && (
+        <View style={styles.arrowHintLeft} pointerEvents="none">
+          <SoftCircleBackdrop>
+            <ChevronLeft
+              size={24}
+              color="rgba(255, 255, 255, 0.85)"
+              strokeWidth={1.5}
+            />
+          </SoftCircleBackdrop>
+        </View>
+      )}
+
+      {/* Right arrow / checkmark */}
+      <View style={styles.arrowHintRight} pointerEvents="none">
+        <SoftCircleBackdrop>
+          {isLastSlide ? (
+            <Check
+              size={24}
+              color="rgba(255, 255, 255, 0.85)"
+              strokeWidth={1.5}
+            />
+          ) : (
+            <ChevronRight
+              size={24}
+              color="rgba(255, 255, 255, 0.85)"
+              strokeWidth={1.5}
+            />
+          )}
+        </SoftCircleBackdrop>
+      </View>
     </Animated.View>
   );
 }
@@ -245,18 +324,28 @@ const styles = StyleSheet.create({
   dotActive: {
     backgroundColor: Colors.white,
   },
-  nextButton: {
+  tapZoneLeft: {
     position: 'absolute',
-    bottom: 200,
-    alignSelf: 'center',
+    top: 0,
     left: 0,
-    right: 0,
-    alignItems: 'center',
-    paddingVertical: 10,
+    width: SCREEN_WIDTH / 2,
+    height: SCREEN_HEIGHT,
   },
-  nextButtonText: {
-    fontSize: 16,
-    fontFamily: Fonts.medium,
-    color: 'rgba(255, 255, 255, 0.85)',
+  tapZoneRight: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: SCREEN_WIDTH / 2,
+    height: SCREEN_HEIGHT,
+  },
+  arrowHintRight: {
+    position: 'absolute',
+    right: 4,
+    top: SCREEN_HEIGHT / 2 - 26,
+  },
+  arrowHintLeft: {
+    position: 'absolute',
+    left: 4,
+    top: SCREEN_HEIGHT / 2 - 26,
   },
 });

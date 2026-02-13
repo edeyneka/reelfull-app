@@ -378,7 +378,9 @@ export default function ChatComposerScreen() {
   // Chat onboarding tips state
   const [showChatOnboarding, setShowChatOnboarding] = useState(false);
   const [spotlightRects, setSpotlightRects] = useState<(SpotlightRect | null)[]>([null, null, null, null]);
+  const [onboardingUsesLatest, setOnboardingUsesLatest] = useState(false);
   const scriptBubbleRef = useRef<View>(null);
+  const latestScriptBubbleRef = useRef<View>(null);
   const threeDotsRef = useRef<View>(null);
   const composerRef = useRef<View>(null);
   const generateButtonRef = useRef<View>(null);
@@ -726,6 +728,13 @@ export default function ChatComposerScreen() {
       Keyboard.dismiss();
     }
   }, [isProcessingMedia]);
+
+  // Dismiss keyboard whenever chat onboarding is active
+  useEffect(() => {
+    if (showChatOnboarding) {
+      Keyboard.dismiss();
+    }
+  }, [showChatOnboarding]);
   
   const pickMedia = async () => {
     // Dismiss keyboard immediately when opening media picker
@@ -1668,7 +1677,8 @@ export default function ChatComposerScreen() {
   
   // Chat onboarding tips: measure target elements and show overlay
   const measureSpotlightRects = useCallback(() => {
-    const refs = [scriptBubbleRef, threeDotsRef, composerRef, generateButtonRef];
+    const bubbleRef = onboardingUsesLatest ? latestScriptBubbleRef : scriptBubbleRef;
+    const refs = [bubbleRef, threeDotsRef, composerRef, generateButtonRef];
     const measured: (SpotlightRect | null)[] = [];
     let remaining = refs.length;
     
@@ -1689,11 +1699,13 @@ export default function ChatComposerScreen() {
         }
       }
     });
-  }, []);
+  }, [onboardingUsesLatest]);
 
   const triggerChatOnboarding = useCallback(() => {
     const shouldShowTips = ENABLE_TEST_RUN_MODE || !backendUser?.chatTipsCompleted;
     if (shouldShowTips) {
+      // Dismiss keyboard before measuring rects so positions are accurate
+      Keyboard.dismiss();
       // Wait for the script bubble to render, then measure and show immediately
       InteractionManager.runAfterInteractions(() => {
         requestAnimationFrame(() => {
@@ -1704,8 +1716,44 @@ export default function ChatComposerScreen() {
     }
   }, [backendUser, measureSpotlightRects]);
   
+  // Force-show onboarding from menu (always highlights latest message)
+  const forceShowChatOnboarding = useCallback(() => {
+    setOnboardingUsesLatest(true);
+    Keyboard.dismiss();
+    InteractionManager.runAfterInteractions(() => {
+      requestAnimationFrame(() => {
+        // Measure using latest ref (onboardingUsesLatest is now true)
+        const bubbleRef = latestScriptBubbleRef;
+        const refs = [bubbleRef, threeDotsRef, composerRef, generateButtonRef];
+        const measured: (SpotlightRect | null)[] = [];
+        let remaining = refs.length;
+        
+        refs.forEach((ref, index) => {
+          if (ref.current) {
+            ref.current.measureInWindow((x, y, width, height) => {
+              measured[index] = { x, y, width, height };
+              remaining--;
+              if (remaining === 0) {
+                setSpotlightRects([...measured]);
+                setShowChatOnboarding(true);
+              }
+            });
+          } else {
+            measured[index] = null;
+            remaining--;
+            if (remaining === 0) {
+              setSpotlightRects([...measured]);
+              setShowChatOnboarding(true);
+            }
+          }
+        });
+      });
+    });
+  }, []);
+
   const handleChatOnboardingComplete = useCallback(async () => {
     setShowChatOnboarding(false);
+    setOnboardingUsesLatest(false);
     if (userId && !ENABLE_TEST_RUN_MODE) {
       try {
         await completeChatTips({ userId });
@@ -1901,6 +1949,25 @@ export default function ChatComposerScreen() {
                 style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
               />
             </View>
+            
+            {hasScript && (
+              <>
+                <View style={styles.menuDivider} />
+                
+                {/* Show Tips */}
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => {
+                    setShowMenu(false);
+                    forceShowChatOnboarding();
+                  }}
+                  activeOpacity={0.6}
+                >
+                  <Info size={18} color={Colors.ink} />
+                  <Text style={styles.menuItemText}>Show Tips</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </>
       )}
@@ -1941,16 +2008,19 @@ export default function ChatComposerScreen() {
           {/* Chat messages */}
           {(() => {
             const firstAssistantIndex = messages.findIndex(m => m.role === 'assistant' && !m.isLoading);
+            const isLatestAssistant = (id: string) => id === latestAssistantMessageId;
             return messages.map((message, index) => {
               const isFirstAssistant = index === firstAssistantIndex;
+              const isLatest = isLatestAssistant(message.id);
+              const needsRef = isFirstAssistant || isLatest;
               
               const bubble = (
                 <ChatBubble
-                  key={isFirstAssistant ? undefined : message.id}
+                  key={needsRef ? undefined : message.id}
                   message={message}
                   onEditTap={() => handleEditScript(message.id, message.content)}
                   onCopy={() => handleCopy(message.id, message.content)}
-                  isLatestAssistant={message.id === latestAssistantMessageId}
+                  isLatestAssistant={isLatest}
                   isCopied={copiedMessageId === message.id}
                   onPlayVoice={() => handlePlayVoice(message.id, message.content)}
                   isPlayingVoice={playingMessageId === message.id}
@@ -1958,9 +2028,28 @@ export default function ChatComposerScreen() {
                 />
               );
               
+              // Wrap with refs for onboarding spotlight measurement
+              if (isFirstAssistant && isLatest) {
+                // Single message is both first and latest
+                return (
+                  <View key={message.id} ref={(node) => {
+                    (scriptBubbleRef as React.MutableRefObject<View | null>).current = node;
+                    (latestScriptBubbleRef as React.MutableRefObject<View | null>).current = node;
+                  }} collapsable={false}>
+                    {bubble}
+                  </View>
+                );
+              }
               if (isFirstAssistant) {
                 return (
                   <View key={message.id} ref={scriptBubbleRef} collapsable={false}>
+                    {bubble}
+                  </View>
+                );
+              }
+              if (isLatest) {
+                return (
+                  <View key={message.id} ref={latestScriptBubbleRef} collapsable={false}>
                     {bubble}
                   </View>
                 );
