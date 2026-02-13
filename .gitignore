@@ -47,3 +47,5 @@ android/
 .rork
 rork-eslint.config.js
 core
+node_modules
+.expo
