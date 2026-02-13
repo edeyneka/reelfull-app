@@ -14,6 +14,7 @@ import {
   Image,
   Dimensions,
   GestureResponderEvent,
+  InteractionManager,
   LayoutChangeEvent,
 } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -22,13 +23,15 @@ import { VideoView, useVideoPlayer } from 'expo-video';
 import { useEvent } from 'expo';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
-import { useAction, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
 import { Fonts } from '@/constants/typography';
 import { GenerationPhase } from '@/types';
 import { getCachedVideoPath, preCacheVideo } from '@/lib/videoCache';
+import VideoPreviewOnboarding, { SpotlightRect } from '@/components/VideoPreviewOnboarding';
+import { ENABLE_TEST_RUN_MODE } from '@/constants/config';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -198,7 +201,7 @@ export default function VideoPreviewScreen() {
     isGenerating?: string;
   }>();
   
-  const { updateVideoStatus } = useApp();
+  const { updateVideoStatus, userId } = useApp();
   
   // Parse params
   const videoId = params.videoId;
@@ -342,6 +345,20 @@ export default function VideoPreviewScreen() {
   // Convex hooks
   const getFreshVideoUrl = useAction(api.tasks.getFreshProjectVideoUrl);
   const getVideoVariant = useAction(api.tasks.getVideoVariant);
+  const completeVideoPreviewTips = useMutation(api.users.completeVideoPreviewTips);
+  
+  // Fetch backend user for onboarding tips check
+  const backendUser = useQuery(
+    api.users.getCurrentUser,
+    userId ? { userId } : "skip"
+  );
+  
+  // Video preview onboarding tips state
+  const [showVideoPreviewOnboarding, setShowVideoPreviewOnboarding] = useState(false);
+  const [onboardingSpotlightRects, setOnboardingSpotlightRects] = useState<(SpotlightRect | null)[]>([null, null]);
+  const onboardingTriggeredRef = useRef(false);
+  const downloadButtonRef = useRef<View>(null);
+  const togglesGroupRef = useRef<View>(null);
 
   // Video player - uses resolved (cached) URI when available
   const videoPlayer = useVideoPlayer(
@@ -530,6 +547,76 @@ export default function VideoPreviewScreen() {
       });
     }
   }, [downloadSuccess, toastOpacity]);
+
+  // Measure onboarding spotlight rects for the sidebar buttons
+  const measureOnboardingRects = useCallback(() => {
+    const refs = [togglesGroupRef, downloadButtonRef];
+    const measured: (SpotlightRect | null)[] = [null, null];
+    let remaining = refs.length;
+    
+    refs.forEach((ref, index) => {
+      if (ref.current) {
+        ref.current.measureInWindow((x: number, y: number, width: number, height: number) => {
+          measured[index] = { x, y, width, height };
+          remaining--;
+          if (remaining === 0) {
+            setOnboardingSpotlightRects([...measured]);
+          }
+        });
+      } else {
+        measured[index] = null;
+        remaining--;
+        if (remaining === 0) {
+          setOnboardingSpotlightRects([...measured]);
+        }
+      }
+    });
+  }, []);
+
+  // Trigger video preview onboarding when video is ready
+  const triggerVideoPreviewOnboarding = useCallback(() => {
+    const shouldShowTips = ENABLE_TEST_RUN_MODE || !backendUser?.videoPreviewTipsCompleted;
+    if (shouldShowTips) {
+      // Pause video while onboarding is active
+      if (videoPlayer) {
+        videoPlayer.pause();
+      }
+      InteractionManager.runAfterInteractions(() => {
+        requestAnimationFrame(() => {
+          measureOnboardingRects();
+          setShowVideoPreviewOnboarding(true);
+        });
+      });
+    }
+  }, [backendUser, measureOnboardingRects, videoPlayer]);
+
+  // Auto-trigger onboarding once when video becomes ready
+  useEffect(() => {
+    if (isVideoReady && !isGenerating && !onboardingTriggeredRef.current) {
+      onboardingTriggeredRef.current = true;
+      // Small delay to ensure sidebar buttons are rendered and measurable
+      const timer = setTimeout(() => {
+        triggerVideoPreviewOnboarding();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isVideoReady, isGenerating, triggerVideoPreviewOnboarding]);
+
+  // Handle onboarding completion
+  const handleVideoPreviewOnboardingComplete = useCallback(async () => {
+    setShowVideoPreviewOnboarding(false);
+    // Resume video playback after onboarding
+    if (videoPlayer) {
+      videoPlayer.play();
+    }
+    if (userId && !ENABLE_TEST_RUN_MODE) {
+      try {
+        await completeVideoPreviewTips({ userId });
+      } catch (e) {
+        console.error('Failed to save video preview tips completion:', e);
+      }
+    }
+  }, [userId, completeVideoPreviewTips, videoPlayer]);
 
   const handleClose = () => {
     // In test mode, navigate directly to feed since the navigation stack may be inconsistent
@@ -856,56 +943,61 @@ export default function VideoPreviewScreen() {
       {!isGenerating && (
         <View style={[styles.rightSidebar, { bottom: insets.bottom + 120 }]}>
           {/* Download button */}
-          <SidebarButton 
-            onPress={handleDownload}
-            disabled={isDownloading}
-          >
-            {isDownloading ? (
-              <View style={{ alignItems: 'center' }}>
-                <ActivityIndicator size="small" color={Colors.white} />
-                {downloadProgress > 0 && downloadProgress < 1 && (
-                  <Text style={{ color: Colors.white, fontSize: 10, marginTop: 2, fontFamily: Fonts.medium }}>
-                    {Math.round(downloadProgress * 100)}%
-                  </Text>
-                )}
-              </View>
-            ) : (
-              <Download size={26} color={Colors.white} strokeWidth={2} />
-            )}
-          </SidebarButton>
+          <View ref={downloadButtonRef} collapsable={false}>
+            <SidebarButton 
+              onPress={handleDownload}
+              disabled={isDownloading}
+            >
+              {isDownloading ? (
+                <View style={{ alignItems: 'center' }}>
+                  <ActivityIndicator size="small" color={Colors.white} />
+                  {downloadProgress > 0 && downloadProgress < 1 && (
+                    <Text style={{ color: Colors.white, fontSize: 10, marginTop: 2, fontFamily: Fonts.medium }}>
+                      {Math.round(downloadProgress * 100)}%
+                    </Text>
+                  )}
+                </View>
+              ) : (
+                <Download size={26} color={Colors.white} strokeWidth={2} />
+              )}
+            </SidebarButton>
+          </View>
           
-          {/* Voice toggle */}
-          <SidebarButton 
-            onPress={() => setVoiceoverEnabled(!voiceoverEnabled)}
-          >
-            <Mic 
-              size={26} 
-              color={voiceoverEnabled ? Colors.white : "rgba(255,255,255,0.5)"} 
-              strokeWidth={2} 
-            />
-          </SidebarButton>
-          
-          {/* Music toggle */}
-          <SidebarButton 
-            onPress={() => setMusicEnabled(!musicEnabled)}
-          >
-            <Music 
-              size={26} 
-              color={musicEnabled ? Colors.white : "rgba(255,255,255,0.5)"} 
-              strokeWidth={2} 
-            />
-          </SidebarButton>
-          
-          {/* Captions toggle */}
-          <SidebarButton 
-            onPress={() => setCaptionsEnabled(!captionsEnabled)}
-          >
-            <Subtitles 
-              size={26} 
-              color={captionsEnabled ? Colors.white : "rgba(255,255,255,0.5)"} 
-              strokeWidth={2} 
-            />
-          </SidebarButton>
+          {/* Toggle group (voice, music, captions) */}
+          <View ref={togglesGroupRef} collapsable={false} style={styles.togglesGroup}>
+            {/* Voice toggle */}
+            <SidebarButton 
+              onPress={() => setVoiceoverEnabled(!voiceoverEnabled)}
+            >
+              <Mic 
+                size={26} 
+                color={voiceoverEnabled ? Colors.white : "rgba(255,255,255,0.5)"} 
+                strokeWidth={2} 
+              />
+            </SidebarButton>
+            
+            {/* Music toggle */}
+            <SidebarButton 
+              onPress={() => setMusicEnabled(!musicEnabled)}
+            >
+              <Music 
+                size={26} 
+                color={musicEnabled ? Colors.white : "rgba(255,255,255,0.5)"} 
+                strokeWidth={2} 
+              />
+            </SidebarButton>
+            
+            {/* Captions toggle */}
+            <SidebarButton 
+              onPress={() => setCaptionsEnabled(!captionsEnabled)}
+            >
+              <Subtitles 
+                size={26} 
+                color={captionsEnabled ? Colors.white : "rgba(255,255,255,0.5)"} 
+                strokeWidth={2} 
+              />
+            </SidebarButton>
+          </View>
         </View>
       )}
       
@@ -969,6 +1061,14 @@ export default function VideoPreviewScreen() {
           <Text style={styles.toastText}>This video was saved to camera roll</Text>
         </BlurView>
       </Animated.View>
+
+      {/* Video preview onboarding overlay */}
+      <VideoPreviewOnboarding
+        visible={showVideoPreviewOnboarding}
+        onComplete={handleVideoPreviewOnboardingComplete}
+        spotlightRects={onboardingSpotlightRects}
+        safeAreaTop={insets.top}
+      />
     </View>
   );
 }
@@ -1016,6 +1116,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     zIndex: 10,
+  },
+  togglesGroup: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 12,
   },
   sidebarButton: {
     width: 48,
