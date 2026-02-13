@@ -1469,7 +1469,17 @@ export default function ChatComposerScreen() {
           thumbnailUrl: existingProject?.thumbnailUrl || mediaUris[0]?.uri,
         });
 
-        router.replace('/(tabs)');
+        Alert.alert(
+          '🎬 Generation Started!',
+          'Your video is being created! Feel free to close the app — we\'ll send you a notification when it\'s ready.',
+          [{
+            text: 'Got it!',
+            style: 'default',
+            onPress: () => {
+              router.replace('/(tabs)');
+            }
+          }]
+        );
       } else {
         throw new Error('Failed to create regenerated project');
       }
@@ -1729,6 +1739,10 @@ export default function ChatComposerScreen() {
   // This happens when we have a script, no new text input, no pending media, and not generating/submitting (but not regenerate mode)
   const isApproveMode = !isRegenerateMode && hasScript && !hasNewInput && !hasPendingMedia && !isGenerating && !isSubmitting;
   
+  // Generate header button is active when we can approve OR regenerate (history chats + drafts)
+  const isGenerateActive = isApproveMode || isRegenerateMode;
+  const isGenerateBusy = isSubmitting || isRegenerating;
+  
   // Find latest assistant message for edit functionality
   const latestAssistantMessageId = messages
     .filter(m => m.role === 'assistant' && !m.isLoading)
@@ -1742,12 +1756,26 @@ export default function ChatComposerScreen() {
           <ArrowLeft size={24} color={Colors.ink} />
         </TouchableOpacity>
         
-        <TouchableOpacity 
-          style={styles.threeDotsButton}
-          onPress={() => setShowMenu(prev => !prev)}
-        >
-          <MoreHorizontal size={20} color={Colors.ink} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <TouchableOpacity
+            style={[styles.generateButton, !isGenerateActive && styles.generateButtonDisabled]}
+            onPress={isRegenerateMode ? handleRegenerateFromVideo : handleApproveAndGenerate}
+            disabled={!isGenerateActive || isGenerateBusy}
+            activeOpacity={0.8}
+          >
+            {isGenerateBusy ? (
+              <ActivityIndicator size="small" color={Colors.white} />
+            ) : (
+              <Text style={[styles.generateButtonText, !isGenerateActive && styles.generateButtonTextDisabled]}>Generate</Text>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.threeDotsButton}
+            onPress={() => setShowMenu(prev => !prev)}
+          >
+            <MoreHorizontal size={20} color={Colors.ink} />
+          </TouchableOpacity>
+        </View>
       </View>
       
       {/* Three-dots popover menu */}
@@ -2014,6 +2042,26 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.creamDark,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  generateButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.ember,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  generateButtonDisabled: {
+    backgroundColor: Colors.creamDark,
+  },
+  generateButtonText: {
+    color: Colors.white,
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: 'Nunito_700Bold',
+  },
+  generateButtonTextDisabled: {
+    color: Colors.grayLight,
   },
   threeDotsButton: {
     width: 40,
