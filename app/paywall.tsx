@@ -376,6 +376,17 @@ export default function PaywallScreen() {
     setPromoSuccess(null);
     
     try {
+      // In test mode, accept any promo code without hitting the backend
+      if (ENABLE_TEST_RUN_MODE) {
+        console.log(`[Paywall][TestMode] Accepting promo code "${promoCode.trim()}" without backend validation`);
+        markPaywallCompleted();
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        setPromoSuccess('Premium activated for 30 days! (Test Mode)');
+        setShowConfetti(true);
+        navigateAfterSuccess(2500);
+        return;
+      }
+
       const result = await redeemPromoCode({
         userId,
         code: promoCode.trim(),
