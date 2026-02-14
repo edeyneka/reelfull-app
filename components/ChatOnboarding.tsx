@@ -58,7 +58,7 @@ interface OnboardingSlide {
 
 const SLIDES: OnboardingSlide[] = [
   {
-    text: 'Here\u2019s your script! Tap the icons below to copy it or hear a voice preview',
+    text: 'Here\u2019s your script! You can tap on it to edit manually. Also tap the icons below to copy it or hear a voice preview',
     tooltipPosition: 'below',
   },
   {
