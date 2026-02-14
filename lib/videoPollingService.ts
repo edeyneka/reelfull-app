@@ -63,9 +63,7 @@ export function useVideoPolling() {
             if (video.status !== 'failed') {
               console.log('[VideoPolling] ❌ Backend marked as FAILED:', video.id, 'Error:', project.error);
               updateVideoStatus(video.id, 'failed', undefined, project.error, project.thumbnailUrl);
-              
-              // Send failure notification
-              sendVideoFailedNotification(project.script || project.prompt || 'Your video', video.projectId);
+              // Note: failure notification is handled by backend push notification (sendVideoFailedNotification in tasks.ts)
             }
           }
           // Priority 2: Check if video is completely ready (has renderedVideoUrl)
@@ -92,9 +90,7 @@ export function useVideoPolling() {
                     console.log('[VideoPolling] Video URL:', project.renderedVideoUrl);
                     console.log('[VideoPolling] Thumbnail URL:', project.thumbnailUrl);
                     updateVideoStatus(video.id, 'ready', project.renderedVideoUrl, undefined, project.thumbnailUrl);
-
-                    // Send notification only after verification passes
-                    sendVideoReadyNotification(project.script || project.prompt || 'Your video', video.projectId);
+                    // Note: push notification is handled by backend (sendVideoReadyNotification in tasks.ts)
                   } else {
                     console.log('[VideoPolling] ⏳ Video URL not yet accessible (status:', verifyResponse.status, '):', video.id);
                     // Keep as preparing - will retry on next poll
@@ -213,41 +209,7 @@ export async function registerForPushNotificationsAsync() {
   }
 }
 
-/**
- * Send a local notification when video is ready
- */
-async function sendVideoReadyNotification(videoPrompt: string, projectId?: string) {
-  try {
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: '✨ Your video is ready!',
-        body: `"${videoPrompt.substring(0, 50)}${videoPrompt.length > 50 ? '...' : ''}" has been generated`,
-        data: { type: 'video_ready', projectId },
-        sound: true,
-      },
-      trigger: null, // Show immediately
-    });
-  } catch (error) {
-    console.error('Error sending notification:', error);
-  }
-}
-
-/**
- * Send a local notification when video generation fails
- */
-async function sendVideoFailedNotification(videoPrompt: string, projectId?: string) {
-  try {
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: '❌ Video generation failed',
-        body: `We couldn't generate "${videoPrompt.substring(0, 50)}${videoPrompt.length > 50 ? '...' : ''}"`,
-        data: { type: 'video_failed', projectId },
-        sound: true,
-      },
-      trigger: null,
-    });
-  } catch (error) {
-    console.error('Error sending notification:', error);
-  }
-}
+// Local notification helpers removed — notifications are now handled exclusively
+// by the backend push notification system (sendVideoReadyNotification / sendVideoFailedNotification
+// in tasks.ts) to avoid duplicate notifications from both systems firing independently.
 
