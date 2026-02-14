@@ -651,6 +651,60 @@ export default function ChatComposerScreen() {
     }
   }, [existingMessages]);
   
+  // Sync local message IDs with backend Convex IDs
+  // Local messages get synthetic IDs (assistant-*, user-*) but backend saves them
+  // with real Convex IDs. We need to sync so edits go through updateChatMessage.
+  useEffect(() => {
+    if (!existingMessages || existingMessages.length === 0 || messages.length === 0) return;
+    
+    // Check if any local messages have synthetic IDs that need syncing
+    const hasSyntheticIds = messages.some(m => 
+      m.id.startsWith('assistant-') || m.id.startsWith('user-') || m.id.startsWith('script-backfill-')
+    );
+    if (!hasSyntheticIds) return;
+    
+    // Build ordered lists by role to match local messages to backend messages
+    // Clone arrays so we can remove matched entries without mutating the original
+    const backendByRole = new Map<string, Array<any>>();
+    existingMessages.forEach((msg: any) => {
+      const list = backendByRole.get(msg.role) || [];
+      list.push(msg);
+      backendByRole.set(msg.role, list);
+    });
+    
+    // Normalize content for comparison: backend stores ??? for ?, local stores ?
+    const normalize = (s: string) => s.replace(/\?\?\?/g, '?');
+    
+    let hasChanges = false;
+    const updatedMessages = messages.map(msg => {
+      // Only sync synthetic IDs
+      if (
+        !msg.id.startsWith('assistant-') &&
+        !msg.id.startsWith('user-') &&
+        !msg.id.startsWith('script-backfill-')
+      ) {
+        return msg;
+      }
+      
+      // Find matching backend message by role + normalized content
+      const candidates = backendByRole.get(msg.role) || [];
+      const normalizedLocal = normalize(msg.content);
+      const matchIdx = candidates.findIndex((bm: any) => normalize(bm.content) === normalizedLocal);
+      if (matchIdx !== -1) {
+        const match = candidates[matchIdx];
+        hasChanges = true;
+        // Remove matched message from candidates to avoid double-matching
+        candidates.splice(matchIdx, 1);
+        return { ...msg, id: match._id };
+      }
+      return msg;
+    });
+    
+    if (hasChanges) {
+      setMessages(updatedMessages);
+    }
+  }, [existingMessages]);
+  
   // Auto-focus keyboard for new projects (after screen transition completes)
   useFocusEffect(
     useCallback(() => {
@@ -1237,13 +1291,36 @@ export default function ChatComposerScreen() {
     // For forked projects or local messages, update project script directly
     // (Message IDs from original project won't exist in the forked project)
     if (hasForkedFromVideo || editingMessageId.startsWith('assistant-') || editingMessageId.startsWith('user-')) {
+      const encodedScript = newScript.replace(/\?(?!\?\?)/g, '???');
       try {
         await updateProjectScript({
           id: targetProjectId as any,
-          script: newScript.replace(/\?(?!\?\?)/g, '???'),
+          script: encodedScript,
         });
       } catch (error) {
         console.error('Failed to update script:', error);
+      }
+      
+      // Also update the corresponding chatMessages entry if it exists.
+      // The ID sync effect should normally replace synthetic IDs before the user
+      // edits, but as a safety net handle the case where it hasn't run yet.
+      if (!hasForkedFromVideo && existingMessages) {
+        try {
+          const normalize = (s: string) => s.replace(/\?\?\?/g, '?');
+          const normalizedOriginal = normalize(editingScript || '');
+          // Find the backend message that matches the original (pre-edit) content
+          const matchingBackendMsg = [...existingMessages]
+            .filter((msg: any) => msg.role === 'assistant')
+            .find((msg: any) => normalize(msg.content) === normalizedOriginal);
+          if (matchingBackendMsg) {
+            await updateChatMessage({
+              messageId: matchingBackendMsg._id,
+              content: encodedScript,
+            });
+          }
+        } catch (error) {
+          console.error('Failed to update chat message (fallback):', error);
+        }
       }
     } else {
       // Update in backend if it's a real message ID (not local) and not forked
