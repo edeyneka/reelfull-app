@@ -361,13 +361,13 @@ export default function VideoPreviewScreen() {
   const togglesGroupRef = useRef<View>(null);
 
   // Video player - uses resolved (cached) URI when available
+  // Note: playback is NOT started here; it's gated by the onboarding check effect below
   const videoPlayer = useVideoPlayer(
     resolvedVideoUri || null,
     (player) => {
       if (player && resolvedVideoUri) {
         player.loop = true;
         player.muted = false;
-        player.play();
       }
     }
   );
@@ -573,34 +573,47 @@ export default function VideoPreviewScreen() {
     });
   }, []);
 
-  // Trigger video preview onboarding when video is ready
+  // Trigger video preview onboarding overlay (caller already decided tips should show)
   const triggerVideoPreviewOnboarding = useCallback(() => {
-    const shouldShowTips = ENABLE_TEST_RUN_MODE || !backendUser?.videoPreviewTipsCompleted;
-    if (shouldShowTips) {
-      // Pause video while onboarding is active
-      if (videoPlayer) {
-        videoPlayer.pause();
-      }
-      InteractionManager.runAfterInteractions(() => {
-        requestAnimationFrame(() => {
-          measureOnboardingRects();
-          setShowVideoPreviewOnboarding(true);
-        });
-      });
+    // Ensure video is paused (should already be, but safety net)
+    if (videoPlayer) {
+      videoPlayer.pause();
     }
-  }, [backendUser, measureOnboardingRects, videoPlayer]);
+    InteractionManager.runAfterInteractions(() => {
+      requestAnimationFrame(() => {
+        measureOnboardingRects();
+        setShowVideoPreviewOnboarding(true);
+      });
+    });
+  }, [measureOnboardingRects, videoPlayer]);
 
-  // Auto-trigger onboarding once when video becomes ready
+  // Auto-trigger onboarding (or auto-play) once when video becomes ready
+  // Waits for backendUser to load so we know whether onboarding is needed
   useEffect(() => {
-    if (isVideoReady && !isGenerating && !onboardingTriggeredRef.current) {
-      onboardingTriggeredRef.current = true;
-      // Small delay to ensure sidebar buttons are rendered and measurable
+    if (!isVideoReady || isGenerating || onboardingTriggeredRef.current) return;
+
+    // Wait for backendUser query to finish loading (undefined = still loading)
+    const backendUserLoaded = backendUser !== undefined || !userId;
+    if (!backendUserLoaded) return;
+
+    onboardingTriggeredRef.current = true;
+
+    const shouldShowTips = ENABLE_TEST_RUN_MODE || !backendUser?.videoPreviewTipsCompleted;
+
+    if (shouldShowTips) {
+      // Onboarding needed — video stays paused, show onboarding after a short
+      // delay so sidebar buttons are rendered and measurable for spotlights
       const timer = setTimeout(() => {
         triggerVideoPreviewOnboarding();
       }, 500);
       return () => clearTimeout(timer);
+    } else {
+      // No onboarding — auto-play immediately
+      if (videoPlayer) {
+        videoPlayer.play();
+      }
     }
-  }, [isVideoReady, isGenerating, triggerVideoPreviewOnboarding]);
+  }, [isVideoReady, isGenerating, backendUser, userId, triggerVideoPreviewOnboarding, videoPlayer]);
 
   // Handle onboarding completion
   const handleVideoPreviewOnboardingComplete = useCallback(async () => {
