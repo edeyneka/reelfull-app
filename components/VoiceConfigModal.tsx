@@ -25,6 +25,7 @@ interface VoiceConfigModalProps {
   onComplete: () => void;
   onSkip: () => void;
   onClose: () => void;
+  showSkip?: boolean;
 }
 
 export default function VoiceConfigModal({
@@ -32,6 +33,7 @@ export default function VoiceConfigModal({
   onComplete,
   onSkip,
   onClose,
+  showSkip = true,
 }: VoiceConfigModalProps) {
   const insets = useSafeAreaInsets();
   const { userId } = useApp();
@@ -325,6 +327,25 @@ export default function VoiceConfigModal({
           >
             <X size={24} color={isSaving ? Colors.gray400 : Colors.ink} strokeWidth={2} />
           </TouchableOpacity>
+          {(showSkip || selectedVoiceId) && (
+            <TouchableOpacity
+              style={[
+                styles.headerSkipButton,
+                selectedVoiceId && styles.headerDoneButton,
+              ]}
+              onPress={handleSkipOrDone}
+              activeOpacity={0.7}
+              disabled={isSaving}
+            >
+              <Text style={[
+                styles.headerSkipText,
+                selectedVoiceId && styles.headerDoneText,
+                isSaving && { opacity: 0.5 },
+              ]}>
+                {selectedVoiceId ? 'Done' : 'Skip'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <ScrollView
@@ -499,23 +520,6 @@ export default function VoiceConfigModal({
               </View>
             )}
             
-            <TouchableOpacity
-              style={[
-                styles.skipButton,
-                selectedVoiceId && styles.doneButton,
-              ]}
-              onPress={handleSkipOrDone}
-              activeOpacity={0.7}
-              disabled={isSaving}
-            >
-              <Text style={[
-                styles.skipButtonText,
-                selectedVoiceId && styles.doneButtonText,
-                isSaving && styles.skipButtonTextDisabled,
-              ]}>
-                {selectedVoiceId ? 'Done' : 'Skip for now'}
-              </Text>
-            </TouchableOpacity>
           </View>
         </ScrollView>
       </View>
@@ -530,12 +534,29 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 15,
   },
   closeButton: {
     padding: 8,
+  },
+  headerSkipButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  headerDoneButton: {
+    backgroundColor: Colors.ember,
+    borderRadius: 20,
+  },
+  headerSkipText: {
+    fontSize: 16,
+    fontFamily: Fonts.medium,
+    color: Colors.textSecondary,
+  },
+  headerDoneText: {
+    color: Colors.white,
   },
   scrollContent: {
     flexGrow: 1,
@@ -650,29 +671,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: Fonts.regular,
     color: Colors.textSecondary,
-  },
-  skipButton: {
-    marginTop: 20,
-    padding: 16,
-    alignItems: 'center',
-  },
-  doneButton: {
-    backgroundColor: Colors.ember,
-    borderRadius: 12,
-    marginHorizontal: 0,
-  },
-  skipButtonText: {
-    fontSize: 16,
-    fontFamily: Fonts.regular,
-    color: Colors.textSecondary,
-    textDecorationLine: 'underline',
-  },
-  doneButtonText: {
-    color: Colors.white,
-    fontFamily: Fonts.medium,
-    textDecorationLine: 'none',
-  },
-  skipButtonTextDisabled: {
-    opacity: 0.5,
   },
 });

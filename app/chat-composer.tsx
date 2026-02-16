@@ -2284,6 +2284,7 @@ export default function ChatComposerScreen() {
         onComplete={handleVoiceConfigComplete}
         onSkip={handleVoiceConfigSkip}
         onClose={handleVoiceConfigClose}
+        showSkip={!!pendingVoiceAction}
       />
       
       {/* Chat onboarding tips overlay */}
