@@ -216,6 +216,10 @@ function ChatBubble({
           )}
         </Pressable>
       )}
+
+      {message.isLoading && (
+        <Text style={[styles.scriptHint, { marginTop: 6, marginLeft: 4 }]}>might take a few minutes</Text>
+      )}
       
       {/* Action buttons for user messages */}
       {isUser && !message.isLoading && message.content && (
