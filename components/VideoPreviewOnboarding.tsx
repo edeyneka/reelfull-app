@@ -195,19 +195,34 @@ export default function VideoPreviewOnboarding({
     <Animated.View style={[styles.container, { opacity: fadeAnim }]} pointerEvents="box-none">
       {/* Overlay with rounded cutout */}
       {cutout ? (
-        <View
-          style={{
-            position: 'absolute',
-            top: cutout.y - OVERLAY_BORDER,
-            left: cutout.x - OVERLAY_BORDER,
-            width: cutout.width + OVERLAY_BORDER * 2,
-            height: cutout.height + OVERLAY_BORDER * 2,
-            borderWidth: OVERLAY_BORDER,
-            borderColor: 'rgba(0, 0, 0, 0.6)',
-            borderRadius: OVERLAY_BORDER + CUTOUT_BORDER_RADIUS,
-          }}
-          pointerEvents="none"
-        />
+        <>
+          <View
+            style={{
+              position: 'absolute',
+              top: cutout.y - OVERLAY_BORDER,
+              left: cutout.x - OVERLAY_BORDER,
+              width: cutout.width + OVERLAY_BORDER * 2,
+              height: cutout.height + OVERLAY_BORDER * 2,
+              borderWidth: OVERLAY_BORDER,
+              borderColor: 'rgba(0, 0, 0, 0.6)',
+              borderRadius: OVERLAY_BORDER + CUTOUT_BORDER_RADIUS,
+            }}
+            pointerEvents="none"
+          />
+          <View
+            style={{
+              position: 'absolute',
+              top: cutout.y,
+              left: cutout.x,
+              width: cutout.width,
+              height: cutout.height,
+              borderRadius: CUTOUT_BORDER_RADIUS,
+              borderWidth: 2,
+              borderColor: 'rgba(255, 255, 255, 0.7)',
+            }}
+            pointerEvents="none"
+          />
+        </>
       ) : (
         /* Full overlay when no cutout */
         <View style={styles.fullOverlay} pointerEvents="none" />
