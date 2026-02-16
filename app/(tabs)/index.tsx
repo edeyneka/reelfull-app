@@ -233,6 +233,7 @@ function VideoThumbnail({
                 <Loader2 size={32} color={Colors.ember} strokeWidth={2} />
               </Animated.View>
               <Text style={styles.processingText}>{statusText}</Text>
+              <Text style={styles.processingHintTextOverlay}>Takes a couple of minutes.{'\n'}You can leave the app.</Text>
             </View>
           </>
         );
@@ -243,6 +244,7 @@ function VideoThumbnail({
             <Loader2 size={32} color={Colors.ember} strokeWidth={2} />
           </Animated.View>
           <Text style={styles.processingText}>{statusText}</Text>
+          <Text style={styles.processingHintText}>Takes a couple of minutes.{'\n'}You can leave the app.</Text>
         </View>
       );
     }
@@ -1079,6 +1081,20 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: Fonts.regular,
     color: Colors.ember,
+  },
+  processingHintText: {
+    fontSize: 10,
+    fontFamily: Fonts.regular,
+    color: Colors.inkMuted,
+    textAlign: 'center',
+    paddingHorizontal: 12,
+  },
+  processingHintTextOverlay: {
+    fontSize: 10,
+    fontFamily: Fonts.regular,
+    color: 'rgba(255,255,255,0.5)',
+    textAlign: 'center',
+    paddingHorizontal: 12,
   },
   draftThumbnail: {
     flex: 1,

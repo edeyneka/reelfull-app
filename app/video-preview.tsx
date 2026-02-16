@@ -922,6 +922,7 @@ export default function VideoPreviewScreen() {
             </Animated.View>
             <Text style={styles.generatingPhaseText}>{phaseText.title}</Text>
             <Text style={styles.generatingSubtitleText}>{phaseText.subtitle}</Text>
+            <Text style={styles.generatingHintText}>Video takes a couple of minutes to generate.{'\n'}You can leave the app.</Text>
           </View>
         </View>
       ) : (
@@ -1245,6 +1246,14 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.7)',
     textAlign: 'center',
     paddingHorizontal: 40,
+  },
+  generatingHintText: {
+    fontSize: 13,
+    fontFamily: Fonts.regular,
+    color: 'rgba(255,255,255,0.5)',
+    textAlign: 'center',
+    paddingHorizontal: 40,
+    marginTop: 8,
   },
   toast: {
     position: 'absolute',
