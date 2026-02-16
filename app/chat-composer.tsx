@@ -2357,7 +2357,7 @@ const styles = StyleSheet.create({
   menuContainer: {
     position: 'absolute',
     right: 16,
-    width: 250,
+    width: 270,
     backgroundColor: Colors.white,
     borderRadius: 16,
     paddingVertical: 6,
