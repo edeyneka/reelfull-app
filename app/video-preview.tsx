@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { X, Download, Mic, Music, Subtitles, MessageSquare, Loader2, Play, Pause } from 'lucide-react-native';
+import { X, Download, Mic, Music, Subtitles, MessageSquare, Loader2, Play, Pause, Info } from 'lucide-react-native';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Alert,
@@ -814,6 +814,17 @@ export default function VideoPreviewScreen() {
     }
   };
 
+  const handleShowOnboarding = useCallback(() => {
+    // Manually trigger the video preview onboarding tips — skip
+    // InteractionManager / rAF wrappers since there are no pending
+    // transitions when the user taps the button.
+    if (videoPlayer) {
+      videoPlayer.pause();
+    }
+    measureOnboardingRects();
+    setShowVideoPreviewOnboarding(true);
+  }, [videoPlayer, measureOnboardingRects]);
+
   const handleChatHistory = () => {
     // Navigate to chat composer with this project's chat history
     if (projectId) {
@@ -959,6 +970,11 @@ export default function VideoPreviewScreen() {
         </IconButton>
         
         <View style={styles.topControlsRight}>
+          {!isGenerating && (
+            <IconButton onPress={handleShowOnboarding}>
+              <Info size={24} color={Colors.white} strokeWidth={2} />
+            </IconButton>
+          )}
           {projectId && !isTestMode && (
             <IconButton onPress={handleChatHistory}>
               <MessageSquare size={26} color={Colors.white} strokeWidth={2} />
@@ -1129,6 +1145,7 @@ const styles = StyleSheet.create({
   topControlsRight: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 4,
   },
   iconButton: {
     width: 44,

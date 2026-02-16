@@ -2031,7 +2031,7 @@ export default function ChatComposerScreen() {
             {/* Keep Clips Order */}
             <View style={styles.menuItem}>
               <ListOrdered size={18} color={Colors.ink} style={{ flexShrink: 0 }} />
-              <Text style={[styles.menuItemText, { flex: 1, flexShrink: 1 }]}>Keep Clips Order</Text>
+              <Text style={[styles.menuItemText, { flex: 1, flexShrink: 1 }]} numberOfLines={1}>Keep Clips Order</Text>
               <Switch
                 value={keepOrder}
                 onValueChange={() => handleToggleKeepOrder()}
@@ -2357,7 +2357,7 @@ const styles = StyleSheet.create({
   menuContainer: {
     position: 'absolute',
     right: 16,
-    width: 220,
+    width: 250,
     backgroundColor: Colors.white,
     borderRadius: 16,
     paddingVertical: 6,
