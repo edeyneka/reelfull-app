@@ -19,6 +19,7 @@ import {
 } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as MediaLibrary from 'expo-media-library';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { useEvent } from 'expo';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -357,8 +358,16 @@ export default function VideoPreviewScreen() {
   const [showVideoPreviewOnboarding, setShowVideoPreviewOnboarding] = useState(false);
   const [onboardingSpotlightRects, setOnboardingSpotlightRects] = useState<(SpotlightRect | null)[]>([null, null]);
   const onboardingTriggeredRef = useRef(false);
+  const [videoTipsCompletedLocally, setVideoTipsCompletedLocally] = useState(false);
   const downloadButtonRef = useRef<View>(null);
   const togglesGroupRef = useRef<View>(null);
+  
+  // Load local video tips completion flag on mount
+  useEffect(() => {
+    AsyncStorage.getItem('@reelfull_videoPreviewTipsCompleted').then((value) => {
+      if (value === 'true') setVideoTipsCompletedLocally(true);
+    });
+  }, []);
 
   // Video player - uses resolved (cached) URI when available
   // Note: playback is NOT started here; it's gated by the onboarding check effect below
@@ -598,7 +607,7 @@ export default function VideoPreviewScreen() {
 
     onboardingTriggeredRef.current = true;
 
-    const shouldShowTips = ENABLE_TEST_RUN_MODE || !backendUser?.videoPreviewTipsCompleted;
+    const shouldShowTips = ENABLE_TEST_RUN_MODE || (!backendUser?.videoPreviewTipsCompleted && !videoTipsCompletedLocally);
 
     if (shouldShowTips) {
       // Onboarding needed — video stays paused, show onboarding after a short
@@ -613,7 +622,7 @@ export default function VideoPreviewScreen() {
         videoPlayer.play();
       }
     }
-  }, [isVideoReady, isGenerating, backendUser, userId, triggerVideoPreviewOnboarding, videoPlayer]);
+  }, [isVideoReady, isGenerating, backendUser, userId, videoTipsCompletedLocally, triggerVideoPreviewOnboarding, videoPlayer]);
 
   // Handle onboarding completion
   const handleVideoPreviewOnboardingComplete = useCallback(async () => {
@@ -622,11 +631,17 @@ export default function VideoPreviewScreen() {
     if (videoPlayer) {
       videoPlayer.play();
     }
-    if (userId && !ENABLE_TEST_RUN_MODE) {
-      try {
-        await completeVideoPreviewTips({ userId });
-      } catch (e) {
-        console.error('Failed to save video preview tips completion:', e);
+    if (!ENABLE_TEST_RUN_MODE) {
+      // Save locally first (guaranteed to persist)
+      setVideoTipsCompletedLocally(true);
+      AsyncStorage.setItem('@reelfull_videoPreviewTipsCompleted', 'true').catch(() => {});
+      // Also save to backend (best-effort)
+      if (userId) {
+        try {
+          await completeVideoPreviewTips({ userId });
+        } catch (e) {
+          console.error('Failed to save video preview tips completion:', e);
+        }
       }
     }
   }, [userId, completeVideoPreviewTips, videoPlayer]);

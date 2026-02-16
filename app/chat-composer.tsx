@@ -22,6 +22,7 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { VideoExportPreset } from 'expo-image-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { useMutation, useAction, useQuery, useConvex } from "convex/react";
@@ -379,9 +380,17 @@ export default function ChatComposerScreen() {
   const [showChatOnboarding, setShowChatOnboarding] = useState(false);
   const [spotlightRects, setSpotlightRects] = useState<(SpotlightRect | null)[]>([null, null, null, null]);
   const [onboardingUsesLatest, setOnboardingUsesLatest] = useState(false);
+  const [chatTipsCompletedLocally, setChatTipsCompletedLocally] = useState(false);
   const scriptBubbleRef = useRef<View>(null);
   const latestScriptBubbleRef = useRef<View>(null);
   const threeDotsRef = useRef<View>(null);
+  
+  // Load local chat tips completion flag on mount
+  useEffect(() => {
+    AsyncStorage.getItem('@reelfull_chatTipsCompleted').then((value) => {
+      if (value === 'true') setChatTipsCompletedLocally(true);
+    });
+  }, []);
   const composerRef = useRef<View>(null);
   const generateButtonRef = useRef<View>(null);
   
@@ -1779,7 +1788,7 @@ export default function ChatComposerScreen() {
   }, [onboardingUsesLatest]);
 
   const triggerChatOnboarding = useCallback(() => {
-    const shouldShowTips = ENABLE_TEST_RUN_MODE || !backendUser?.chatTipsCompleted;
+    const shouldShowTips = ENABLE_TEST_RUN_MODE || (!backendUser?.chatTipsCompleted && !chatTipsCompletedLocally);
     if (shouldShowTips) {
       // Dismiss keyboard before measuring rects so positions are accurate
       Keyboard.dismiss();
@@ -1791,7 +1800,7 @@ export default function ChatComposerScreen() {
         });
       });
     }
-  }, [backendUser, measureSpotlightRects]);
+  }, [backendUser, chatTipsCompletedLocally, measureSpotlightRects]);
   
   // Force-show onboarding from menu (always highlights latest message)
   const forceShowChatOnboarding = useCallback(() => {
@@ -1831,11 +1840,17 @@ export default function ChatComposerScreen() {
   const handleChatOnboardingComplete = useCallback(async () => {
     setShowChatOnboarding(false);
     setOnboardingUsesLatest(false);
-    if (userId && !ENABLE_TEST_RUN_MODE) {
-      try {
-        await completeChatTips({ userId });
-      } catch (e) {
-        console.error('Failed to save chat tips completion:', e);
+    if (!ENABLE_TEST_RUN_MODE) {
+      // Save locally first (guaranteed to persist)
+      setChatTipsCompletedLocally(true);
+      AsyncStorage.setItem('@reelfull_chatTipsCompleted', 'true').catch(() => {});
+      // Also save to backend (best-effort)
+      if (userId) {
+        try {
+          await completeChatTips({ userId });
+        } catch (e) {
+          console.error('Failed to save chat tips completion:', e);
+        }
       }
     }
   }, [userId, completeChatTips]);
