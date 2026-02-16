@@ -14,6 +14,7 @@ const SCRIPT_TEXT = `Wow, Reelful is such a cool app! It helps me turn my photos
 
 interface VoiceRecorderProps {
   onRecordingComplete: (uri: string) => void;
+  onBeforeRecord?: () => Promise<void>;
   initialRecordingUri?: string;
   showScript?: boolean;
   disabled?: boolean;
@@ -21,6 +22,7 @@ interface VoiceRecorderProps {
 
 export default function VoiceRecorder({ 
   onRecordingComplete, 
+  onBeforeRecord,
   initialRecordingUri,
   showScript = true,
   disabled = false,
@@ -105,6 +107,12 @@ export default function VoiceRecorder({
 
   const startRecording = async () => {
     try {
+      // Allow parent to clean up any loaded sounds that would conflict
+      // with the iOS audio session switch to recording mode
+      if (onBeforeRecord) {
+        await onBeforeRecord();
+      }
+
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,

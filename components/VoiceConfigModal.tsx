@@ -351,6 +351,20 @@ export default function VoiceConfigModal({
           <View style={styles.content}>
             <VoiceRecorder
               onRecordingComplete={handleVoiceRecordingComplete}
+              onBeforeRecord={async () => {
+                // Unload all cached/playing sounds so the iOS audio session
+                // can cleanly switch to recording mode
+                if (sound) {
+                  await sound.stopAsync().catch(console.error);
+                  await sound.unloadAsync().catch(console.error);
+                  setSound(null);
+                }
+                for (const s of Object.values(cachedSounds)) {
+                  await s.unloadAsync().catch(console.error);
+                }
+                setCachedSounds({});
+                setPlayingPreviewId(null);
+              }}
               showScript={true}
               disabled={isSaving}
             />
