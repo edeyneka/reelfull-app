@@ -40,3 +40,6 @@ core
 # === AI tool caches (optional - remove if you want to track these) ===
 .claude/
 .cursor/
+
+node_modules
+.expo
