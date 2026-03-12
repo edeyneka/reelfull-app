@@ -56,6 +56,7 @@ export interface LocalChatMessage {
   isEdited?: boolean;
   createdAt: number;
   isLoading?: boolean; // For AI response loading state
+  isError?: boolean; // Script generation failed — show retry affordance
 }
 
 // Convex types placeholder - will be replaced with generated types

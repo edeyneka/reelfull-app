@@ -10,6 +10,7 @@ node_modules/
 **/prod-backup.zip
 expo-env.d.ts
 
+
 # === OS ===
 .DS_Store
 Thumbs.db
@@ -34,6 +35,7 @@ android/
 .rork
 rork-eslint.config.js
 core
+.maestro/
 
 # === AI tool caches (optional - remove if you want to track these) ===
 .claude/

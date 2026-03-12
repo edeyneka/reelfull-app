@@ -24,10 +24,11 @@ import { usePaywall, CREDIT_PACKS, CreditPackType } from '@/contexts/PaywallCont
 import { useApp } from '@/contexts/AppContext';
 import { ENABLE_TEST_RUN_MODE } from '@/constants/config';
 import * as Haptics from 'expo-haptics';
+import { getScreenDimensions } from '@/lib/dimensions';
 
 type PlanType = 'monthly' | 'annual';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = getScreenDimensions();
 const CONFETTI_COUNT = 150;
 // Confetti colors adjusted for light background
 const CONFETTI_COLORS = ['#F36A3F', '#F58560', '#E05530', '#262626', '#636363', '#D4A574', '#C9B8A8'];

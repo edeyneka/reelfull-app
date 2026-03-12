@@ -7,36 +7,13 @@ import {
   Dimensions,
   Animated,
 } from 'react-native';
-import { ChevronRight, ChevronLeft, Check } from 'lucide-react-native';
-import Svg, { Defs, RadialGradient, Stop, Circle as SvgCircle } from 'react-native-svg';
+import { ChevronRight, ChevronLeft, Check, X } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { Fonts } from '@/constants/typography';
+import SoftCircleBackdrop from '@/components/SoftCircleBackdrop';
+import { getScreenDimensions } from '@/lib/dimensions';
 
-const BACKDROP_SIZE = 52;
-
-function SoftCircleBackdrop({ children }: { children: React.ReactNode }) {
-  return (
-    <View style={{ width: BACKDROP_SIZE, height: BACKDROP_SIZE, alignItems: 'center', justifyContent: 'center' }}>
-      <Svg
-        width={BACKDROP_SIZE}
-        height={BACKDROP_SIZE}
-        style={StyleSheet.absoluteFill}
-      >
-        <Defs>
-          <RadialGradient id="softGlow" cx="50%" cy="50%" r="50%">
-            <Stop offset="0%" stopColor="black" stopOpacity="0.2" />
-            <Stop offset="40%" stopColor="black" stopOpacity="0.1" />
-            <Stop offset="80%" stopColor="black" stopOpacity="0" />
-          </RadialGradient>
-        </Defs>
-        <SvgCircle cx={BACKDROP_SIZE / 2} cy={BACKDROP_SIZE / 2} r={BACKDROP_SIZE / 2} fill="url(#softGlow)" />
-      </Svg>
-      {children}
-    </View>
-  );
-}
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = getScreenDimensions();
 
 // Padding around the cutout spotlight
 const CUTOUT_PADDING = 8;
@@ -62,7 +39,7 @@ const SLIDES: OnboardingSlide[] = [
     tooltipPosition: 'below',
   },
   {
-    text: 'Tap here to change the voice, adjust its speed, or lock your clip order',
+    text: 'Tap here to change the voice or adjust its speed',
     tooltipPosition: 'below',
   },
   {
@@ -71,6 +48,10 @@ const SLIDES: OnboardingSlide[] = [
   },
   {
     text: 'When you\u2019re happy with the script, tap Generate. The latest version in the chat becomes your narration',
+    tooltipPosition: 'below',
+  },
+  {
+    text: 'Turn this on to keep your clips in the exact order you uploaded them',
     tooltipPosition: 'below',
   },
 ];
@@ -118,6 +99,16 @@ export default function ChatOnboarding({
       });
     }
   }, [currentSlide, onComplete, fadeAnim]);
+
+  const handleClose = useCallback(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => {
+      onComplete();
+    });
+  }, [onComplete, fadeAnim]);
 
   const handlePrev = useCallback(() => {
     if (currentSlide > 0) {
@@ -228,9 +219,17 @@ export default function ChatOnboarding({
         </View>
       </View>
 
-      {/* Dot indicators fixed at top center */}
-      <View style={[styles.navRow, { top: safeAreaTop + 8 }]} pointerEvents="none">
+      {/* Close button + dot indicators */}
+      <View style={[styles.navRow, { top: safeAreaTop }]} pointerEvents="box-none">
         <View style={styles.dotsContainer}>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={handleClose}
+            activeOpacity={0.7}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <X size={16} color="rgba(255, 255, 255, 0.85)" strokeWidth={2} />
+          </TouchableOpacity>
           {SLIDES.map((_, index) => (
             <View
               key={index}
@@ -347,5 +346,13 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 4,
     top: SCREEN_HEIGHT / 2 - 26,
+  },
+  closeButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

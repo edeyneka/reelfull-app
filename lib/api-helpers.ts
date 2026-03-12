@@ -10,6 +10,31 @@ import * as MediaLibrary from 'expo-media-library';
 import { Platform } from 'react-native';
 
 /**
+ * Run async tasks with a concurrency limit.
+ * Preserves result order matching the input array.
+ */
+export async function runWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  worker: (item: T, index: number) => Promise<R>
+): Promise<R[]> {
+  if (items.length === 0) return [];
+  const results: R[] = new Array(items.length);
+  let cursor = 0;
+  const run = async () => {
+    while (true) {
+      const idx = cursor++;
+      if (idx >= items.length) break;
+      results[idx] = await worker(items[idx], idx);
+    }
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, () => run())
+  );
+  return results;
+}
+
+/**
  * Extract asset ID from a ph:// URI
  * @param uri - The ph:// URI
  * @returns The asset ID or null
@@ -35,7 +60,7 @@ function extractAssetId(uri: string): string | null {
  * @param providedAssetId - Optional asset ID from expo-image-picker
  * @returns Local file URI that can be safely fetched
  */
-async function ensureLocalFile(uri: string, type: "image" | "video", providedAssetId?: string): Promise<string> {
+export async function ensureLocalFile(uri: string, type: "image" | "video", providedAssetId?: string): Promise<string> {
   // Only special handling needed on iOS
   if (Platform.OS !== 'ios') {
     return uri;
@@ -309,7 +334,7 @@ export async function uploadMediaFilesToR2(
     contentType: string;
     size: number;
     r2Key: string;
-    r2Url: string;
+    r2Url?: string;
   }>
 > {
   console.log(`[R2] Uploading ${mediaUris.length} files directly to R2...`);
@@ -385,13 +410,12 @@ export async function uploadMediaFilesToR2(
           throw new Error(`R2 upload failed: ${uploadResponse.statusText}`);
         }
 
-        // Add metadata
         uploads.push({
           filename: uploadInfo.filename,
           contentType: fileMetadata[i].contentType,
           size: blob.size,
           r2Key: uploadInfo.key,
-          r2Url: uploadInfo.r2Url || "",
+          r2Url: uploadInfo.r2Url,
         });
 
         console.log(`[R2] ✓ Uploaded ${uploadInfo.filename} to R2`);
@@ -405,6 +429,80 @@ export async function uploadMediaFilesToR2(
     return uploads;
   } finally {
     // Clean up temporary local files
+    await cleanupLocalFiles(localFilesToCleanup);
+  }
+}
+
+/**
+ * Upload a single media file directly to R2 using a pre-generated upload URL.
+ * Designed for use with runWithConcurrency for parallel uploads.
+ */
+export async function uploadSingleMediaFileToR2(
+  media: { uri: string; type: "image" | "video"; assetId?: string },
+  uploadInfo: { filename: string; uploadUrl: string; key: string; r2Url?: string },
+  contentType: string
+): Promise<{
+  filename: string;
+  contentType: string;
+  size: number;
+  r2Key: string;
+  r2Url?: string;
+}> {
+  const localUri = await ensureLocalFile(media.uri, media.type, media.assetId);
+  const localFilesToCleanup: string[] = [];
+  if (localUri !== media.uri) localFilesToCleanup.push(localUri);
+
+  try {
+    let blob: Blob;
+    try {
+      const response = await fetch(localUri);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch file: ${response.status} ${response.statusText}`);
+      }
+      blob = await response.blob();
+    } catch (fetchError) {
+      const errorMessage = fetchError instanceof Error ? fetchError.message : String(fetchError);
+      if (
+        errorMessage.includes('3164') ||
+        errorMessage.includes('PHPhotos') ||
+        errorMessage.includes("operation couldn't be completed")
+      ) {
+        throw new Error(
+          'This video is stored in iCloud and not available on your device. ' +
+          'Please open the Photos app, find this video, and wait for it to fully download before trying again.'
+        );
+      }
+      throw fetchError;
+    }
+
+    if (blob.size === 0) {
+      throw new Error(
+        'This video appears to still be downloading from iCloud. ' +
+        'Please wait for the download to complete in the Photos app, then try again.'
+      );
+    }
+
+    console.log(`[R2-single] Uploading ${uploadInfo.filename} (${formatFileSize(blob.size)})...`);
+
+    const uploadResponse = await fetch(uploadInfo.uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": contentType },
+      body: blob,
+    });
+
+    if (!uploadResponse.ok) {
+      throw new Error(`R2 upload failed: ${uploadResponse.statusText}`);
+    }
+
+    console.log(`[R2-single] ✓ Uploaded ${uploadInfo.filename}`);
+    return {
+      filename: uploadInfo.filename,
+      contentType,
+      size: blob.size,
+      r2Key: uploadInfo.key,
+      r2Url: uploadInfo.r2Url,
+    };
+  } finally {
     await cleanupLocalFiles(localFilesToCleanup);
   }
 }

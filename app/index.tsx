@@ -16,8 +16,9 @@ import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
 import { Fonts } from '@/constants/typography';
 import { ENABLE_TEST_RUN_MODE } from '@/constants/config';
+import { getScreenDimensions } from '@/lib/dimensions';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = getScreenDimensions();
 
 // Base reel size for non-logged-in users
 const REEL_SIZE_DEFAULT = SCREEN_WIDTH * 2;
@@ -55,23 +56,27 @@ export default function IntroScreen() {
     return () => rotateAnimation.stop();
   }, []);
 
-  // Initial entrance animation
+  // Initial entrance animation – faster for returning users so the reel is
+  // visible for the full duration of the brief splash screen.
   useEffect(() => {
+    if (isLoading) return;
+
+    const quick = !!userId;
     Animated.parallel([
       Animated.timing(titleFade, {
         toValue: 1,
-        duration: 800,
-        delay: 300,
+        duration: quick ? 250 : 800,
+        delay: quick ? 0 : 300,
         useNativeDriver: true,
       }),
       Animated.timing(reelFade, {
         toValue: 1,
-        duration: 1000,
-        delay: 500,
+        duration: quick ? 250 : 1000,
+        delay: quick ? 0 : 500,
         useNativeDriver: true,
       }),
     ]).start();
-  }, [titleFade, reelFade]);
+  }, [titleFade, reelFade, userId, isLoading]);
 
   // Navigate to the appropriate screen
   const navigateToNextScreen = () => {

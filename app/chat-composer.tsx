@@ -1,9 +1,8 @@
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
-import { ArrowLeft, Plus, Send, X, Check, Info, Copy, MessageSquare, Volume2, Mic, Gauge, ListOrdered, MoreHorizontal, VolumeX } from 'lucide-react-native';
+import { ArrowLeft, Plus, Send, X, Check, Info, Copy, MessageSquare, Volume2, Mic, Gauge, MoreHorizontal, VolumeX, RotateCcw, Pencil } from 'lucide-react-native';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Alert,
-  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -18,27 +17,36 @@ import {
   Animated,
   ActionSheetIOS,
   InteractionManager,
-  Switch,
 } from 'react-native';
+import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { VideoExportPreset } from 'expo-image-picker';
+import * as VideoThumbnails from 'expo-video-thumbnails';
+import { Paths, File as FSFile, Directory } from 'expo-file-system';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { VideoView, useVideoPlayer } from 'expo-video';
 import { useMutation, useAction, useQuery, useConvex } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import * as Clipboard from 'expo-clipboard';
 import { Audio } from 'expo-av';
 import Colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
-import { uploadMediaFiles } from '@/lib/api-helpers';
+import {
+  retryWithBackoff,
+  runWithConcurrency,
+  uploadSingleMediaFileToR2,
+} from '@/lib/api-helpers';
 import { Fonts } from '@/constants/typography';
 import { LocalChatMessage } from '@/types';
 import { ENABLE_TEST_RUN_MODE } from '@/constants/config';
 import VoiceConfigModal from '@/components/VoiceConfigModal';
 import ChatOnboarding, { SpotlightRect } from '@/components/ChatOnboarding';
+import MediaPreviewModal, { PreviewMediaItem } from '@/components/MediaPreviewModal';
 
 const MAX_USER_MESSAGES = 10;
+const UPLOAD_CONCURRENCY = 3;
+const MAX_MESSAGE_LENGTH = 2500;
+const MAX_MEDIA_FILES = 10;
 const SCRIPT_LOADING_PHRASES = [
   "Generating script",
   "Composing your story",
@@ -80,21 +88,107 @@ interface PendingMedia {
   assetId?: string;
   uploadStatus: 'pending' | 'uploading' | 'uploaded' | 'failed';
   storageId?: any;
-  thumbnailLoaded?: boolean; // Track if thumbnail has finished loading
 }
 
-// Video thumbnail component
-function VideoThumbnail({ uri, style }: { uri: string; style: any }) {
-  const player = useVideoPlayer(uri, (player) => {
-    player.muted = true;
-  });
-  
+// Guard against web where Directory/Paths is not supported
+const videoThumbDir: Directory | null = (() => {
+  try {
+    return new Directory(Paths.cache, 'video-thumbs/');
+  } catch {
+    return null;
+  }
+})();
+
+function VideoThumbnail({ uri, style, cacheId }: { uri: string; style: any; cacheId?: string }) {
+  const [thumbUri, setThumbUri] = useState<string | null>(null);
+  const cacheIdRef = useRef(cacheId);
+  cacheIdRef.current = cacheId;
+  // Track whether we have already generated a thumbnail so that rotating
+  // Convex storage URLs don't cancel in-progress or completed work.
+  const generatedRef = useRef(false);
+
+  // Reset generatedRef when cacheId changes (different video)
+  useEffect(() => {
+    generatedRef.current = false;
+  }, [cacheId]);
+
+  useEffect(() => {
+    if (generatedRef.current && thumbUri) return;
+
+    let cancelled = false;
+
+    (async () => {
+      const id = cacheIdRef.current;
+      if (id && videoThumbDir) {
+        try {
+          const cached = new FSFile(videoThumbDir, `${id}.jpg`);
+          if (cached.exists) {
+            if (!cancelled) {
+              generatedRef.current = true;
+              setThumbUri(cached.uri);
+            }
+            return;
+          }
+        } catch (e) {
+          console.warn('[VideoThumbnail] Cache read error:', e);
+        }
+      }
+
+      let generated: string | undefined;
+      try {
+        ({ uri: generated } = await VideoThumbnails.getThumbnailAsync(uri, { time: 100, quality: 0.7 }));
+      } catch (e) {
+        console.warn('[VideoThumbnail] Failed to generate thumbnail:', e);
+        return;
+      }
+
+      const latestId = cacheIdRef.current;
+      if (latestId && videoThumbDir) {
+        try {
+          if (!videoThumbDir.exists) videoThumbDir.create();
+          const dest = new FSFile(videoThumbDir, `${latestId}.jpg`);
+          new FSFile(generated).copy(dest);
+          if (!cancelled) {
+            generatedRef.current = true;
+            setThumbUri(dest.uri);
+          }
+          return;
+        } catch (e) {
+          console.warn('[VideoThumbnail] Failed to cache thumbnail:', e);
+        }
+      }
+
+      if (!cancelled) {
+        generatedRef.current = true;
+        setThumbUri(generated);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [uri, thumbUri]);
+
+  useEffect(() => {
+    if (!cacheId || !thumbUri || !videoThumbDir) return;
+    try {
+      const dest = new FSFile(videoThumbDir, `${cacheId}.jpg`);
+      if (dest.exists) return;
+      if (!videoThumbDir.exists) videoThumbDir.create();
+      new FSFile(thumbUri).copy(dest);
+    } catch (e) {
+      console.warn('[VideoThumbnail] Failed to late-cache thumbnail:', e);
+    }
+  }, [cacheId, thumbUri]);
+
+  if (!thumbUri) {
+    return <View style={[style, { backgroundColor: Colors.creamDark }]} />;
+  }
+
   return (
-    <VideoView
-      player={player}
+    <Image
+      source={thumbUri}
       style={style}
       contentFit="cover"
-      nativeControls={false}
+      transition={150}
     />
   );
 }
@@ -149,6 +243,38 @@ function TypingIndicator() {
   );
 }
 
+// Animated tap-to-edit indicator for the latest assistant message
+function TapToEditIndicator() {
+  const opacity = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, {
+          toValue: 0.4,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+      ]),
+      { iterations: 3 }
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, [opacity]);
+
+  return (
+    <Animated.View style={[styles.tapToEditIndicator, { opacity }]}>
+      <Pencil size={10} color={Colors.ember} strokeWidth={2.5} />
+      <Text style={styles.tapToEditText}>tap to edit</Text>
+    </Animated.View>
+  );
+}
+
 // Chat message bubble component
 function ChatBubble({ 
   message, 
@@ -159,6 +285,9 @@ function ChatBubble({
   onPlayVoice,
   isPlayingVoice,
   isGeneratingVoice,
+  onRetry,
+  onMediaPress,
+  measureRef,
 }: { 
   message: LocalChatMessage;
   onEditTap?: () => void;
@@ -168,23 +297,43 @@ function ChatBubble({
   onPlayVoice?: () => void;
   isPlayingVoice?: boolean;
   isGeneratingVoice?: boolean;
+  onRetry?: () => void;
+  onMediaPress?: (items: PreviewMediaItem[], index: number) => void;
+  measureRef?: React.Ref<View>;
 }) {
   const isUser = message.role === 'user';
   const isAssistant = message.role === 'assistant';
   
+  const mediaItems: PreviewMediaItem[] | undefined = message.mediaUris?.map(m => ({
+    uri: m.uri,
+    type: m.type,
+  }));
+  
   return (
-    <View style={[styles.messageBubbleContainer, isUser && styles.messageBubbleContainerUser]}>
+    <View ref={measureRef} collapsable={false} style={[styles.messageBubbleContainer, isUser && styles.messageBubbleContainerUser]}>
       {/* Media display for user messages */}
-      {message.mediaUris && message.mediaUris.length > 0 && (
+      {message.mediaUris && message.mediaUris.length > 0 && mediaItems && (
         <View style={[styles.messageMediaGrid, isUser && styles.messageMediaGridUser]}>
           {message.mediaUris.map((media, index) => (
-            <View key={index} style={styles.messageMediaItem}>
+            <TouchableOpacity
+              key={index}
+              style={styles.messageMediaItem}
+              activeOpacity={0.8}
+              onPress={() => onMediaPress?.(mediaItems, index)}
+            >
               {media.type === 'video' ? (
-                <VideoThumbnail uri={media.uri} style={styles.messageMediaImage} />
+                <VideoThumbnail uri={media.uri} style={styles.messageMediaImage} cacheId={media.storageId} />
               ) : (
-                <Image source={{ uri: media.uri }} style={styles.messageMediaImage} />
+                <Image
+                  source={{ uri: media.uri }}
+                  style={styles.messageMediaImage}
+                  contentFit="cover"
+                  cachePolicy="disk"
+                  recyclingKey={media.storageId || `msg-${message.id}-${index}`}
+                  transition={150}
+                />
               )}
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
       )}
@@ -212,13 +361,18 @@ function ChatBubble({
               {message.isEdited && (
                 <Text style={styles.editedLabel}>Edited</Text>
               )}
+              {isAssistant && isLatestAssistant && !message.isEdited && (
+                <TapToEditIndicator />
+              )}
             </>
           )}
         </Pressable>
       )}
 
       {message.isLoading && (
-        <Text style={[styles.scriptHint, { marginTop: 6, marginLeft: 4 }]}>might take a few minutes</Text>
+        <Text style={[styles.scriptHint, { marginTop: 6, marginLeft: 4 }]}>
+          might take a few minutes{'\n'}you can close the app, we'll notify you when it's ready
+        </Text>
       )}
       
       {/* Action buttons for user messages */}
@@ -240,36 +394,45 @@ function ChatBubble({
       {/* Action buttons for assistant messages */}
       {isAssistant && !message.isLoading && (
         <View style={styles.messageActions}>
-          {/* Copy button */}
-          {isCopied ? (
-            <View style={styles.copiedFeedback}>
-              <Check size={14} color={Colors.ember} strokeWidth={2.5} />
-              <Text style={styles.copiedText}>Copied</Text>
-            </View>
-          ) : (
-            <TouchableOpacity onPress={onCopy} style={styles.actionButton}>
-              <Copy size={14} color={Colors.textSecondary} />
+          {message.isError ? (
+            <TouchableOpacity onPress={onRetry} style={styles.retryActionButton}>
+              <RotateCcw size={14} color={Colors.ember} />
+              <Text style={styles.retryActionText}>Retry</Text>
             </TouchableOpacity>
-          )}
-          
-          {/* Voice preview button */}
-          <TouchableOpacity 
-            onPress={onPlayVoice} 
-            style={styles.actionButton}
-            disabled={isGeneratingVoice}
-          >
-            {isGeneratingVoice ? (
-              <ActivityIndicator size={14} color={Colors.ember} />
-            ) : isPlayingVoice ? (
-              <VolumeX size={14} color={Colors.ember} />
-            ) : (
-              <Volume2 size={14} color={Colors.textSecondary} />
-            )}
-          </TouchableOpacity>
-          
-          {/* Script hint for latest assistant message */}
-          {isLatestAssistant && (
-            <Text style={styles.scriptHint}>this message will be used as script</Text>
+          ) : (
+            <>
+              {/* Copy button */}
+              {isCopied ? (
+                <View style={styles.copiedFeedback}>
+                  <Check size={14} color={Colors.ember} strokeWidth={2.5} />
+                  <Text style={styles.copiedText}>Copied</Text>
+                </View>
+              ) : (
+                <TouchableOpacity onPress={onCopy} style={styles.actionButton}>
+                  <Copy size={14} color={Colors.textSecondary} />
+                </TouchableOpacity>
+              )}
+              
+              {/* Voice preview button */}
+              <TouchableOpacity 
+                onPress={onPlayVoice} 
+                style={styles.actionButton}
+                disabled={isGeneratingVoice}
+              >
+                {isGeneratingVoice ? (
+                  <ActivityIndicator size={14} color={Colors.ember} />
+                ) : isPlayingVoice ? (
+                  <VolumeX size={14} color={Colors.ember} />
+                ) : (
+                  <Volume2 size={14} color={Colors.textSecondary} />
+                )}
+              </TouchableOpacity>
+              
+              {/* Script hint for latest assistant message */}
+              {isLatestAssistant && (
+                <Text style={styles.scriptHint}>this message will be used as a script</Text>
+              )}
+            </>
           )}
         </View>
       )}
@@ -382,12 +545,15 @@ export default function ChatComposerScreen() {
   
   // Chat onboarding tips state
   const [showChatOnboarding, setShowChatOnboarding] = useState(false);
-  const [spotlightRects, setSpotlightRects] = useState<(SpotlightRect | null)[]>([null, null, null, null]);
+  const [spotlightRects, setSpotlightRects] = useState<(SpotlightRect | null)[]>([null, null, null, null, null]);
   const [onboardingUsesLatest, setOnboardingUsesLatest] = useState(false);
   const [chatTipsCompletedLocally, setChatTipsCompletedLocally] = useState(false);
   const scriptBubbleRef = useRef<View>(null);
   const latestScriptBubbleRef = useRef<View>(null);
   const threeDotsRef = useRef<View>(null);
+  
+  // Media preview state
+  const [previewMedia, setPreviewMedia] = useState<{ items: PreviewMediaItem[]; index: number } | null>(null);
   
   // Load local chat tips completion flag on mount
   useEffect(() => {
@@ -397,16 +563,31 @@ export default function ChatComposerScreen() {
   }, []);
   const composerRef = useRef<View>(null);
   const generateButtonRef = useRef<View>(null);
+  const keepClipsOrderRef = useRef<View>(null);
   
   const hasAutoOpenedPicker = useRef(false);
   const scrollViewRef = useRef<ScrollView>(null);
+  const keyboardVisibleRef = useRef(false);
   const inputRef = useRef<TextInput>(null);
   const isMountedRef = useRef(true);
   const scriptBackfillRef = useRef<Set<string>>(new Set());
+  const pendingOnboardingRef = useRef(false);
+  const mediaUrisRef = useRef(mediaUris);
+  const inputTextRef = useRef(inputText);
+  const mediaUrlsRefreshTimeRef = useRef<number>(Date.now());
+  const messageUrlsRefreshTimeRef = useRef<number>(Date.now());
+  
+  // Stores the arguments from the last generateScript call so we can retry on failure
+  const lastGenerateArgsRef = useRef<{
+    userInput: string;
+    isNewMedia: boolean;
+    newMediaCount: number;
+    newMediaIds: string[];
+    userMessagePersisted: boolean;
+  } | null>(null);
   
   // Convex hooks
   const convex = useConvex();
-  const generateUploadUrl = useMutation(api.tasks.generateUploadUrl);
   const createChatProject = useMutation(api.tasks.createChatProject);
   const addFilesToProject = useMutation(api.tasks.addFilesToProject);
   const addChatMessage = useMutation(api.tasks.addChatMessage);
@@ -422,15 +603,22 @@ export default function ChatComposerScreen() {
   const refreshProjectR2Urls = useAction(api.tasks.refreshProjectR2Urls);
   const regenerateProjectEditing = useMutation(api.tasks.regenerateProjectEditing);
   const completeChatTips = useMutation(api.users.completeChatTips);
+  const generateMultipleR2UploadUrls = useAction(api.r2Storage.generateMultipleR2UploadUrls);
+  const importR2FileToConvexStorage = useAction(api.tasks.importR2FileToConvexStorage);
   
   // Track if we've already tried to refresh R2 URLs for this project
   const hasAttemptedR2Refresh = useRef(false);
+  // Guard against double-tap on close button
+  const isClosingRef = useRef(false);
 
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
     };
   }, []);
+
+  useEffect(() => { mediaUrisRef.current = mediaUris; }, [mediaUris]);
+  useEffect(() => { inputTextRef.current = inputText; }, [inputText]);
   
   // Fetch current project data (tracks newly created/forked chat projects too)
   const existingProject = useQuery(
@@ -487,12 +675,16 @@ export default function ChatComposerScreen() {
               id: `existing-${index}`,
               storageId: metadata?.storageId,
               uploadStatus: 'uploaded' as const,
-              thumbnailLoaded: true,
             };
           })
           .filter((item: any): item is typeof mediaUris[0] => item !== null);
         
         setMediaUris(mediaFromProject);
+      }
+      
+      // Sync voice speed from project (so UI reflects the actual configured speed)
+      if (existingProject.voiceSpeed) {
+        setVoiceSpeed(existingProject.voiceSpeed);
       }
       
       // If coming from video preview, load chat history
@@ -566,13 +758,16 @@ export default function ChatComposerScreen() {
         // Consider script present if either assistant chat exists or project.script is set.
         setHasScript(hasAssistantMessage || hasProjectScript);
         
-        // Mark all existing media as "sent" so they don't appear in the composer
-        // (they were already sent in previous chat messages)
-        const existingMediaIds = new Set<string>();
-        for (let i = 0; i < (existingProject.fileUrls?.length || 0); i++) {
-          existingMediaIds.add(`existing-${i}`);
+        // Mark all existing media as "sent" so they don't appear in the composer.
+        // Only do this when there are actual messages (media was sent with those).
+        // For drafts with no messages yet, media should remain in the composer.
+        if (loadedMessages.length > 0) {
+          const existingMediaIds = new Set<string>();
+          for (let i = 0; i < (existingProject.fileUrls?.length || 0); i++) {
+            existingMediaIds.add(`existing-${i}`);
+          }
+          setSentMediaIds(existingMediaIds);
         }
-        setSentMediaIds(existingMediaIds);
       }
     }
   }, [existingProject, existingMessages, projectId]);
@@ -600,122 +795,140 @@ export default function ChatComposerScreen() {
     }
   }, [existingProject, projectId, refreshProjectR2Urls]);
   
-  // Refresh media URLs when queries return fresh data (URLs expire after 1 hour)
-  // This runs even after initial load to ensure URLs stay fresh
+  // Refresh media URLs when an existing URL is missing or potentially expired.
+  // Convex generates new signed URLs on every query re-evaluation, and swapping
+  // them frequently causes expo-image to restart downloads endlessly. To avoid
+  // this, we only refresh if (a) the URL is missing, or (b) enough time has
+  // passed that the URL may have expired (~1 hour for Convex URLs).
   useEffect(() => {
     if (!existingProject || !projectId) return;
     
-    // Update project media URLs if they've changed (fresh from query)
     if (existingProject.fileUrls && existingProject.fileMetadata && mediaUris.length > 0) {
-      const freshMediaUris = mediaUris.map((media, index) => {
-        // Only update existing media items that came from the project
+      const now = Date.now();
+      const timeSinceLastRefresh = now - mediaUrlsRefreshTimeRef.current;
+      const shouldAllowExpiredRefresh = timeSinceLastRefresh > 30 * 60 * 1000; // 30 minutes
+      
+      const freshMediaUris = mediaUris.map((media) => {
         if (media.id.startsWith('existing-')) {
           const existingIndex = parseInt(media.id.replace('existing-', ''));
           const freshUrl = existingProject.fileUrls?.[existingIndex];
-          if (freshUrl && freshUrl !== media.uri) {
-            console.log(`[chat-composer] Refreshing expired URL for media ${existingIndex}`);
+          // Replace if URL is missing, or if URL changed and enough time passed (expired)
+          if (freshUrl && (!media.uri || (freshUrl !== media.uri && shouldAllowExpiredRefresh))) {
+            console.log(`[chat-composer] Refreshing URL for media ${existingIndex}`);
             return { ...media, uri: freshUrl };
           }
         }
         return media;
       });
       
-      // Only update state if URLs actually changed
       const urlsChanged = freshMediaUris.some((m, i) => m.uri !== mediaUris[i].uri);
       if (urlsChanged) {
+        mediaUrlsRefreshTimeRef.current = now;
         setMediaUris(freshMediaUris);
       }
     }
   }, [existingProject?.fileUrls, projectId]);
   
-  // Refresh message media URLs when existingMessages query returns fresh data
+  // Refresh message media URLs when missing or potentially expired.
+  // Same rationale as above — avoid frequent URL swaps but handle expiration.
   useEffect(() => {
-    if (!existingMessages || messages.length === 0) return;
+    if (!existingMessages) return;
     
-    // Create a map of fresh URLs from the query
+    const now = Date.now();
+    const timeSinceLastRefresh = now - messageUrlsRefreshTimeRef.current;
+    const shouldAllowExpiredRefresh = timeSinceLastRefresh > 30 * 60 * 1000; // 30 minutes
+    
     const freshUrlsMap = new Map<string, (string | null)[]>();
     existingMessages.forEach((msg: any) => {
       if (msg.mediaUrls) {
         freshUrlsMap.set(msg._id, msg.mediaUrls);
       }
     });
+    if (freshUrlsMap.size === 0) return;
     
-    // Update messages with fresh URLs
-    let hasChanges = false;
-    const updatedMessages = messages.map(msg => {
-      const freshUrls = freshUrlsMap.get(msg.id);
-      if (freshUrls && msg.mediaUris) {
-        const updatedMediaUris = msg.mediaUris.map((media, index) => {
-          const freshUrl = freshUrls[index];
-          if (freshUrl && freshUrl !== media.uri) {
-            hasChanges = true;
-            console.log(`[chat-composer] Refreshing expired URL for message ${msg.id} media ${index}`);
-            return { ...media, uri: freshUrl };
-          }
-          return media;
-        });
-        return { ...msg, mediaUris: updatedMediaUris };
+    setMessages(prev => {
+      if (prev.length === 0) return prev;
+      let hasChanges = false;
+      const updated = prev.map(msg => {
+        const freshUrls = freshUrlsMap.get(msg.id);
+        if (freshUrls && msg.mediaUris) {
+          const updatedMediaUris = msg.mediaUris.map((media, index) => {
+            const freshUrl = freshUrls[index];
+            if (freshUrl && (!media.uri || (freshUrl !== media.uri && shouldAllowExpiredRefresh))) {
+              hasChanges = true;
+              return { ...media, uri: freshUrl };
+            }
+            return media;
+          });
+          return { ...msg, mediaUris: updatedMediaUris };
+        }
+        return msg;
+      });
+      if (hasChanges) {
+        messageUrlsRefreshTimeRef.current = now;
       }
-      return msg;
+      return hasChanges ? updated : prev;
     });
-    
-    if (hasChanges) {
-      setMessages(updatedMessages);
-    }
   }, [existingMessages]);
   
   // Sync local message IDs with backend Convex IDs
   // Local messages get synthetic IDs (assistant-*, user-*) but backend saves them
   // with real Convex IDs. We need to sync so edits go through updateChatMessage.
   useEffect(() => {
-    if (!existingMessages || existingMessages.length === 0 || messages.length === 0) return;
+    if (!existingMessages || existingMessages.length === 0) return;
     
-    // Check if any local messages have synthetic IDs that need syncing
-    const hasSyntheticIds = messages.some(m => 
-      m.id.startsWith('assistant-') || m.id.startsWith('user-') || m.id.startsWith('script-backfill-')
-    );
-    if (!hasSyntheticIds) return;
-    
-    // Build ordered lists by role to match local messages to backend messages
-    // Clone arrays so we can remove matched entries without mutating the original
-    const backendByRole = new Map<string, Array<any>>();
-    existingMessages.forEach((msg: any) => {
-      const list = backendByRole.get(msg.role) || [];
-      list.push(msg);
-      backendByRole.set(msg.role, list);
-    });
-    
-    // Normalize content for comparison: backend stores ??? for ?, local stores ?
     const normalize = (s: string) => s.replace(/\?\?\?/g, '?');
     
-    let hasChanges = false;
-    const updatedMessages = messages.map(msg => {
-      // Only sync synthetic IDs
-      if (
-        !msg.id.startsWith('assistant-') &&
-        !msg.id.startsWith('user-') &&
-        !msg.id.startsWith('script-backfill-')
-      ) {
-        return msg;
-      }
+    setMessages(prev => {
+      if (prev.length === 0) return prev;
       
-      // Find matching backend message by role + normalized content
-      const candidates = backendByRole.get(msg.role) || [];
-      const normalizedLocal = normalize(msg.content);
-      const matchIdx = candidates.findIndex((bm: any) => normalize(bm.content) === normalizedLocal);
-      if (matchIdx !== -1) {
-        const match = candidates[matchIdx];
-        hasChanges = true;
-        // Remove matched message from candidates to avoid double-matching
-        candidates.splice(matchIdx, 1);
-        return { ...msg, id: match._id };
-      }
-      return msg;
+      const hasSyntheticIds = prev.some(m => 
+        m.id.startsWith('assistant-') || m.id.startsWith('user-') || m.id.startsWith('script-backfill-')
+      );
+      if (!hasSyntheticIds) return prev;
+      
+      const usedIds = new Set<string>(
+        prev
+          .filter(m =>
+            !m.id.startsWith('assistant-') &&
+            !m.id.startsWith('user-') &&
+            !m.id.startsWith('script-backfill-')
+          )
+          .map(m => m.id)
+      );
+
+      const backendByRole = new Map<string, any[]>();
+      existingMessages.forEach((msg: any) => {
+        if (usedIds.has(msg._id)) return;
+        const list = backendByRole.get(msg.role) || [];
+        list.push(msg);
+        backendByRole.set(msg.role, list);
+      });
+      
+      let hasChanges = false;
+      const updated = prev.map(msg => {
+        if (
+          !msg.id.startsWith('assistant-') &&
+          !msg.id.startsWith('user-') &&
+          !msg.id.startsWith('script-backfill-')
+        ) {
+          return msg;
+        }
+        
+        const candidates = backendByRole.get(msg.role) || [];
+        const normalizedLocal = normalize(msg.content);
+        const matchIdx = candidates.findIndex((bm: any) => normalize(bm.content) === normalizedLocal);
+        if (matchIdx !== -1) {
+          const match = candidates[matchIdx];
+          hasChanges = true;
+          candidates.splice(matchIdx, 1);
+          return { ...msg, id: match._id };
+        }
+        return msg;
+      });
+      
+      return hasChanges ? updated : prev;
     });
-    
-    if (hasChanges) {
-      setMessages(updatedMessages);
-    }
   }, [existingMessages]);
   
   // Auto-focus keyboard for new projects (after screen transition completes)
@@ -747,9 +960,7 @@ export default function ChatComposerScreen() {
   // Scroll to bottom when keyboard appears and track keyboard visibility
   useEffect(() => {
     const scrollToBottom = () => {
-      // Scroll immediately
       scrollViewRef.current?.scrollToEnd({ animated: true });
-      // And again after keyboard animation completes
       setTimeout(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
       }, 350);
@@ -757,11 +968,13 @@ export default function ChatComposerScreen() {
     
     const handleKeyboardShow = () => {
       setKeyboardVisible(true);
+      keyboardVisibleRef.current = true;
       scrollToBottom();
     };
     
     const handleKeyboardHide = () => {
       setKeyboardVisible(false);
+      keyboardVisibleRef.current = false;
     };
     
     const keyboardWillShowListener = Keyboard.addListener(
@@ -807,6 +1020,11 @@ export default function ChatComposerScreen() {
     // Dismiss keyboard immediately when opening media picker
     Keyboard.dismiss();
     
+    if (mediaUris.length >= MAX_MEDIA_FILES) {
+      Alert.alert('Limit Reached', `You can upload a maximum of ${MAX_MEDIA_FILES} media files.`);
+      return;
+    }
+    
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Permission Required', 'Please grant permission to access your photos.');
@@ -819,10 +1037,13 @@ export default function ChatComposerScreen() {
       setIsProcessingMedia(true);
     }, 2000);
     
+    const remaining = MAX_MEDIA_FILES - mediaUris.length;
+    
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['videos', 'images'],
         allowsMultipleSelection: true,
+        selectionLimit: remaining,
         quality: 1,
         videoExportPreset: VideoExportPreset.H264_1920x1080,
         preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
@@ -831,16 +1052,14 @@ export default function ChatComposerScreen() {
       });
       
       if (!result.canceled && result.assets.length > 0) {
+        const assets = result.assets.slice(0, remaining);
         const baseTimestamp = generateMediaTimestamp();
-        // Create media items with thumbnailLoaded: false to show placeholder
-        // Videos are marked as loaded immediately since VideoView doesn't have onLoad
-        const newMedia: PendingMedia[] = result.assets.map((asset, index) => ({
+        const newMedia: PendingMedia[] = assets.map((asset, index) => ({
           uri: asset.uri,
           type: (asset.type === 'video' ? 'video' : 'image') as 'video' | 'image',
           id: `${baseTimestamp + index}`,
           assetId: asset.assetId ?? undefined,
           uploadStatus: 'pending' as const,
-          thumbnailLoaded: asset.type === 'video', // Videos show immediately
         }));
         
         // Add media immediately to show placeholders in UI
@@ -875,43 +1094,76 @@ export default function ChatComposerScreen() {
         : m
     ));
     
-    // Track successfully uploaded items with their storage IDs
-    const successfullyUploadedItems: PendingMedia[] = [];
-    
-    for (const item of filesToUpload) {
+    // 1. Batch-generate R2 presigned upload URLs for all files
+    const fileMetadataForR2 = filesToUpload.map((item, index) => {
+      const ext = item.type === 'video' ? 'mp4' : 'jpg';
+      return {
+        filename: `${item.type}_${item.id}_${index}.${ext}`,
+        contentType: item.type === 'video' ? 'video/mp4' : 'image/jpeg',
+      };
+    });
+
+    let r2UploadInfos: { filename: string; uploadUrl: string; key: string; r2Url?: string }[];
+    try {
+      r2UploadInfos = await retryWithBackoff(
+        () => generateMultipleR2UploadUrls({ files: fileMetadataForR2 }),
+        3,
+        2000
+      );
+    } catch (error) {
+      console.error('[upload] Failed to generate R2 upload URLs after retries', error);
+      setMediaUris(prev => prev.map(m =>
+        filesToUpload.some(f => f.id === m.id)
+          ? { ...m, uploadStatus: 'failed' as const }
+          : m
+      ));
+      setTimeout(() => inputRef.current?.focus(), 100);
+      return;
+    }
+
+    // 2. Upload each file to R2 in parallel (concurrency-limited) with retry,
+    //    then import into Convex storage for the storageId.
+    await runWithConcurrency(filesToUpload, UPLOAD_CONCURRENCY, async (item, index) => {
       try {
-        const uploadResult = await uploadMediaFiles(
-          generateUploadUrl,
-          [{ uri: item.uri, type: item.type, assetId: item.assetId }]
+        const r2Info = r2UploadInfos[index];
+        const contentType = fileMetadataForR2[index].contentType;
+
+        // Upload directly to R2 with retry (2 retries, 2s base backoff)
+        const r2Result = await retryWithBackoff(
+          () => uploadSingleMediaFileToR2(
+            { uri: item.uri, type: item.type, assetId: item.assetId },
+            r2Info,
+            contentType
+          ),
+          3,
+          2000
         );
-        
-        const storageId = uploadResult[0]?.storageId;
-        
-        // Update individual item status in state
-        setMediaUris(prev => prev.map(m => 
-          m.id === item.id 
+
+        // Import the R2 file into Convex storage to obtain a storageId
+        const { storageId } = await retryWithBackoff(
+          () => importR2FileToConvexStorage({
+            r2Url: r2Result.r2Url,
+            r2Key: r2Result.r2Key,
+            contentType,
+          }),
+          3,
+          2000
+        );
+
+        setMediaUris(prev => prev.map(m =>
+          m.id === item.id
             ? { ...m, uploadStatus: 'uploaded' as const, storageId }
             : m
         ));
-        
-        // Track this item for later use (with storageId)
-        if (storageId) {
-          successfullyUploadedItems.push({
-            ...item,
-            uploadStatus: 'uploaded',
-            storageId,
-          });
-        }
       } catch (error) {
         console.error('Failed to upload file', item.id, error);
-        // Mark as failed but don't block other uploads
-        setMediaUris(prev => prev.map(m => 
-          m.id === item.id 
+        setMediaUris(prev => prev.map(m =>
+          m.id === item.id
             ? { ...m, uploadStatus: 'failed' as const }
             : m
         ));
       }
-    }
+    });
     
     // Focus input after all uploads - user can add a prompt and press Send
     setTimeout(() => inputRef.current?.focus(), 100);
@@ -921,16 +1173,10 @@ export default function ChatComposerScreen() {
     setMediaUris(prev => prev.filter(m => m.id !== id));
   };
   
-  const markThumbnailLoaded = (id: string) => {
-    setMediaUris(prev => prev.map(m => 
-      m.id === id ? { ...m, thumbnailLoaded: true } : m
-    ));
-  };
-  
   const handleSend = async () => {
     const selectedMedia = mediaUris.filter(m => !sentMediaIds.has(m.id));
     const mediaNotReady = selectedMedia.some(
-      (media) => media.uploadStatus !== 'uploaded' || !media.thumbnailLoaded
+      (media) => media.uploadStatus !== 'uploaded'
     );
     if (mediaNotReady) {
       return;
@@ -946,6 +1192,11 @@ export default function ChatComposerScreen() {
         'Message Limit Reached',
         'You can edit the script directly by tapping on it, or approve and generate your video.'
       );
+      return;
+    }
+    
+    // Check character limit
+    if (inputText.length > MAX_MESSAGE_LENGTH) {
       return;
     }
     
@@ -997,8 +1248,9 @@ export default function ChatComposerScreen() {
     await generateScript(inputText.trim(), hasPendingMedia, pendingMedia.length, newMediaIds);
   };
   
-  const generateScript = async (userInput: string, isNewMedia = false, newMediaCount = 0, newMediaIds: string[] = []) => {
+  const generateScript = async (userInput: string, isNewMedia = false, newMediaCount = 0, newMediaIds: string[] = [], isRetry = false) => {
     if (!isMountedRef.current) return;
+    lastGenerateArgsRef.current = { userInput, isNewMedia, newMediaCount, newMediaIds, userMessagePersisted: false };
     setIsGenerating(true);
     let requestProjectId: string | null = createdProjectId;
     
@@ -1010,7 +1262,7 @@ export default function ChatComposerScreen() {
       isLoading: true,
       createdAt: Date.now(),
     };
-    setMessages(prev => [...prev, loadingMessage]);
+    setMessages(prev => [...prev.filter(m => !m.isError), loadingMessage]);
     
     try {
       // If coming from a video, fork the project first (never modify original)
@@ -1057,29 +1309,28 @@ export default function ChatComposerScreen() {
         }
       }
       
-      // Store user message in backend
-      // Get uploaded media for attaching to the first user message
-      const uploadedMediaForMessage = mediaUris.filter(m => m.storageId);
-      
-      // Determine which media IDs to attach:
-      // - For first message: all uploaded media
-      // - For follow-up messages with new media: the new media IDs passed in
-      let mediaIdsToAttach: string[] | undefined;
-      if (!hasScript && uploadedMediaForMessage.length > 0) {
-        // First message - attach all media
-        mediaIdsToAttach = uploadedMediaForMessage.map(m => m.storageId).filter(Boolean) as string[];
-      } else if (isNewMedia && newMediaIds.length > 0) {
-        // Follow-up message with new media - attach the new media IDs
-        mediaIdsToAttach = newMediaIds;
+      // Store user message in backend (skip on retry only if already persisted by the original call)
+      if (!isRetry || !lastGenerateArgsRef.current?.userMessagePersisted) {
+        const uploadedMediaForMessage = mediaUris.filter(m => m.storageId);
+        
+        let mediaIdsToAttach: string[] | undefined;
+        if (!hasScript && uploadedMediaForMessage.length > 0) {
+          mediaIdsToAttach = uploadedMediaForMessage.map(m => m.storageId).filter(Boolean) as string[];
+        } else if (isNewMedia && newMediaIds.length > 0) {
+          mediaIdsToAttach = newMediaIds;
+        }
+        
+        await addChatMessage({
+          projectId: currentProjectId,
+          role: 'user',
+          content: userInput || '',
+          messageIndex: userMessageCount + 1,
+          mediaIds: mediaIdsToAttach as any,
+        });
+        if (lastGenerateArgsRef.current) {
+          lastGenerateArgsRef.current.userMessagePersisted = true;
+        }
       }
-      
-      await addChatMessage({
-        projectId: currentProjectId,
-        role: 'user',
-        content: userInput || '',
-        messageIndex: userMessageCount + 1,
-        mediaIds: mediaIdsToAttach as any,
-      });
 
       // Keep project-level media in sync for follow-up messages with new uploads.
       // Composition/rendering reads project.files + project.fileMetadata.
@@ -1139,35 +1390,36 @@ export default function ChatComposerScreen() {
         }
       }
       
-      // Build conversation history for AI
+      // Build conversation history for AI, excluding transient loading/error messages
+      // and media-only user messages (empty content). Media context is conveyed via
+      // storageIds / media descriptions, not synthetic placeholder text.
       const conversationHistory = messages
-        .filter(m => !m.isLoading)
+        .filter(m => !m.isLoading && !m.isError)
+        .filter(m => !(m.role === 'user' && !m.content.trim() && m.mediaUris && m.mediaUris.length > 0))
         .map(m => ({
           role: m.role as 'user' | 'assistant',
           content: m.content,
         }));
       
-      // Add the current message
-      conversationHistory.push({
-        role: 'user',
-        content: userInput || 'Generate a script based on my media',
-      });
-      
-      // Get storage IDs for media - backend will fetch proper URLs from Convex storage
-      const uploadedMedia = mediaUris.filter(m => m.storageId);
-      const storageIds = uploadedMedia
-        .map(m => m.storageId)
-        .filter((id): id is string => !!id);
+      // Add the current user message. For media-only sends the content is empty;
+      // the backend handles empty user text with appropriate fallbacks.
+      const currentInput = userInput.trim();
+      const lastEntry = conversationHistory[conversationHistory.length - 1];
+      if (!lastEntry || lastEntry.role !== 'user' || lastEntry.content !== currentInput) {
+        conversationHistory.push({
+          role: 'user',
+          content: currentInput,
+        });
+      }
       
       // Use pre-computed media descriptions if available (from Gemini captioning)
-      // This makes script generation much faster and cheaper
       const cachedDescriptions = existingProject?.mediaDescriptions;
       
       // Generate script (saveAndNotify: true means backend saves script and sends notification)
+      // Backend will wait for captions from the captioning pipeline if not yet available.
       const result = await generateChatScript({
         projectId: currentProjectId,
         conversationHistory,
-        storageIds,
         cachedMediaDescriptions: cachedDescriptions,
         newMediaFiles: newMediaFilesForCaptioning,
         isFirstMessage: !hasScript,
@@ -1191,12 +1443,12 @@ export default function ChatComposerScreen() {
           
           return [...withoutLoading, assistantMessage];
         } else {
-          // Add error message
           const errorMessage: LocalChatMessage = {
             id: `error-${Date.now()}`,
             role: 'assistant',
-            content: 'Sorry, I couldn\'t generate a script. Please try again.',
+            content: 'Sorry, I couldn\'t generate a script.',
             createdAt: Date.now(),
+            isError: true,
           };
           return [...withoutLoading, errorMessage];
         }
@@ -1208,7 +1460,7 @@ export default function ChatComposerScreen() {
       if (result.success && result.script) {
         if (isMountedRef.current) {
           setHasScript(true);
-          triggerChatOnboarding();
+          pendingOnboardingRef.current = true;
         }
       }
     } catch (error: any) {
@@ -1250,7 +1502,7 @@ export default function ChatComposerScreen() {
             if (isMountedRef.current) {
               setHasScript(true);
               setIsGenerating(false);
-              triggerChatOnboarding();
+              pendingOnboardingRef.current = true;
             }
             return; // Successfully recovered
           }
@@ -1259,10 +1511,19 @@ export default function ChatComposerScreen() {
         }
       }
       
-      // If we couldn't recover, show error
+      // If we couldn't recover, show inline error with retry
       if (isMountedRef.current) {
-        setMessages(prev => prev.filter(m => !m.isLoading));
-        Alert.alert('Error', 'Failed to generate script. Please try again.');
+        setMessages(prev => {
+          const withoutLoading = prev.filter(m => !m.isLoading);
+          const errorMessage: LocalChatMessage = {
+            id: `error-${Date.now()}`,
+            role: 'assistant',
+            content: 'Failed to generate script.',
+            createdAt: Date.now(),
+            isError: true,
+          };
+          return [...withoutLoading, errorMessage];
+        });
       }
     } finally {
       if (isMountedRef.current) {
@@ -1359,6 +1620,16 @@ export default function ChatComposerScreen() {
     } catch (error) {
       console.error('Copy error:', error);
     }
+  };
+  
+  const handleRetryGenerate = () => {
+    const args = lastGenerateArgsRef.current;
+    if (!args || isGenerating) return;
+    
+    // Remove the error message before retrying
+    setMessages(prev => prev.filter(m => !m.isError));
+    
+    generateScript(args.userInput, args.isNewMedia, args.newMediaCount, args.newMediaIds, true);
   };
   
   // Check if user needs voice configuration (progressive disclosure)
@@ -1570,12 +1841,12 @@ export default function ChatComposerScreen() {
       if (result.success && result.newProjectId) {
         console.log('[chat-composer] New project created:', result.newProjectId);
         
-        // Get the latest script from messages
-        const latestScript = messages
-          .filter(m => m.role === 'assistant' && !m.isLoading)
-          .sort((a, b) => b.createdAt - a.createdAt)[0]?.content;
-        
-        addVideo({
+      // Get the latest script from messages
+      const latestScript = messages
+        .filter(m => m.role === 'assistant' && !m.isLoading && !m.isError)
+        .sort((a, b) => b.createdAt - a.createdAt)[0]?.content;
+      
+      addVideo({
           id: result.newProjectId,
           uri: '',
           prompt: existingProject?.prompt || 'Regenerated video',
@@ -1616,7 +1887,7 @@ export default function ChatComposerScreen() {
   };
   
   const handleApproveAndGenerate = async () => {
-    if (isSubmitting) return;
+    if (isSubmitting || isMessageTooLong) return;
     
     // Check if voice configuration is needed before submitting
     if (shouldShowVoicePrompt()) {
@@ -1646,7 +1917,7 @@ export default function ChatComposerScreen() {
       
       // Get the latest script from messages
       const latestScript = messages
-        .filter(m => m.role === 'assistant' && !m.isLoading)
+        .filter(m => m.role === 'assistant' && !m.isLoading && !m.isError)
         .sort((a, b) => b.createdAt - a.createdAt)[0]?.content;
       
       if (!latestScript) {
@@ -1768,7 +2039,7 @@ export default function ChatComposerScreen() {
   // Chat onboarding tips: measure target elements and show overlay
   const measureSpotlightRects = useCallback(() => {
     const bubbleRef = onboardingUsesLatest ? latestScriptBubbleRef : scriptBubbleRef;
-    const refs = [bubbleRef, threeDotsRef, composerRef, generateButtonRef];
+    const refs = [bubbleRef, threeDotsRef, composerRef, generateButtonRef, keepClipsOrderRef];
     const measured: (SpotlightRect | null)[] = [];
     let remaining = refs.length;
     
@@ -1796,6 +2067,8 @@ export default function ChatComposerScreen() {
     if (shouldShowTips) {
       // Dismiss keyboard before measuring rects so positions are accurate
       Keyboard.dismiss();
+      // Scroll to end to ensure Generate/Keep Clips Order buttons are visible for measurement
+      scrollViewRef.current?.scrollToEnd({ animated: false });
       // Wait for the script bubble to render, then measure and show immediately
       InteractionManager.runAfterInteractions(() => {
         requestAnimationFrame(() => {
@@ -1806,15 +2079,28 @@ export default function ChatComposerScreen() {
     }
   }, [backendUser, chatTipsCompletedLocally, measureSpotlightRects]);
   
+  // Trigger onboarding only after the script message is committed to the render,
+  // so the user never sees loading phrases and onboarding at the same time.
+  useEffect(() => {
+    if (!pendingOnboardingRef.current) return;
+    const hasRenderedScript = messages.some(m => m.role === 'assistant' && !m.isLoading && !m.isError);
+    if (hasRenderedScript && hasScript) {
+      pendingOnboardingRef.current = false;
+      triggerChatOnboarding();
+    }
+  }, [messages, hasScript, triggerChatOnboarding]);
+  
   // Force-show onboarding from menu (always highlights latest message)
   const forceShowChatOnboarding = useCallback(() => {
     setOnboardingUsesLatest(true);
     Keyboard.dismiss();
+    // Scroll to end to ensure Generate/Keep Clips Order buttons are visible for measurement
+    scrollViewRef.current?.scrollToEnd({ animated: false });
     InteractionManager.runAfterInteractions(() => {
       requestAnimationFrame(() => {
         // Measure using latest ref (onboardingUsesLatest is now true)
         const bubbleRef = latestScriptBubbleRef;
-        const refs = [bubbleRef, threeDotsRef, composerRef, generateButtonRef];
+        const refs = [bubbleRef, threeDotsRef, composerRef, generateButtonRef, keepClipsOrderRef];
         const measured: (SpotlightRect | null)[] = [];
         let remaining = refs.length;
         
@@ -1859,13 +2145,56 @@ export default function ChatComposerScreen() {
     }
   }, [userId, completeChatTips]);
   
+  const saveDraft = async (): Promise<boolean> => {
+    if (createdProjectId || !userId) return false;
+
+    const uploaded = mediaUrisRef.current.filter(m => m.storageId);
+    if (uploaded.length === 0) return false;
+
+    try {
+      const fileMetadata = uploaded.map(m => ({
+        storageId: m.storageId,
+        filename: `${m.type}_${m.id}.${m.type === 'video' ? 'mp4' : 'jpg'}`,
+        contentType: m.type === 'video' ? 'video/mp4' : 'image/jpeg',
+        size: 0,
+      }));
+
+      const draftId = await createChatProject({
+        userId,
+        files: uploaded.map(m => m.storageId),
+        fileMetadata,
+        thumbnail: uploaded[0]?.storageId,
+      });
+      console.log('[chat-composer] Draft saved on exit:', draftId);
+
+      const currentInputText = inputTextRef.current;
+      if (currentInputText.trim() && draftId) {
+        try {
+          await updateChatProjectPrompt({
+            projectId: draftId,
+            prompt: currentInputText.trim(),
+          });
+        } catch (promptError) {
+          console.error('[chat-composer] Failed to save draft prompt:', promptError);
+        }
+      }
+      return true;
+    } catch (error) {
+      console.error('[chat-composer] Failed to save draft on exit:', error);
+      return false;
+    }
+  };
+
   const handleClose = async () => {
+    if (isClosingRef.current) return;
+    isClosingRef.current = true;
+
     if (isGenerating) {
       Alert.alert(
         'Script is still generating',
         'You can safely leave this screen. We will keep generating in the background and notify you when it is ready.',
         [
-          { text: 'Stay', style: 'cancel' },
+          { text: 'Stay', style: 'cancel', onPress: () => { isClosingRef.current = false; } },
           {
             text: 'Continue in background',
             onPress: () => router.back(),
@@ -1877,9 +2206,6 @@ export default function ChatComposerScreen() {
 
     // Check if this is an existing draft that was opened (projectId param was provided)
     const isExistingDraft = !!projectId && !fromVideo;
-    
-    // Check if we created a new project during this session
-    const isNewlyCreatedProject = createdProjectId && !projectId;
     
     // If opening an existing draft without changes, exit silently
     if (isExistingDraft && !hasForkedFromVideo) {
@@ -1908,17 +2234,64 @@ export default function ChatComposerScreen() {
       return;
     }
     
-    // For newly created chats with content, show the save notice
     const hasContent = mediaUris.length > 0 || messages.length > 0 || inputText.trim();
-    if (isNewlyCreatedProject || hasContent) {
+    const isNewlyCreatedProject = createdProjectId && !projectId;
+    const isMediaUploading = mediaUris.some(
+      m => m.uploadStatus === 'uploading' || m.uploadStatus === 'pending'
+    );
+
+    if (!hasContent && !isNewlyCreatedProject) {
+      router.back();
+      return;
+    }
+
+    if (isMediaUploading) {
+      const uploadedSoFar = mediaUris.filter(m => m.storageId);
+      Alert.alert(
+        'Media still uploading',
+        uploadedSoFar.length > 0
+          ? 'Some media is still uploading. Already uploaded media will be saved as a draft.'
+          : 'Media is still uploading and will be lost if you leave now.',
+        [
+          { text: 'Stay', style: 'cancel', onPress: () => { isClosingRef.current = false; } },
+          {
+            text: 'Leave',
+            style: 'destructive',
+            onPress: async () => {
+              const saved = await saveDraft();
+              if (saved || isNewlyCreatedProject) {
+                Alert.alert(
+                  'Draft Saved',
+                  'Your draft has been saved in the Drafts tab. You can continue later.',
+                  [{ text: 'OK', onPress: () => router.back() }]
+                );
+              } else {
+                router.back();
+              }
+            },
+          },
+        ]
+      );
+      return;
+    }
+
+    const uploadedMedia = mediaUris.filter(m => m.storageId);
+    const canSaveDraft = !createdProjectId && uploadedMedia.length > 0;
+
+    let draftSaved = false;
+    if (canSaveDraft) {
+      draftSaved = await saveDraft();
+    }
+
+    if (draftSaved || isNewlyCreatedProject) {
       Alert.alert(
         'Draft Saved',
-        'Your draft will be saved in the Drafts tab. You can continue later.',
+        'Your draft has been saved in the Drafts tab. You can continue later.',
         [
-          { 
-            text: 'OK', 
-            onPress: () => router.back() 
-          }
+          {
+            text: 'OK',
+            onPress: () => router.back(),
+          },
         ]
       );
     } else {
@@ -1927,20 +2300,21 @@ export default function ChatComposerScreen() {
   };
   
   const isLimitReached = userMessageCount >= MAX_USER_MESSAGES;
+  const isMessageTooLong = inputText.length > MAX_MESSAGE_LENGTH;
   const selectedMedia = mediaUris.filter(m => !sentMediaIds.has(m.id));
   const uploadedMedia = mediaUris.filter(m => m.storageId);
   const pendingMedia = mediaUris.filter(m => m.storageId && !sentMediaIds.has(m.id));
   const hasPendingMedia = pendingMedia.length > 0;
   const hasNewInput = inputText.trim().length > 0;
   const allSelectedMediaReady = selectedMedia.every(
-    (media) => media.uploadStatus === 'uploaded' && media.thumbnailLoaded
+    (media) => media.uploadStatus === 'uploaded'
   );
   
   // Before first message: can send if we have media (even without text)
   // After first message: can send if we have new text input OR new pending media
   const canSend = messages.length === 0 
-    ? (uploadedMedia.length > 0 && allSelectedMediaReady && !isGenerating)  // First message: need media
-    : ((hasNewInput || hasPendingMedia) && allSelectedMediaReady && !isGenerating && !isLimitReached);  // Subsequent: need text or new media
+    ? (uploadedMedia.length > 0 && allSelectedMediaReady && !isGenerating && !isMessageTooLong)  // First message: need media
+    : ((hasNewInput || hasPendingMedia) && allSelectedMediaReady && !isGenerating && !isLimitReached && !isMessageTooLong);
   
   // Determine if send button should act as "Regenerate" 
   // This happens when coming from video without any modifications
@@ -1951,12 +2325,12 @@ export default function ChatComposerScreen() {
   const isApproveMode = !isRegenerateMode && hasScript && !hasNewInput && !hasPendingMedia && !isGenerating && !isSubmitting;
   
   // Generate header button is active when we can approve OR regenerate (history chats + drafts)
-  const isGenerateActive = isApproveMode || isRegenerateMode;
+  const isGenerateActive = (isApproveMode || isRegenerateMode) && !isMessageTooLong;
   const isGenerateBusy = isSubmitting || isRegenerating;
   
   // Find latest assistant message for edit functionality
   const latestAssistantMessageId = messages
-    .filter(m => m.role === 'assistant' && !m.isLoading)
+    .filter(m => m.role === 'assistant' && !m.isLoading && !m.isError)
     .sort((a, b) => b.createdAt - a.createdAt)[0]?.id;
   
   return (
@@ -1967,28 +2341,13 @@ export default function ChatComposerScreen() {
           <ArrowLeft size={24} color={Colors.ink} />
         </TouchableOpacity>
         
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <TouchableOpacity
-            ref={generateButtonRef}
-            style={[styles.generateButton, !isGenerateActive && styles.generateButtonDisabled]}
-            onPress={isRegenerateMode ? handleRegenerateFromVideo : handleApproveAndGenerate}
-            disabled={!isGenerateActive || isGenerateBusy}
-            activeOpacity={0.8}
-          >
-            {isGenerateBusy ? (
-              <ActivityIndicator size="small" color={Colors.white} />
-            ) : (
-              <Text style={[styles.generateButtonText, !isGenerateActive && styles.generateButtonTextDisabled]}>Generate</Text>
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity 
-            ref={threeDotsRef}
-            style={styles.threeDotsButton}
-            onPress={() => setShowMenu(prev => !prev)}
-          >
-            <MoreHorizontal size={20} color={Colors.ink} />
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity 
+          ref={threeDotsRef}
+          style={styles.threeDotsButton}
+          onPress={() => setShowMenu(prev => !prev)}
+        >
+          <MoreHorizontal size={20} color={Colors.ink} />
+        </TouchableOpacity>
       </View>
       
       {/* Three-dots popover menu */}
@@ -2030,22 +2389,6 @@ export default function ChatComposerScreen() {
               </View>
             </TouchableOpacity>
             
-            <View style={styles.menuDivider} />
-            
-            {/* Keep Clips Order */}
-            <View style={styles.menuItem}>
-              <ListOrdered size={18} color={Colors.ink} style={{ flexShrink: 0 }} />
-              <Text style={[styles.menuItemText, { flex: 1, flexShrink: 1 }]} numberOfLines={1}>Keep Clips Order</Text>
-              <Switch
-                value={keepOrder}
-                onValueChange={() => handleToggleKeepOrder()}
-                trackColor={{ false: Colors.creamDark, true: Colors.ember }}
-                thumbColor={Colors.white}
-                ios_backgroundColor={Colors.creamDark}
-                style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }], flexShrink: 0 }}
-              />
-            </View>
-            
             {hasScript && (
               <>
                 <View style={styles.menuDivider} />
@@ -2080,6 +2423,11 @@ export default function ChatComposerScreen() {
           contentContainerStyle={styles.chatContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          onLayout={() => {
+            if (keyboardVisibleRef.current) {
+              scrollViewRef.current?.scrollToEnd({ animated: true });
+            }
+          }}
         >
           {/* Info banner when viewing chat from a completed video */}
           {fromVideo && !hasForkedFromVideo && (
@@ -2098,6 +2446,9 @@ export default function ChatComposerScreen() {
               <Text style={styles.welcomeSubtitle}>
                 upload media for a video you would like to create
               </Text>
+              <Text style={styles.welcomeNote}>
+                max {MAX_MEDIA_FILES} media files
+              </Text>
             </View>
           )}
           
@@ -2108,11 +2459,22 @@ export default function ChatComposerScreen() {
             return messages.map((message, index) => {
               const isFirstAssistant = index === firstAssistantIndex;
               const isLatest = isLatestAssistant(message.id);
-              const needsRef = isFirstAssistant || isLatest;
               
-              const bubble = (
+              const getMeasureRef = () => {
+                if (isFirstAssistant && isLatest) {
+                  return (node: View | null) => {
+                    (scriptBubbleRef as React.MutableRefObject<View | null>).current = node;
+                    (latestScriptBubbleRef as React.MutableRefObject<View | null>).current = node;
+                  };
+                }
+                if (isFirstAssistant) return scriptBubbleRef;
+                if (isLatest) return latestScriptBubbleRef;
+                return undefined;
+              };
+
+              return (
                 <ChatBubble
-                  key={needsRef ? undefined : message.id}
+                  key={message.id}
                   message={message}
                   onEditTap={() => handleEditScript(message.id, message.content)}
                   onCopy={() => handleCopy(message.id, message.content)}
@@ -2121,39 +2483,41 @@ export default function ChatComposerScreen() {
                   onPlayVoice={() => handlePlayVoice(message.id, message.content)}
                   isPlayingVoice={playingMessageId === message.id}
                   isGeneratingVoice={generatingVoiceMessageId === message.id}
+                  onRetry={message.isError ? handleRetryGenerate : undefined}
+                  onMediaPress={(items, index) => setPreviewMedia({ items, index })}
+                  measureRef={getMeasureRef()}
                 />
               );
-              
-              // Wrap with refs for onboarding spotlight measurement
-              if (isFirstAssistant && isLatest) {
-                // Single message is both first and latest
-                return (
-                  <View key={message.id} ref={(node) => {
-                    (scriptBubbleRef as React.MutableRefObject<View | null>).current = node;
-                    (latestScriptBubbleRef as React.MutableRefObject<View | null>).current = node;
-                  }} collapsable={false}>
-                    {bubble}
-                  </View>
-                );
-              }
-              if (isFirstAssistant) {
-                return (
-                  <View key={message.id} ref={scriptBubbleRef} collapsable={false}>
-                    {bubble}
-                  </View>
-                );
-              }
-              if (isLatest) {
-                return (
-                  <View key={message.id} ref={latestScriptBubbleRef} collapsable={false}>
-                    {bubble}
-                  </View>
-                );
-              }
-              return bubble;
             });
           })()}
           
+          {/* Generate & Keep Clips Order buttons */}
+          {hasScript && !isGenerating && (
+            <View style={styles.scriptActionButtons}>
+              <TouchableOpacity
+                ref={generateButtonRef}
+                style={[styles.generateButton, !isGenerateActive && styles.generateButtonDisabled]}
+                onPress={isRegenerateMode ? handleRegenerateFromVideo : handleApproveAndGenerate}
+                disabled={!isGenerateActive || isGenerateBusy}
+                activeOpacity={0.8}
+              >
+                {isGenerateBusy ? (
+                  <ActivityIndicator size="small" color={Colors.white} />
+                ) : (
+                  <Text style={[styles.generateButtonText, !isGenerateActive && styles.generateButtonTextDisabled]}>Generate</Text>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                ref={keepClipsOrderRef}
+                style={[styles.keepClipsOrderButton, keepOrder && styles.keepClipsOrderButtonOn]}
+                onPress={() => handleToggleKeepOrder()}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.keepClipsOrderButtonText, keepOrder && styles.keepClipsOrderButtonTextOn]}>Keep clips order</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
           {/* Message limit warning */}
           {isLimitReached && (
             <View style={styles.limitWarning}>
@@ -2165,7 +2529,7 @@ export default function ChatComposerScreen() {
         </ScrollView>
         
         {/* Unified Composer */}
-        <View ref={composerRef} style={[styles.composerContainer, { paddingBottom: keyboardVisible ? 10 : insets.bottom }]}>
+        <View style={[styles.composerContainer, { paddingBottom: keyboardVisible ? 10 : insets.bottom }]}>
           {/* Add media button - outside card */}
           <TouchableOpacity 
             style={styles.addMediaButton}
@@ -2176,7 +2540,7 @@ export default function ChatComposerScreen() {
           </TouchableOpacity>
           
           {/* Unified card containing media + input */}
-          <View style={styles.composerCard}>
+          <View ref={composerRef} collapsable={false} style={[styles.composerCard, isMessageTooLong && styles.composerCardError]}>
             {/* Media thumbnails inside card - show pending media (not yet sent in a message) */}
             {(() => {
               const pendingMedia = mediaUris.filter(m => !sentMediaIds.has(m.id));
@@ -2187,26 +2551,27 @@ export default function ChatComposerScreen() {
                   contentContainerStyle={styles.composerMediaScroll}
                   keyboardShouldPersistTaps="handled"
                 >
-                  {pendingMedia.map((item) => (
-                    <View key={item.id} style={styles.composerMediaItem}>
-                      {/* Loading placeholder until thumbnail loads */}
-                      {!item.thumbnailLoaded && (
-                        <View style={styles.composerMediaPlaceholder}>
-                          <ActivityIndicator size="small" color={Colors.white} />
-                        </View>
-                      )}
-                      
-                      {/* Actual thumbnail - hidden until loaded */}
+                  {pendingMedia.map((item, itemIndex) => (
+                    <TouchableOpacity
+                      key={item.id}
+                      style={styles.composerMediaItem}
+                      activeOpacity={0.8}
+                      onPress={() => {
+                        const allItems = pendingMedia.map(m => ({ uri: m.uri, type: m.type }));
+                        setPreviewMedia({ items: allItems, index: itemIndex });
+                      }}
+                    >
+                      {/* Actual thumbnail */}
                       {item.type === 'video' ? (
-                        <VideoThumbnail uri={item.uri} style={styles.composerMediaImage} />
+                        <VideoThumbnail uri={item.uri} style={styles.composerMediaImage} cacheId={item.storageId} />
                       ) : (
-                        <Image 
-                          source={{ uri: item.uri }} 
-                          style={[
-                            styles.composerMediaImage,
-                            !item.thumbnailLoaded && styles.composerMediaImageHidden
-                          ]} 
-                          onLoad={() => markThumbnailLoaded(item.id)}
+                        <Image
+                          source={{ uri: item.uri }}
+                          style={styles.composerMediaImage}
+                          contentFit="cover"
+                          cachePolicy="disk"
+                          recyclingKey={item.id}
+                          transition={150}
                         />
                       )}
                       
@@ -2225,7 +2590,7 @@ export default function ChatComposerScreen() {
                       >
                         <X size={16} color={Colors.white} strokeWidth={2} />
                       </TouchableOpacity>
-                    </View>
+                    </TouchableOpacity>
                   ))}
                 </ScrollView>
               );
@@ -2234,34 +2599,31 @@ export default function ChatComposerScreen() {
             {/* Text input inside card */}
             <TextInput
               ref={inputRef}
-              style={styles.composerTextInput}
-              placeholder={hasScript ? "Type to edit, or tap → to approve" : "Share your story, or leave it blank..."}
+              style={[styles.composerTextInput, isMessageTooLong && styles.composerTextInputError]}
+              placeholder={hasScript ? "Type to edit" : "Share your story, or leave it blank..."}
               placeholderTextColor={Colors.gray400}
               value={inputText}
               onChangeText={setInputText}
               multiline
-              maxLength={500}
               editable={!isLimitReached && !isGenerating}
             />
+            {inputText.length > 0 && (
+              <Text style={[styles.charCounter, isMessageTooLong && styles.charCounterError]}>
+                {inputText.length}/{MAX_MESSAGE_LENGTH}
+              </Text>
+            )}
           </View>
           
-          {/* Send/Approve/Regenerate button - outside card */}
+          {/* Send button - only for chat messages */}
           <TouchableOpacity
             style={[
               styles.sendButton, 
-              (canSend || isApproveMode || isRegenerateMode) && styles.sendButtonActive,
-              (isSubmitting || isRegenerating) && styles.sendButtonDisabled,
+              canSend && styles.sendButtonActive,
             ]}
-            onPress={isRegenerateMode ? handleRegenerateFromVideo : (isApproveMode ? handleApproveAndGenerate : handleSend)}
-            disabled={isRegenerateMode ? isRegenerating : (isApproveMode ? isSubmitting : !canSend)}
+            onPress={handleSend}
+            disabled={!canSend}
           >
-            {(isSubmitting || isRegenerating) ? (
-              <ActivityIndicator size={16} color={Colors.white} />
-            ) : (
-              <View style={(isApproveMode || isRegenerateMode) ? styles.sendIconApprove : undefined}>
-                <Send size={20} color={(canSend || isApproveMode || isRegenerateMode) ? Colors.white : Colors.grayLight} />
-              </View>
-            )}
+            <Send size={20} color={canSend ? Colors.white : Colors.grayLight} />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -2297,6 +2659,14 @@ export default function ChatComposerScreen() {
         onComplete={handleChatOnboardingComplete}
         spotlightRects={spotlightRects}
         safeAreaTop={insets.top}
+      />
+      
+      {/* Media preview modal */}
+      <MediaPreviewModal
+        visible={!!previewMedia}
+        items={previewMedia?.items ?? []}
+        initialIndex={previewMedia?.index ?? 0}
+        onClose={() => setPreviewMedia(null)}
       />
     </View>
   );
@@ -2341,6 +2711,33 @@ const styles = StyleSheet.create({
   },
   generateButtonTextDisabled: {
     color: Colors.grayLight,
+  },
+  scriptActionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 2,
+    marginLeft: 4,
+  },
+  keepClipsOrderButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F7EBE7',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  keepClipsOrderButtonOn: {
+    backgroundColor: Colors.ember,
+  },
+  keepClipsOrderButtonText: {
+    color: Colors.ember,
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: 'Nunito_700Bold',
+  },
+  keepClipsOrderButtonTextOn: {
+    color: Colors.white,
   },
   threeDotsButton: {
     width: 40,
@@ -2409,7 +2806,7 @@ const styles = StyleSheet.create({
   },
   chatContent: {
     padding: 16,
-    paddingBottom: 0,
+    paddingBottom: 8,
   },
   infoBanner: {
     flexDirection: 'row',
@@ -2443,6 +2840,13 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: 'center',
   },
+  welcomeNote: {
+    fontSize: 13,
+    fontFamily: Fonts.regular,
+    color: Colors.textTertiary,
+    textAlign: 'center',
+    marginTop: 4,
+  },
   messageBubbleContainer: {
     marginBottom: 12,
     alignItems: 'flex-start',
@@ -2466,6 +2870,7 @@ const styles = StyleSheet.create({
     height: 75,
     borderRadius: 10,
     overflow: 'hidden',
+    backgroundColor: Colors.creamDark,
   },
   messageMediaImage: {
     width: '100%',
@@ -2549,6 +2954,18 @@ const styles = StyleSheet.create({
     padding: 6,
     borderRadius: 4,
   },
+  retryActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    padding: 6,
+    borderRadius: 8,
+  },
+  retryActionText: {
+    fontSize: 13,
+    fontFamily: Fonts.medium,
+    color: Colors.ember,
+  },
   actionButtonActive: {
     backgroundColor: 'rgba(243, 106, 63, 0.12)',
   },
@@ -2568,6 +2985,22 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.regular,
     color: Colors.textSecondary,
     marginLeft: 2,
+  },
+  tapToEditIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-end',
+    gap: 4,
+    marginTop: 8,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    backgroundColor: 'rgba(243, 106, 63, 0.08)',
+    borderRadius: 10,
+  },
+  tapToEditText: {
+    fontSize: 11,
+    fontFamily: Fonts.medium,
+    color: Colors.ember,
   },
   limitWarning: {
     backgroundColor: 'rgba(243, 106, 63, 0.08)',
@@ -2646,6 +3079,23 @@ const styles = StyleSheet.create({
     color: Colors.ink,
     maxHeight: 100,
   },
+  composerTextInputError: {
+    color: Colors.error,
+  },
+  composerCardError: {
+    borderColor: Colors.error,
+  },
+  charCounter: {
+    paddingHorizontal: 16,
+    paddingBottom: 6,
+    fontSize: 12,
+    fontFamily: Fonts.regular,
+    color: Colors.gray400,
+    textAlign: 'right',
+  },
+  charCounterError: {
+    color: Colors.error,
+  },
   composerMediaPlaceholder: {
     position: 'absolute',
     top: 0,
@@ -2693,13 +3143,6 @@ const styles = StyleSheet.create({
   },
   sendButtonActive: {
     backgroundColor: Colors.ember,
-  },
-  sendButtonDisabled: {
-    opacity: 0.6,
-  },
-  sendIconApprove: {
-    transform: [{ rotate: '45deg' }],
-    right: 2,
   },
   editorOverlay: {
     position: 'absolute',

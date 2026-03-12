@@ -14,7 +14,8 @@ export const Fonts = {
   // For italic/emphasized text
   italic: 'PPNeueMontreal-Italic',
 
-  // Legacy Inter fonts (for backwards compatibility)
+  // Inter fonts (for captions)
+  interSemiBold: 'Inter_600SemiBold',
   interBold: 'Inter_700Bold',
   interRegular: 'Inter_400Regular',
 } as const;

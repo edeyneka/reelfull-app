@@ -1,14 +1,4 @@
-import { Redirect as RedirectLegacy } from 'expo-router';
-
-function ComposerRedirectLegacy() {
-  return <RedirectLegacy href="/chat-composer" />;
-}
-import { Redirect } from 'expo-router';
-
-export default function ComposerRedirect() {
-  return <Redirect href="/chat-composer" />;
-}
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Redirect as RedirectLegacy , Redirect , useRouter, useLocalSearchParams } from 'expo-router';
 import { Camera, X, ArrowRight } from 'lucide-react-native';
 import { useState, useEffect, useRef } from 'react';
 import {
@@ -36,6 +26,14 @@ import { useApp } from '@/contexts/AppContext';
 import { uploadMediaFiles } from '@/lib/api-helpers';
 import { Fonts } from '@/constants/typography';
 import { ENABLE_TEST_RUN_MODE } from '@/constants/config';
+
+function ComposerRedirectLegacy() {
+  return <RedirectLegacy href="/chat-composer" />;
+}
+
+export default function ComposerRedirect() {
+  return <Redirect href="/chat-composer" />;
+}
 
 // Step types for the composer flow
 type ComposerStep = 'media_selection' | 'description';
@@ -250,6 +248,13 @@ function ComposerScreen() {
   };
 
   const pickMedia = async () => {
+    const MAX_MEDIA_FILES = 10;
+    
+    if (mediaUris.length >= MAX_MEDIA_FILES) {
+      Alert.alert('Limit Reached', `You can upload a maximum of ${MAX_MEDIA_FILES} media files.`);
+      return;
+    }
+    
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       alert('Sorry, we need camera roll permissions to make this work!');
@@ -261,10 +266,13 @@ function ComposerScreen() {
       setIsPickingMedia(true);
     }, 2000);
     
+    const remaining = MAX_MEDIA_FILES - mediaUris.length;
+    
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['videos', 'images'],
         allowsMultipleSelection: true,
+        selectionLimit: remaining,
         quality: 1,
         videoExportPreset: VideoExportPreset.H264_1920x1080,
         preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
@@ -274,7 +282,8 @@ function ComposerScreen() {
       setIsPickingMedia(false);
 
       if (!result.canceled && result.assets.length > 0) {
-        console.log('[pickMedia] Selected assets:', result.assets.length);
+        const selectedAssets = result.assets.slice(0, remaining);
+        console.log('[pickMedia] Selected assets:', selectedAssets.length);
         
         // Show overlay immediately
         setShowUploadOverlay(true);
@@ -282,7 +291,7 @@ function ComposerScreen() {
         // Use consistent 13-digit timestamp for media IDs
         const ts = Date.now();
         const baseTimestamp = parseInt(ts.toString().slice(0, 13).padEnd(13, '0'), 10);
-        const newMedia = result.assets.map((asset, index) => ({
+        const newMedia = selectedAssets.map((asset, index) => ({
           uri: asset.uri,
           type: (asset.type === 'video' ? 'video' : 'image') as 'video' | 'image',
           id: `${baseTimestamp + index}`,

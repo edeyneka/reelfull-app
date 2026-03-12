@@ -14,13 +14,6 @@ export default function TabsLayout() {
           title: 'Home',
         }}
       />
-      {/* Profile moved to stack screen in root layout */}
-      <Tabs.Screen
-        name="profile"
-        options={{
-          href: null, // Hide from tab bar navigation
-        }}
-      />
     </Tabs>
   );
 }

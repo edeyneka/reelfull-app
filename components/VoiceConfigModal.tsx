@@ -13,11 +13,11 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAction, useMutation, useQuery } from "convex/react";
-import { Audio } from 'expo-av';
 import { api } from "@/convex/_generated/api";
 import Colors from '@/constants/colors';
 import { Fonts } from '@/constants/typography';
 import { useApp } from '@/contexts/AppContext';
+import { useVoicePreview } from '@/hooks/useVoicePreview';
 import VoiceRecorder from './VoiceRecorder';
 
 interface VoiceConfigModalProps {
@@ -40,10 +40,15 @@ export default function VoiceConfigModal({
   const [isSaving, setIsSaving] = useState(false);
   const [showVoiceList, setShowVoiceList] = useState(false);
   const [selectedVoiceId, setSelectedVoiceId] = useState<string | null>(null);
-  const [playingPreviewId, setPlayingPreviewId] = useState<string | null>(null);
-  const [sound, setSound] = useState<Audio.Sound | null>(null);
-  const [cachedSounds, setCachedSounds] = useState<Record<string, Audio.Sound>>({});
   const [isPreloading, setIsPreloading] = useState(false);
+  const {
+    playingPreviewId,
+    isGeneratingPreview,
+    stopAllPreviews,
+    playVoicePreview,
+    playLivePreview,
+    preloadVoices,
+  } = useVoicePreview();
 
   // Convex hooks
   const generateUploadUrl = useMutation(api.users.generateUploadUrl);
@@ -91,114 +96,11 @@ export default function VoiceConfigModal({
     }
   }, [showVoiceList, defaultVoices]);
 
-  // Cleanup sounds on unmount
-  useEffect(() => {
-    return () => {
-      // Cleanup current sound
-      if (sound) {
-        sound.unloadAsync().catch(console.error);
-      }
-      // Cleanup cached sounds
-      Object.values(cachedSounds).forEach(s => {
-        s.unloadAsync().catch(console.error);
-      });
-    };
-  }, []);
-
   const preloadAudioFiles = async () => {
     if (!defaultVoices || isPreloading) return;
-    
     setIsPreloading(true);
-    
-    // Preload audio for voices that have preview URLs
-    const loadPromises = defaultVoices
-      .filter((voice: any) => voice.previewUrl && !cachedSounds[voice.voiceId])
-      .map(async (voice: any) => {
-        try {
-          const { sound: preloadedSound } = await Audio.Sound.createAsync(
-            { uri: voice.previewUrl },
-            { shouldPlay: false }
-          );
-          return { voiceId: voice.voiceId, sound: preloadedSound };
-        } catch (error) {
-          console.error(`[VoiceConfigModal] Failed to preload audio for ${voice.name}:`, error);
-          return null;
-        }
-      });
-    
-    const results = await Promise.all(loadPromises);
-    const newCachedSounds: Record<string, Audio.Sound> = {};
-    
-    results.forEach((result: { voiceId: string; sound: Audio.Sound } | null) => {
-      if (result) {
-        newCachedSounds[result.voiceId] = result.sound;
-      }
-    });
-    
-    setCachedSounds(prev => ({ ...prev, ...newCachedSounds }));
+    await preloadVoices(defaultVoices);
     setIsPreloading(false);
-  };
-
-  const playVoicePreview = async (voiceId: string, previewUrl: string) => {
-    // Stop current preview if playing
-    if (sound) {
-      await sound.stopAsync().catch(console.error);
-    }
-
-    if (playingPreviewId === voiceId) {
-      // Stop if already playing this one
-      setPlayingPreviewId(null);
-      return;
-    }
-
-    setPlayingPreviewId(voiceId);
-
-    try {
-      // Ensure audio plays through the speaker (not earpiece)
-      // allowsRecordingIOS must be false for speaker output on iOS
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: false,
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: false,
-      });
-
-      // Check if we have a cached sound
-      const cachedSound = cachedSounds[voiceId];
-      
-      if (cachedSound) {
-        // Use cached sound - seek to beginning and play
-        await cachedSound.setPositionAsync(0);
-        await cachedSound.playAsync();
-        setSound(cachedSound);
-        
-        // Set up playback status listener
-        cachedSound.setOnPlaybackStatusUpdate((status) => {
-          if (status.isLoaded && status.didJustFinish) {
-            setPlayingPreviewId(null);
-          }
-        });
-      } else {
-        // No cached sound, load and play
-        const { sound: newSound } = await Audio.Sound.createAsync(
-          { uri: previewUrl },
-          { shouldPlay: true }
-        );
-        
-        setSound(newSound);
-        
-        // Cache it for future use
-        setCachedSounds(prev => ({ ...prev, [voiceId]: newSound }));
-
-        newSound.setOnPlaybackStatusUpdate((status) => {
-          if (status.isLoaded && status.didJustFinish) {
-            setPlayingPreviewId(null);
-          }
-        });
-      }
-    } catch (error) {
-      console.error('[VoiceConfigModal] Error playing audio:', error);
-      setPlayingPreviewId(null);
-    }
   };
 
   // Helper function to upload voice recording to Convex storage
@@ -259,7 +161,7 @@ export default function VoiceConfigModal({
       console.log('[VoiceConfigModal] Voice saved successfully!');
       setIsSaving(false);
       
-      // Small delay to let the UI update before closing
+      stopAllPreviews();
       setTimeout(() => {
         onComplete();
       }, 100);
@@ -272,12 +174,11 @@ export default function VoiceConfigModal({
 
   const handleSkipOrDone = () => {
     if (isSaving) return;
+    stopAllPreviews();
     
     if (selectedVoiceId) {
-      // Voice was selected, call onComplete
       onComplete();
     } else {
-      // No voice selected, skip
       onSkip();
     }
   };
@@ -315,13 +216,13 @@ export default function VoiceConfigModal({
       visible={visible}
       animationType="slide"
       presentationStyle="pageSheet"
-      onRequestClose={onClose}
+      onRequestClose={() => { stopAllPreviews(); onClose(); }}
     >
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.closeButton}
-            onPress={onClose}
+            onPress={() => { stopAllPreviews(); onClose(); }}
             activeOpacity={0.7}
             disabled={isSaving}
           >
@@ -373,18 +274,7 @@ export default function VoiceConfigModal({
             <VoiceRecorder
               onRecordingComplete={handleVoiceRecordingComplete}
               onBeforeRecord={async () => {
-                // Unload all cached/playing sounds so the iOS audio session
-                // can cleanly switch to recording mode
-                if (sound) {
-                  await sound.stopAsync().catch(console.error);
-                  await sound.unloadAsync().catch(console.error);
-                  setSound(null);
-                }
-                for (const s of Object.values(cachedSounds)) {
-                  await s.unloadAsync().catch(console.error);
-                }
-                setCachedSounds({});
-                setPlayingPreviewId(null);
+                await stopAllPreviews();
               }}
               showScript={true}
               disabled={isSaving}
@@ -417,8 +307,8 @@ export default function VoiceConfigModal({
                   const cloneVoiceId = backendUser.elevenlabsVoiceId!;
                   const isSelected = selectedVoiceId === cloneVoiceId;
                   const isPlaying = playingPreviewId === cloneVoiceId;
-                  const isCached = !!cachedSounds[cloneVoiceId];
                   const hasPreview = !!clonePreviewUrl;
+                  const isLoading_ = isPlaying && isGeneratingPreview;
                   
                   return (
                     <TouchableOpacity
@@ -440,9 +330,11 @@ export default function VoiceConfigModal({
                           <Mic size={22} color={Colors.ember} strokeWidth={2} />
                         )}
                         <View style={styles.voiceOptionTextContainer}>
-                          <Text style={styles.voiceOptionName}>My Voice</Text>
+                          <Text style={styles.voiceOptionName}>
+                            {backendUser?.name ? `${backendUser.name}'s Voice` : 'Your Voice'}
+                          </Text>
                           <Text style={styles.voiceOptionDesc}>
-                            Your cloned voice
+                            Custom AI voice clone
                           </Text>
                         </View>
                       </View>
@@ -451,14 +343,22 @@ export default function VoiceConfigModal({
                           styles.previewButton,
                           isPlaying && styles.previewButtonPlaying,
                         ]}
-                        onPress={() => hasPreview && playVoicePreview(cloneVoiceId, clonePreviewUrl!)}
+                        onPress={() => {
+                          if (hasPreview) {
+                            playVoicePreview(cloneVoiceId, clonePreviewUrl!);
+                          } else {
+                            playLivePreview(cloneVoiceId);
+                          }
+                        }}
                         activeOpacity={0.7}
-                        disabled={!hasPreview}
+                        disabled={isLoading_}
                       >
-                        {isPlaying ? (
+                        {isLoading_ ? (
+                          <ActivityIndicator size="small" color={Colors.ember} />
+                        ) : isPlaying ? (
                           <Square size={14} color={Colors.white} strokeWidth={0} fill={Colors.white} />
                         ) : (
-                          <Play size={16} color={hasPreview ? Colors.ember : Colors.gray400} strokeWidth={0} fill={hasPreview ? Colors.ember : Colors.gray400} />
+                          <Play size={16} color={Colors.ember} strokeWidth={0} fill={Colors.ember} />
                         )}
                       </TouchableOpacity>
                     </TouchableOpacity>
@@ -469,7 +369,6 @@ export default function VoiceConfigModal({
                 {defaultVoices?.map((voice: any) => {
                   const isSelected = selectedVoiceId === voice.voiceId;
                   const isPlaying = playingPreviewId === voice.voiceId;
-                  const isCached = !!cachedSounds[voice.voiceId];
                   
                   return (
                     <TouchableOpacity
@@ -506,9 +405,7 @@ export default function VoiceConfigModal({
                         activeOpacity={0.7}
                         disabled={!voice.previewUrl}
                       >
-                        {isPreloading && !isCached ? (
-                          <ActivityIndicator size="small" color={Colors.ember} />
-                        ) : isPlaying ? (
+                        {isPlaying ? (
                           <Square size={14} color={Colors.white} strokeWidth={0} fill={Colors.white} />
                         ) : (
                           <Play size={16} color={voice.previewUrl ? Colors.ember : Colors.gray400} strokeWidth={0} fill={voice.previewUrl ? Colors.ember : Colors.gray400} />

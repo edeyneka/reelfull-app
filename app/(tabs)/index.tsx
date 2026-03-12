@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Loader2, AlertCircle, FileText, Zap, Clock, Calendar, Plus } from 'lucide-react-native';
+import { Loader2, AlertCircle, FileText, Zap, Clock, Calendar, Plus , Trash2 } from 'lucide-react-native';
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
   Dimensions,
@@ -10,12 +10,12 @@ import {
   View,
   Alert,
   Animated,
-  Image,
   RefreshControl,
   LayoutAnimation,
   Platform,
   UIManager,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
@@ -29,14 +29,14 @@ import { usePaywall } from '@/contexts/PaywallContext';
 import { Video as VideoType } from '@/types';
 import { useVideoPolling, registerForPushNotificationsAsync } from '@/lib/videoPollingService';
 import { Fonts } from '@/constants/typography';
-import { Trash2 } from 'lucide-react-native';
+import { getScreenDimensions } from '@/lib/dimensions';
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = getScreenDimensions();
 const ITEM_SPACING = 12;
 const ITEM_WIDTH = (SCREEN_WIDTH - ITEM_SPACING * 3) / 2;
 const THUMBNAIL_HEIGHT = ITEM_WIDTH * 1.4; // Thumbnail aspect ratio
@@ -182,9 +182,11 @@ function VideoThumbnail({
         return (
           <>
             <Image
-              source={{ uri: effectiveThumbnailUrl }}
+              source={effectiveThumbnailUrl}
               style={styles.thumbnail}
-              resizeMode="cover"
+              contentFit="cover"
+              cachePolicy="disk"
+              transition={200}
             />
             <LinearGradient
               colors={['#FFEEE8', "#FAF9F5"]}
@@ -224,9 +226,11 @@ function VideoThumbnail({
         return (
           <>
             <Image
-              source={{ uri: effectiveThumbnailUrl }}
+              source={effectiveThumbnailUrl}
               style={styles.thumbnail}
-              resizeMode="cover"
+              contentFit="cover"
+              cachePolicy="disk"
+              transition={200}
             />
             <View style={styles.processingOverlay}>
               <Animated.View style={{ transform: [{ rotate: spin }] }}>
@@ -254,9 +258,11 @@ function VideoThumbnail({
         return (
           <>
             <Image
-              source={{ uri: effectiveThumbnailUrl }}
+              source={effectiveThumbnailUrl}
               style={styles.thumbnail}
-              resizeMode="cover"
+              contentFit="cover"
+              cachePolicy="disk"
+              transition={200}
             />
             <View style={styles.errorOverlay}>
               <AlertCircle size={28} color={Colors.white} strokeWidth={2} />
@@ -277,9 +283,11 @@ function VideoThumbnail({
     if (effectiveThumbnailUrl) {
       return (
         <Image
-          source={{ uri: effectiveThumbnailUrl }}
+          source={effectiveThumbnailUrl}
           style={styles.thumbnail}
-          resizeMode="cover"
+          contentFit="cover"
+          cachePolicy="disk"
+          transition={200}
         />
       );
     }
@@ -1237,7 +1245,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     borderWidth: 3,
     borderColor: Colors.ember,
-    borderRadius: 14,
+    borderRadius: 10,
     pointerEvents: 'none',
   },
   // Profile Avatar in header

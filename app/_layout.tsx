@@ -2,18 +2,18 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, router, useGlobalSearchParams, usePathname } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useCallback, useEffect, useRef } from "react";
-import { AppState, AppStateStatus } from "react-native";
+import { AppState, AppStateStatus, Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { ConvexProvider, ConvexReactClient } from "convex/react";
+import { ConvexProvider, ConvexReactClient , useMutation } from "convex/react";
 import { AppProvider, useApp } from "@/contexts/AppContext";
 import { PaywallProvider } from "@/contexts/PaywallContext";
 import * as Font from 'expo-font';
 import * as Notifications from 'expo-notifications';
 import { registerForPushNotificationsAsync } from "@/lib/videoPollingService";
-import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Constants from 'expo-constants';
 import Colors from "@/constants/colors";
+import IPhoneFrameWrapper from "@/components/IPhoneFrameWrapper";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -235,12 +235,13 @@ function AppContent() {
       <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
       <Stack.Screen name="chat-composer" options={{ gestureEnabled: false }} />
       <Stack.Screen name="video-preview" options={{ gestureEnabled: false }} />
+      <Stack.Screen name="video-editor" options={{ gestureEnabled: false, animation: 'slide_from_right' }} />
       <Stack.Screen name="loader" options={{ gestureEnabled: false }} />
       <Stack.Screen name="result" options={{ gestureEnabled: false, animation: 'none' }} />
       <Stack.Screen 
         name="settings" 
         options={{ 
-          presentation: "transparentModal",
+          presentation: Platform.OS === 'web' ? 'card' : 'transparentModal',
           animation: 'none',
           contentStyle: { backgroundColor: 'transparent' }
         }} 
@@ -248,16 +249,15 @@ function AppContent() {
       <Stack.Screen 
         name="paywall" 
         options={{ 
-          presentation: "transparentModal",
-          animation: 'fade',
+          presentation: Platform.OS === 'web' ? 'card' : 'transparentModal',
+          animation: Platform.OS === 'web' ? 'none' : 'fade',
           contentStyle: { backgroundColor: 'transparent' },
         }} 
       />
       <Stack.Screen 
         name="profile" 
         options={{ 
-          presentation: "modal",
-          animation: 'slide_from_bottom',
+          animation: 'slide_from_right',
         }} 
       />
     </Stack>
@@ -275,6 +275,9 @@ export default function RootLayout() {
           'PPNeueMontreal-Medium': require('../assets/fonts/PPNeueMontreal-Medium.otf'),
           'PPNeueMontreal-Bold': require('../assets/fonts/PPNeueMontreal-Bold.otf'),
           'PPNeueMontreal-Italic': require('../assets/fonts/PPNeueMontreal-Italic.otf'),
+          'Inter_400Regular': require('@expo-google-fonts/inter/400Regular/Inter_400Regular.ttf'),
+          'Inter_600SemiBold': require('@expo-google-fonts/inter/600SemiBold/Inter_600SemiBold.ttf'),
+          'Inter_700Bold': require('@expo-google-fonts/inter/700Bold/Inter_700Bold.ttf'),
         });
         setFontsLoaded(true);
       } catch (error) {
@@ -298,16 +301,18 @@ export default function RootLayout() {
   }
 
   return (
-    <ConvexProvider client={convex}>
-      <QueryClientProvider client={queryClient}>
-        <GestureHandlerRootView style={{ flex: 1, backgroundColor: Colors.dark }}>
-          <AppProvider>
-            <PaywallProvider>
-              <AppContent />
-            </PaywallProvider>
-          </AppProvider>
-        </GestureHandlerRootView>
-      </QueryClientProvider>
-    </ConvexProvider>
+    <IPhoneFrameWrapper>
+      <ConvexProvider client={convex}>
+        <QueryClientProvider client={queryClient}>
+          <GestureHandlerRootView style={{ flex: 1, backgroundColor: Colors.dark }}>
+            <AppProvider>
+              <PaywallProvider>
+                <AppContent />
+              </PaywallProvider>
+            </AppProvider>
+          </GestureHandlerRootView>
+        </QueryClientProvider>
+      </ConvexProvider>
+    </IPhoneFrameWrapper>
   );
 }

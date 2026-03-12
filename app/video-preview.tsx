@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { X, Download, Mic, Music, Subtitles, MessageSquare, Loader2, Play, Pause, Info } from 'lucide-react-native';
+import { X, Download, Mic, Music, Subtitles, MessageSquare, Loader2, Play, Pause, Info, Scissors } from 'lucide-react-native';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Alert,
@@ -22,6 +22,7 @@ import * as MediaLibrary from 'expo-media-library';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { useEvent } from 'expo';
+import { Audio } from 'expo-av';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { useAction, useMutation, useQuery } from "convex/react";
@@ -33,8 +34,17 @@ import { GenerationPhase } from '@/types';
 import { getCachedVideoPath, preCacheVideo } from '@/lib/videoCache';
 import VideoPreviewOnboarding, { SpotlightRect } from '@/components/VideoPreviewOnboarding';
 import { ENABLE_TEST_RUN_MODE } from '@/constants/config';
+import { getScreenDimensions } from '@/lib/dimensions';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = getScreenDimensions();
+
+// Match client-side watermark position to FFmpeg's `overlay=W-w-160:114` on a 1080×1920 canvas
+// by accounting for contentFit="cover" scaling and crop offset.
+const VIDEO_W = 1080;
+const VIDEO_H = 1920;
+const COVER_SCALE = Math.max(SCREEN_WIDTH / VIDEO_W, SCREEN_HEIGHT / VIDEO_H);
+const CROP_X = (VIDEO_W * COVER_SCALE - SCREEN_WIDTH) / 2;
+const CROP_Y = (VIDEO_H * COVER_SCALE - SCREEN_HEIGHT) / 2;
 
 // Icon shadow style for visibility on light/dark videos
 const ICON_SHADOW = {
@@ -54,20 +64,9 @@ const getGenerationPhase = (project: any): GenerationPhase => {
     return null;
   }
   
-  // Debug logging
-  console.log('[getGenerationPhase] Project state:', {
-    status: project.status,
-    animationStatus: project.animationStatus,
-    hasAudioUrl: !!project.audioUrl,
-    hasMusicUrl: !!project.musicUrl,
-    renderProgress: project.renderProgress?.step,
-    hasRenderedVideoUrl: !!project.renderedVideoUrl,
-  });
-  
   // Priority 1: Check render progress step
   const step = project.renderProgress?.step?.toLowerCase() || '';
   if (step) {
-    console.log('[getGenerationPhase] Render step found:', step);
     
     // Media preparation steps (voiceover, music, animations, loading) = preparing_media
     if (step.includes('voiceover') || step.includes('music') || step.includes('animat') || step.includes('loading')) {
@@ -343,11 +342,154 @@ export default function VideoPreviewScreen() {
   const [musicEnabled, setMusicEnabled] = useState(true);
   const [captionsEnabled, setCaptionsEnabled] = useState(true);
 
+  // Client-side preview: resolved URLs for base video, voice audio, music audio
+  const [previewAssets, setPreviewAssets] = useState<{
+    baseVideoUrl: string | null;
+    voiceAudioUrl: string | null;
+    musicAudioUrl: string | null;
+    watermarkUrl: string | null;
+    voiceSpeed: number;
+    includeVoice?: boolean;
+    includeMusic?: boolean;
+    includeCaptions?: boolean;
+    includeOriginalSound?: boolean;
+    musicVolume?: number;
+    voiceVolume?: number;
+    originalSoundVolume?: number;
+  } | null>(null);
+
+  // Track which features are available in the rendered video
+  const [voiceAvailable, setVoiceAvailable] = useState(true);
+  const [musicAvailable, setMusicAvailable] = useState(true);
+  const [captionsAvailable, setCaptionsAvailable] = useState(true);
+  const voiceSoundRef = useRef<Audio.Sound | null>(null);
+  const musicSoundRef = useRef<Audio.Sound | null>(null);
+  const audioLoadedRef = useRef({ voice: false, music: false });
+  const [audioReady, setAudioReady] = useState(false);
+  // One-time source switch: rendered video → base video (during initial load)
+  const pendingSeekAfterSourceSwitch = useRef<{ time: number; wasPlaying: boolean } | null>(null);
+  const [isSourceSwitching, setIsSourceSwitching] = useState(false);
+  const isSourceSwitchingRef = useRef(false);
+  const switchedToBaseRef = useRef(false);
+
+  // Default variant = current toggles match what was baked into the rendered video
+  const renderIncludesVoice = previewAssets?.includeVoice !== false;
+  const renderIncludesMusic = previewAssets?.includeMusic !== false;
+  const renderIncludesCaptions = previewAssets?.includeCaptions !== false;
+  const isDefaultVariant =
+    voiceoverEnabled === renderIncludesVoice &&
+    musicEnabled === renderIncludesMusic &&
+    captionsEnabled === renderIncludesCaptions;
+  const useSeparateAudio = switchedToBaseRef.current || !isDefaultVariant;
+
   // Convex hooks
   const getFreshVideoUrl = useAction(api.tasks.getFreshProjectVideoUrl);
   const getVideoVariant = useAction(api.tasks.getVideoVariant);
+  const getPreviewAssets = useAction(api.tasks.getProjectPreviewAssets);
   const completeVideoPreviewTips = useMutation(api.users.completeVideoPreviewTips);
-  
+
+  // Fetch preview assets (base video, voice audio, music audio URLs) for client-side preview
+  useEffect(() => {
+    if (!projectId || isGenerating) return;
+    let cancelled = false;
+    getPreviewAssets({ projectId }).then((assets) => {
+      if (!cancelled) {
+        console.log('[video-preview] Preview assets loaded:', {
+          hasBaseVideo: !!assets.baseVideoUrl,
+          hasVoice: !!assets.voiceAudioUrl,
+          hasMusic: !!assets.musicAudioUrl,
+          hasWatermark: !!assets.watermarkUrl,
+          voiceSpeed: assets.voiceSpeed,
+          includeVoice: assets.includeVoice,
+          includeMusic: assets.includeMusic,
+          includeCaptions: assets.includeCaptions,
+        });
+        setPreviewAssets(assets);
+
+        // Disable toggles and mark features as unavailable if they were
+        // excluded during rendering (the rendered video simply doesn't have them)
+        if (assets.includeVoice === false) {
+          setVoiceAvailable(false);
+          setVoiceoverEnabled(false);
+        }
+        if (assets.includeMusic === false) {
+          setMusicAvailable(false);
+          setMusicEnabled(false);
+        }
+        if (assets.includeCaptions === false) {
+          setCaptionsAvailable(false);
+          setCaptionsEnabled(false);
+        }
+      }
+    }).catch((err) => {
+      console.warn('[video-preview] Failed to load preview assets:', err);
+    });
+    return () => { cancelled = true; };
+  }, [projectId, isGenerating]);
+
+  // Load separate audio tracks for client-side preview mixing
+  useEffect(() => {
+    if (!previewAssets) return;
+    let cancelled = false;
+
+    const loadAudio = async () => {
+      await Audio.setAudioModeAsync({
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+      });
+
+      if (previewAssets.voiceAudioUrl && !audioLoadedRef.current.voice) {
+        try {
+          const { sound } = await Audio.Sound.createAsync(
+            { uri: previewAssets.voiceAudioUrl },
+            { shouldPlay: false, volume: previewAssets.voiceVolume ?? 1.0, rate: previewAssets.voiceSpeed, shouldCorrectPitch: true }
+          );
+          if (!cancelled) {
+            voiceSoundRef.current = sound;
+            audioLoadedRef.current.voice = true;
+            console.log('[video-preview] Voice audio loaded');
+          } else {
+            sound.unloadAsync();
+          }
+        } catch (e) {
+          console.warn('[video-preview] Failed to load voice audio:', e);
+        }
+      }
+
+      if (previewAssets.musicAudioUrl && !audioLoadedRef.current.music) {
+        try {
+          const { sound } = await Audio.Sound.createAsync(
+            { uri: previewAssets.musicAudioUrl },
+            { shouldPlay: false, volume: previewAssets.musicVolume ?? 0.1 }
+          );
+          if (!cancelled) {
+            musicSoundRef.current = sound;
+            audioLoadedRef.current.music = true;
+            console.log('[video-preview] Music audio loaded');
+          } else {
+            sound.unloadAsync();
+          }
+        } catch (e) {
+          console.warn('[video-preview] Failed to load music audio:', e);
+        }
+      }
+    };
+
+    loadAudio().then(() => {
+      if (!cancelled) setAudioReady(true);
+    });
+
+    return () => {
+      cancelled = true;
+      setAudioReady(false);
+      voiceSoundRef.current?.unloadAsync();
+      musicSoundRef.current?.unloadAsync();
+      voiceSoundRef.current = null;
+      musicSoundRef.current = null;
+      audioLoadedRef.current = { voice: false, music: false };
+    };
+  }, [previewAssets]);
+
   // Fetch backend user for onboarding tips check
   const backendUser = useQuery(
     api.users.getCurrentUser,
@@ -387,28 +529,196 @@ export default function VideoPreviewScreen() {
   
   // Track if video is ready to play (loaded enough to display)
   const isVideoReady = playerStatus === 'readyToPlay';
-  
+
+  // Second player: rendered video with baked captions (shown via opacity when captions enabled)
+  const captionPlayer = useVideoPlayer(
+    resolvedVideoUri || null,
+    (player) => {
+      if (player && resolvedVideoUri) {
+        player.loop = true;
+        player.muted = true;
+      }
+    }
+  );
+  const { status: captionPlayerStatus } = useEvent(captionPlayer, 'statusChange', { status: captionPlayer.status });
+  const isCaptionPlayerReady = captionPlayerStatus === 'readyToPlay';
+
+  // Keep caption player in sync with primary player (skip when captions disabled)
+  useEffect(() => {
+    if (!isCaptionPlayerReady || !videoPlayer || !captionPlayer || !captionsEnabled) return;
+
+    const syncCaption = () => {
+      if (!videoPlayer.playing) return;
+      const drift = Math.abs(videoPlayer.currentTime - captionPlayer.currentTime);
+      if (drift > 0.3) {
+        captionPlayer.currentTime = videoPlayer.currentTime;
+      }
+    };
+
+    const interval = setInterval(syncCaption, 1000);
+    return () => clearInterval(interval);
+  }, [isCaptionPlayerReady, videoPlayer, captionPlayer, captionsEnabled]);
+
+  // Mirror play/pause state to caption player (pause when captions disabled to save GPU)
+  useEffect(() => {
+    if (!captionPlayer || !isCaptionPlayerReady) return;
+    if (captionsEnabled && playerIsPlaying) {
+      captionPlayer.currentTime = videoPlayer.currentTime;
+      captionPlayer.play();
+    } else {
+      captionPlayer.pause();
+    }
+  }, [playerIsPlaying, captionPlayer, isCaptionPlayerReady, videoPlayer, captionsEnabled]);
+
+  // Sync separate audio tracks with the video player
+  const syncAudioPlayState = useCallback(async (playing: boolean) => {
+    const currentTimeMs = (videoPlayer?.currentTime || 0) * 1000;
+
+    if (voiceoverEnabled && voiceSoundRef.current) {
+      try {
+        await voiceSoundRef.current.setPositionAsync(currentTimeMs);
+        if (playing) await voiceSoundRef.current.playAsync();
+        else await voiceSoundRef.current.pauseAsync();
+      } catch (_) {}
+    } else {
+      try { await voiceSoundRef.current?.pauseAsync(); } catch (_) {}
+    }
+
+    if (musicEnabled && musicSoundRef.current) {
+      try {
+        await musicSoundRef.current.setVolumeAsync(previewAssets?.musicVolume ?? 0.1);
+        await musicSoundRef.current.setPositionAsync(currentTimeMs);
+        if (playing) await musicSoundRef.current.playAsync();
+        else await musicSoundRef.current.pauseAsync();
+      } catch (_) {}
+    } else {
+      try { await musicSoundRef.current?.pauseAsync(); } catch (_) {}
+    }
+  }, [voiceoverEnabled, musicEnabled, videoPlayer, previewAssets?.musicVolume]);
+
+  // One-time switch: swap rendered video → base video while thumbnail is still visible.
+  // Waits for audioReady so everything starts together after the switch.
+  useEffect(() => {
+    if (!previewAssets?.baseVideoUrl || !audioReady || !videoPlayer || switchedToBaseRef.current || isGenerating) return;
+    switchedToBaseRef.current = true;
+    const currentTime = videoPlayer.currentTime;
+    const wasPlaying = videoPlayer.playing;
+    videoPlayer.pause();
+    const origVol = previewAssets.originalSoundVolume ?? 0;
+    videoPlayer.muted = !previewAssets.includeOriginalSound || origVol === 0;
+    try { videoPlayer.volume = origVol; } catch (_) {}
+    pendingSeekAfterSourceSwitch.current = { time: currentTime, wasPlaying };
+    isSourceSwitchingRef.current = true;
+    setIsSourceSwitching(true);
+    videoPlayer.replaceAsync({ uri: previewAssets.baseVideoUrl });
+  }, [previewAssets?.baseVideoUrl, audioReady, videoPlayer, isGenerating]);
+
+  // After the one-time source switch completes, restore position (auto-play effect handles starting)
+  useEffect(() => {
+    if (isVideoReady && pendingSeekAfterSourceSwitch.current && videoPlayer) {
+      const { time } = pendingSeekAfterSourceSwitch.current;
+      pendingSeekAfterSourceSwitch.current = null;
+      videoPlayer.currentTime = time;
+      isSourceSwitchingRef.current = false;
+      setIsSourceSwitching(false);
+    }
+  }, [isVideoReady, videoPlayer]);
+
+  // When any toggle changes, manage audio (no source switching)
+  useEffect(() => {
+    if (!videoPlayer || isGenerating) return;
+
+    if (switchedToBaseRef.current) {
+      const origVol = previewAssets?.originalSoundVolume ?? 0;
+      videoPlayer.muted = !previewAssets?.includeOriginalSound || origVol === 0;
+      try { videoPlayer.volume = origVol; } catch (_) {}
+      syncAudioPlayState(videoPlayer.playing);
+    } else if (isDefaultVariant) {
+      // Still on rendered video, all defaults — use baked audio
+      videoPlayer.muted = false;
+      voiceSoundRef.current?.pauseAsync().catch(() => {});
+      musicSoundRef.current?.pauseAsync().catch(() => {});
+    } else {
+      // Still on rendered video but user toggled before base loaded — mute & use separate audio
+      // Must stay muted because the rendered video's audio is a pre-mixed composite (voice + music + original sound)
+      // that cannot be decomposed; unmuting would cause double audio with the separate tracks
+      videoPlayer.muted = true;
+      syncAudioPlayState(videoPlayer.playing);
+    }
+  }, [voiceoverEnabled, musicEnabled, captionsEnabled, isGenerating, syncAudioPlayState, audioReady, previewAssets?.includeOriginalSound]);
+
+  // Periodic audio sync: keep separate tracks in time with the video
+  useEffect(() => {
+    if (!useSeparateAudio || isGenerating || !videoPlayer) return;
+
+    const interval = setInterval(async () => {
+      if (!videoPlayer.playing) return;
+      const videoMs = videoPlayer.currentTime * 1000;
+
+      const drift = async (sound: Audio.Sound | null) => {
+        if (!sound) return;
+        try {
+          const s = await sound.getStatusAsync();
+          if (s.isLoaded && s.isPlaying && Math.abs(s.positionMillis - videoMs) > 400) {
+            await sound.setPositionAsync(videoMs);
+          }
+        } catch (_) {}
+      };
+
+      if (voiceoverEnabled) await drift(voiceSoundRef.current);
+      if (musicEnabled) await drift(musicSoundRef.current);
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [useSeparateAudio, isGenerating, voiceoverEnabled, musicEnabled, videoPlayer]);
+
   // Update local isPlaying state when player state changes
   useEffect(() => {
     setIsPlaying(playerIsPlaying);
   }, [playerIsPlaying]);
   
-  // Track video progress
+  // Track video progress, detect loop restarts, and update caption overlay
+  const prevVideoTimeRef = useRef(0);
+  const showControlsRef = useRef(false);
+  showControlsRef.current = showControls;
+  const isScrubbingRef = useRef(false);
+  isScrubbingRef.current = isScrubbing;
+  const durationSetRef = useRef(false);
+
   useEffect(() => {
     if (!videoPlayer || isGenerating) return;
+    durationSetRef.current = false;
     
     const interval = setInterval(() => {
       if (videoPlayer.duration > 0) {
-        setDuration(videoPlayer.duration);
-        // Don't update progress while user is scrubbing
-        if (!isScrubbing) {
-          setProgress(videoPlayer.currentTime / videoPlayer.duration);
+        if (!durationSetRef.current) {
+          durationSetRef.current = true;
+          setDuration(videoPlayer.duration);
+        }
+        const currentTime = videoPlayer.currentTime;
+
+        // Detect loop restart: video jumped backwards by a large amount
+        if (useSeparateAudio && videoPlayer.playing && prevVideoTimeRef.current - currentTime > 1) {
+          syncAudioPlayState(true);
+        }
+        prevVideoTimeRef.current = currentTime;
+
+        // Only update progress state when timeline is visible to avoid unnecessary re-renders
+        if (showControlsRef.current && !isScrubbingRef.current) {
+          setProgress(currentTime / videoPlayer.duration);
         }
       }
-    }, 100);
+    }, 250);
     
     return () => clearInterval(interval);
-  }, [videoPlayer, isGenerating, isScrubbing]);
+  }, [videoPlayer, isGenerating, useSeparateAudio, syncAudioPlayState]);
+
+  // Immediately update progress when controls become visible so the timeline is accurate
+  useEffect(() => {
+    if (showControls && videoPlayer && videoPlayer.duration > 0 && !isScrubbing) {
+      setProgress(videoPlayer.currentTime / videoPlayer.duration);
+    }
+  }, [showControls, videoPlayer, isScrubbing]);
   
   // Auto-hide controls after 3 seconds
   const resetControlsTimeout = useCallback(() => {
@@ -420,23 +730,24 @@ export default function VideoPreviewScreen() {
     }, 3000);
   }, []);
   
-  // Handle tap on video
+  // Handle tap on video: toggle play/pause and sync separate audio tracks
   const handleVideoTap = useCallback(() => {
     if (isGenerating) return;
     
-    // Toggle play/pause
     if (videoPlayer) {
       if (isPlaying) {
         videoPlayer.pause();
+        if (useSeparateAudio) syncAudioPlayState(false);
       } else {
         videoPlayer.play();
+        if (useSeparateAudio) syncAudioPlayState(true);
       }
     }
     
     // Show controls and reset timeout
     setShowControls(true);
     resetControlsTimeout();
-  }, [videoPlayer, isPlaying, isGenerating, resetControlsTimeout]);
+  }, [videoPlayer, isPlaying, isGenerating, resetControlsTimeout, useSeparateAudio, syncAudioPlayState]);
   
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -476,6 +787,7 @@ export default function VideoPreviewScreen() {
     wasPlayingBeforeScrub.current = isPlaying;
     if (isPlaying) {
       videoPlayer.pause();
+      if (useSeparateAudio) syncAudioPlayState(false);
     }
     
     setIsScrubbing(true);
@@ -489,7 +801,7 @@ export default function VideoPreviewScreen() {
     // Calculate and apply initial scrub position
     const newProgress = getProgressFromPageX(pageX);
     setScrubProgress(newProgress);
-  }, [videoPlayer, duration, isPlaying, getProgressFromPageX]);
+  }, [videoPlayer, duration, isPlaying, getProgressFromPageX, useSeparateAudio, syncAudioPlayState]);
   
   const handleTimelineTouchMove = useCallback((event: GestureResponderEvent) => {
     if (!isScrubbing || !videoPlayer || !duration) return;
@@ -505,6 +817,7 @@ export default function VideoPreviewScreen() {
     // Seek to the final scrub position
     const seekTime = scrubProgress * duration;
     videoPlayer.currentTime = seekTime;
+    if (captionPlayer) captionPlayer.currentTime = seekTime;
     setProgress(scrubProgress);
     
     setIsScrubbing(false);
@@ -512,11 +825,12 @@ export default function VideoPreviewScreen() {
     // Resume playing if it was playing before
     if (wasPlayingBeforeScrub.current) {
       videoPlayer.play();
+      if (useSeparateAudio) syncAudioPlayState(true);
     }
     
     // Reset controls hide timeout
     resetControlsTimeout();
-  }, [isScrubbing, videoPlayer, duration, scrubProgress, resetControlsTimeout]);
+  }, [isScrubbing, videoPlayer, duration, scrubProgress, resetControlsTimeout, useSeparateAudio, syncAudioPlayState]);
 
   // Animate composing toast - stays visible during entire composing process
   useEffect(() => {
@@ -596,10 +910,17 @@ export default function VideoPreviewScreen() {
     });
   }, [measureOnboardingRects, videoPlayer]);
 
-  // Auto-trigger onboarding (or auto-play) once when video becomes ready
-  // Waits for backendUser to load so we know whether onboarding is needed
+  // Auto-trigger onboarding (or auto-play) once when video, audio, and base-video switch are all ready.
+  // Keeps thumbnail visible until everything is loaded so playback starts with sound.
   useEffect(() => {
     if (!isVideoReady || isGenerating || onboardingTriggeredRef.current) return;
+
+    // Wait for audio tracks to finish loading
+    if (!audioReady && projectId) return;
+
+    // Wait for the base-video switch to finish (isSourceSwitching goes true → false)
+    // Check both the ref (for synchronous updates within same effect batch) and state (for re-renders)
+    if (isSourceSwitching || isSourceSwitchingRef.current) return;
 
     // Wait for backendUser query to finish loading (undefined = still loading)
     const backendUserLoaded = backendUser !== undefined || !userId;
@@ -610,26 +931,28 @@ export default function VideoPreviewScreen() {
     const shouldShowTips = ENABLE_TEST_RUN_MODE || (!backendUser?.videoPreviewTipsCompleted && !videoTipsCompletedLocally);
 
     if (shouldShowTips) {
-      // Onboarding needed — video stays paused, show onboarding after a short
-      // delay so sidebar buttons are rendered and measurable for spotlights
       const timer = setTimeout(() => {
         triggerVideoPreviewOnboarding();
       }, 500);
       return () => clearTimeout(timer);
     } else {
-      // No onboarding — auto-play immediately
       if (videoPlayer) {
         videoPlayer.play();
+        syncAudioPlayState(true);
       }
     }
-  }, [isVideoReady, isGenerating, backendUser, userId, videoTipsCompletedLocally, triggerVideoPreviewOnboarding, videoPlayer]);
+  }, [isVideoReady, isGenerating, isSourceSwitching, backendUser, userId, videoTipsCompletedLocally, triggerVideoPreviewOnboarding, videoPlayer, audioReady, projectId, syncAudioPlayState]);
 
   // Handle onboarding completion
   const handleVideoPreviewOnboardingComplete = useCallback(async () => {
     setShowVideoPreviewOnboarding(false);
-    // Resume video playback after onboarding
     if (videoPlayer) {
       videoPlayer.play();
+    }
+    // Read ref directly to avoid stale closure (switchedToBaseRef may have changed
+    // after this callback was memoized)
+    if (switchedToBaseRef.current || !isDefaultVariant) {
+      syncAudioPlayState(true);
     }
     if (!ENABLE_TEST_RUN_MODE) {
       // Save locally first (guaranteed to persist)
@@ -644,11 +967,11 @@ export default function VideoPreviewScreen() {
         }
       }
     }
-  }, [userId, completeVideoPreviewTips, videoPlayer]);
+  }, [userId, completeVideoPreviewTips, videoPlayer, isDefaultVariant, syncAudioPlayState]);
 
   const handleClose = () => {
-    // In test mode, navigate directly to feed since the navigation stack may be inconsistent
-    // In production, router.back() goes to feed (since video-preview is opened from feed)
+    voiceSoundRef.current?.stopAsync().catch(() => {});
+    musicSoundRef.current?.stopAsync().catch(() => {});
     if (isTestMode) {
       router.replace('/(tabs)');
     } else {
@@ -666,9 +989,6 @@ export default function VideoPreviewScreen() {
       
       let downloadUrl = videoUri;
       let isLocalFile = false;
-      
-      // Check if user has customized the video options (not all enabled)
-      const isDefaultVariant = voiceoverEnabled && musicEnabled && captionsEnabled;
       
       if (projectId) {
         if (!isDefaultVariant) {
@@ -815,26 +1135,44 @@ export default function VideoPreviewScreen() {
   };
 
   const handleShowOnboarding = useCallback(() => {
-    // Manually trigger the video preview onboarding tips — skip
-    // InteractionManager / rAF wrappers since there are no pending
-    // transitions when the user taps the button.
     if (videoPlayer) {
       videoPlayer.pause();
     }
+    if (useSeparateAudio) syncAudioPlayState(false);
     measureOnboardingRects();
     setShowVideoPreviewOnboarding(true);
-  }, [videoPlayer, measureOnboardingRects]);
+  }, [videoPlayer, measureOnboardingRects, useSeparateAudio, syncAudioPlayState]);
 
   const handleChatHistory = () => {
-    // Navigate to chat composer with this project's chat history
     if (projectId) {
-      // Pause video before navigating to chat
       if (videoPlayer) {
         videoPlayer.pause();
       }
+      if (captionPlayer) {
+        captionPlayer.pause();
+      }
+      voiceSoundRef.current?.pauseAsync().catch(() => {});
+      musicSoundRef.current?.pauseAsync().catch(() => {});
       router.push({
         pathname: '/chat-composer',
         params: { projectId, fromVideo: 'true' },
+      });
+    }
+  };
+
+  const handleOpenEditor = () => {
+    if (projectId) {
+      if (videoPlayer) {
+        videoPlayer.pause();
+      }
+      if (captionPlayer) {
+        captionPlayer.pause();
+      }
+      voiceSoundRef.current?.pauseAsync().catch(() => {});
+      musicSoundRef.current?.pauseAsync().catch(() => {});
+      router.push({
+        pathname: '/video-editor' as any,
+        params: { projectId },
       });
     }
   };
@@ -929,15 +1267,36 @@ export default function VideoPreviewScreen() {
         // Ready state - show full-screen video player with tap-to-pause
         <TouchableWithoutFeedback onPress={handleVideoTap}>
           <View style={styles.fullscreenVideo}>
+            {/* Base layer: primary video (base video after switch, rendered before) */}
             <VideoView
               player={videoPlayer}
               style={StyleSheet.absoluteFill}
               contentFit="cover"
               nativeControls={false}
             />
+
+            {/* Caption layer: rendered video with baked captions, toggled via opacity */}
+            {switchedToBaseRef.current && (
+              <VideoView
+                player={captionPlayer}
+                style={[StyleSheet.absoluteFill, { opacity: captionsEnabled ? 1 : 0 }]}
+                contentFit="cover"
+                nativeControls={false}
+              />
+            )}
+
+            {/* Watermark overlay: visible when on base video and captions are off
+                (when captions are on, the caption player layer already includes the watermark) */}
+            {switchedToBaseRef.current && !captionsEnabled && previewAssets?.watermarkUrl && (
+              <Image
+                source={{ uri: previewAssets.watermarkUrl }}
+                style={styles.watermarkOverlay}
+                resizeMode="contain"
+              />
+            )}
             
-            {/* Thumbnail overlay while video is loading */}
-            {!isVideoReady && effectiveThumbnailUrl && (
+            {/* Thumbnail overlay while video is loading or source is switching */}
+            {(!isVideoReady || isSourceSwitching) && effectiveThumbnailUrl && (
               <Image
                 source={{ uri: effectiveThumbnailUrl }}
                 style={[StyleSheet.absoluteFill, styles.generatingThumbnail]}
@@ -1012,37 +1371,47 @@ export default function VideoPreviewScreen() {
           <View ref={togglesGroupRef} collapsable={false} style={styles.togglesGroup}>
             {/* Voice toggle */}
             <SidebarButton 
-              onPress={() => setVoiceoverEnabled(!voiceoverEnabled)}
+              onPress={() => voiceAvailable && setVoiceoverEnabled(!voiceoverEnabled)}
+              disabled={!voiceAvailable}
             >
               <Mic 
                 size={26} 
-                color={voiceoverEnabled ? Colors.white : "rgba(255,255,255,0.5)"} 
+                color={!voiceAvailable ? "rgba(255,255,255,0.2)" : voiceoverEnabled ? Colors.white : "rgba(255,255,255,0.5)"} 
                 strokeWidth={2} 
               />
             </SidebarButton>
             
             {/* Music toggle */}
             <SidebarButton 
-              onPress={() => setMusicEnabled(!musicEnabled)}
+              onPress={() => musicAvailable && setMusicEnabled(!musicEnabled)}
+              disabled={!musicAvailable}
             >
               <Music 
                 size={26} 
-                color={musicEnabled ? Colors.white : "rgba(255,255,255,0.5)"} 
+                color={!musicAvailable ? "rgba(255,255,255,0.2)" : musicEnabled ? Colors.white : "rgba(255,255,255,0.5)"} 
                 strokeWidth={2} 
               />
             </SidebarButton>
             
             {/* Captions toggle */}
             <SidebarButton 
-              onPress={() => setCaptionsEnabled(!captionsEnabled)}
+              onPress={() => captionsAvailable && setCaptionsEnabled(!captionsEnabled)}
+              disabled={!captionsAvailable}
             >
               <Subtitles 
                 size={26} 
-                color={captionsEnabled ? Colors.white : "rgba(255,255,255,0.5)"} 
+                color={!captionsAvailable ? "rgba(255,255,255,0.2)" : captionsEnabled ? Colors.white : "rgba(255,255,255,0.5)"} 
                 strokeWidth={2} 
               />
             </SidebarButton>
           </View>
+
+          {/* Video editor (scissors) button */}
+          {projectId && (
+            <SidebarButton onPress={handleOpenEditor}>
+              <Scissors size={26} color={Colors.white} strokeWidth={2} />
+            </SidebarButton>
+          )}
         </View>
       )}
       
@@ -1174,6 +1543,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 24,
+  },
+  watermarkOverlay: {
+    position: 'absolute',
+    top: 40 * COVER_SCALE - CROP_Y,
+    right: 160 * COVER_SCALE - CROP_X,
+    width: 200 * COVER_SCALE,
+    height: 200 * COVER_SCALE,
+    opacity: 0.7,
   },
   playPauseOverlay: {
     ...StyleSheet.absoluteFillObject,

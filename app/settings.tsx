@@ -19,6 +19,7 @@ import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Audio } from 'expo-av';
 import Colors from '@/constants/colors';
+import { useVoicePreview } from '@/hooks/useVoicePreview';
 import { useApp } from '@/contexts/AppContext';
 // Note: We use videoGenerationStatus.isPremium from backend instead of subscriptionState.isPro
 // because backend status is more reliable (RevenueCat may not have loaded yet)
@@ -57,10 +58,17 @@ export default function SettingsScreen() {
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [editedName, setEditedName] = useState('');
   const [editedStyle, setEditedStyle] = useState<StylePreference | null>(null);
-  const [playingPreviewId, setPlayingPreviewId] = useState<string | null>(null);
   const [previewStorageId, setPreviewStorageId] = useState<string | null>(null);
-  const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const {
+    playingPreviewId,
+    setPlayingPreviewId,
+    isGeneratingPreview,
+    sound,
+    setSound,
+    stopAllPreviews: stopAllPreviewsHook,
+    playLivePreview,
+  } = useVoicePreview();
 
   // Animated values for slide gesture
   const translateY = useRef(new Animated.Value(600)).current;
@@ -98,7 +106,7 @@ export default function SettingsScreen() {
     }
   }, [user]);
 
-  // Cleanup sound on unmount
+  // Unload sound when it changes so replaced sounds don't leak
   useEffect(() => {
     return () => {
       if (sound) {
@@ -324,23 +332,26 @@ export default function SettingsScreen() {
     }
   };
 
-  const playVoicePreview = (storageId: string, voiceId: string) => {
-    // Stop current preview if playing
-    if (sound) {
-      sound.unloadAsync().catch(console.error);
-      setSound(null);
-    }
+  const stopAllPreviews = () => {
+    stopAllPreviewsHook();
+    setPreviewStorageId(null);
+  };
+
+  const playVoicePreview = async (storageId: string | null, voiceId: string) => {
+    await stopAllPreviewsHook();
 
     if (playingPreviewId === voiceId) {
-      // Stop if already playing this one
-      setPlayingPreviewId(null);
       setPreviewStorageId(null);
       return;
     }
 
-    // Set preview storage ID to trigger useQuery
-    setPreviewStorageId(storageId);
-    setPlayingPreviewId(voiceId);
+    if (storageId) {
+      setPreviewStorageId(storageId);
+      setPlayingPreviewId(voiceId);
+    } else {
+      setPreviewStorageId(null);
+      playLivePreview(voiceId);
+    }
   };
 
 
@@ -356,7 +367,7 @@ export default function SettingsScreen() {
       return user.name ? `${user.name}'s Voice` : 'Your Voice';
     }
     
-    return 'Custom Voice';
+    return 'Your Voice';
   };
 
   const handleLogout = async () => {
@@ -859,7 +870,7 @@ export default function SettingsScreen() {
                   <Text style={styles.editModalTitle}>Select Voice</Text>
                   <TouchableOpacity
                     testID="closeVoiceSettingsModal"
-                    onPress={() => setIsSelectingVoice(false)}
+                    onPress={() => { stopAllPreviews(); setIsSelectingVoice(false); }}
                     activeOpacity={0.7}
                   >
                     <X size={24} color={Colors.ink} strokeWidth={2} />
@@ -869,8 +880,8 @@ export default function SettingsScreen() {
                 <ScrollView style={styles.voicesList}>
                   {/* Custom Voice Option */}
                   {user.elevenlabsVoiceId && (() => {
-                    // Fall back to original recording if TTS preview not available
-                    const clonePreviewStorageId = user.voicePreviewStorageId || user.voiceRecordingStorageId;
+                    const clonePreviewStorageId = user.voicePreviewStorageId || user.voiceRecordingStorageId || null;
+                    const isLoadingPreview = playingPreviewId === user.elevenlabsVoiceId && isGeneratingPreview;
                     return (
                       <TouchableOpacity
                         style={[
@@ -889,20 +900,18 @@ export default function SettingsScreen() {
                             <Text style={styles.voiceOptionDesc}>Custom AI voice clone</Text>
                           </View>
                         </View>
-                        {clonePreviewStorageId && (
-                          <TouchableOpacity
-                            style={styles.previewButton}
-                            onPress={() => playVoicePreview(clonePreviewStorageId, user.elevenlabsVoiceId)}
-                            activeOpacity={0.7}
-                            disabled={playingPreviewId === user.elevenlabsVoiceId && !previewUrl}
-                          >
-                            {playingPreviewId === user.elevenlabsVoiceId && !previewUrl ? (
-                              <ActivityIndicator size="small" color={Colors.ember} />
-                            ) : (
-                              <Volume2 size={18} color={Colors.ember} strokeWidth={2} />
-                            )}
-                          </TouchableOpacity>
-                        )}
+                        <TouchableOpacity
+                          style={styles.previewButton}
+                          onPress={() => playVoicePreview(clonePreviewStorageId, user.elevenlabsVoiceId)}
+                          activeOpacity={0.7}
+                          disabled={isLoadingPreview}
+                        >
+                          {isLoadingPreview ? (
+                            <ActivityIndicator size="small" color={Colors.ember} />
+                          ) : (
+                            <Volume2 size={18} color={Colors.ember} strokeWidth={2} />
+                          )}
+                        </TouchableOpacity>
                       </TouchableOpacity>
                     );
                   })()}
