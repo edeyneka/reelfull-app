@@ -199,7 +199,7 @@ function AppContent() {
         } else {
           // No projectId (older local notification) — navigate to feed where user can see the ready video
           console.log('[App] video_ready notification without projectId, navigating to feed');
-          router.navigate('/(tabs)');
+          router.navigate('/feed');
         }
       } else if (data?.type === 'video_failed') {
         if (data?.projectId) {
@@ -209,7 +209,7 @@ function AppContent() {
         } else {
           // No projectId — navigate to feed
           console.log('[App] video_failed notification without projectId, navigating to feed');
-          router.navigate('/(tabs)');
+          router.navigate('/feed');
         }
       }
     });
@@ -232,7 +232,7 @@ function AppContent() {
       <Stack.Screen name="index" />
       <Stack.Screen name="auth" />
       <Stack.Screen name="onboarding" />
-      <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+      <Stack.Screen name="feed" options={{ animation: 'fade' }} />
       <Stack.Screen name="chat-composer" options={{ gestureEnabled: false }} />
       <Stack.Screen name="video-preview" options={{ gestureEnabled: false }} />
       <Stack.Screen name="video-editor" options={{ gestureEnabled: false, animation: 'slide_from_right' }} />

@@ -75,7 +75,7 @@ export default function OnboardingScreen() {
       await saveUser({ name: name.trim(), style: style });
       
       console.log('[onboarding] Onboarding complete!');
-      router.replace('/(tabs)');
+      router.replace('/feed');
     } catch (error) {
       console.error('[onboarding] Error completing onboarding:', error);
       Alert.alert('Error', 'Failed to save your profile. Please try again.');

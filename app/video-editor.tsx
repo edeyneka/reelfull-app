@@ -1136,7 +1136,7 @@ export default function VideoEditorScreen() {
               thumbnailUrl: project?.thumbnailUrl,
             });
           }
-          router.replace('/(tabs)');
+          router.replace('/feed');
         }}]);
     } catch (e) {
       console.error('[video-editor] Save failed:', e);

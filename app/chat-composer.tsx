@@ -1864,7 +1864,7 @@ export default function ChatComposerScreen() {
             text: 'Got it!',
             style: 'default',
             onPress: () => {
-              router.replace('/(tabs)');
+              router.replace('/feed');
             }
           }]
         );
@@ -1959,7 +1959,7 @@ export default function ChatComposerScreen() {
           text: 'Got it!',
           style: 'default',
           onPress: () => {
-            router.replace('/(tabs)');
+            router.replace('/feed');
           }
         }]
       );

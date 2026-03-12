@@ -2,7 +2,6 @@ import { useRouter } from 'expo-router';
 import { Loader2, AlertCircle, FileText, Zap, Clock, Calendar, Plus , Trash2 } from 'lucide-react-native';
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
-  Dimensions,
   FlatList,
   StyleSheet,
   Text,
@@ -132,7 +131,7 @@ function VideoThumbnail({
     console.log(`[Thumbnail] ${displayText}: status=${item.status}, thumbnailUrl=${urlType}, using=${effectiveThumbnailUrl ? 'image' : (shouldUseVideoPreview ? 'video' : 'placeholder')}`);
   }, [item.thumbnailUrl, item.status, item.name, item.prompt, effectiveThumbnailUrl, shouldUseVideoPreview]);
 
-  const handleLongPress = (event: any) => {
+  const handleLongPress = (_event: any) => {
     if (thumbnailRef.current) {
       thumbnailRef.current.measure((x, y, width, height, pageX, pageY) => {
         onLongPress({ pageX, pageY, width, height });
@@ -384,7 +383,7 @@ function VideoThumbnail({
 export default function FeedTab() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { videos, deleteVideo, userId, syncedFromBackend, syncVideosFromBackend, syncUserFromBackend } = useApp();
+  const { videos, deleteVideo, userId, syncVideosFromBackend, syncUserFromBackend } = useApp();
   const { subscriptionState, hasCompletedPaywallThisSession } = usePaywall();
   const [actionSheetVideo, setActionSheetVideo] = useState<VideoType | null>(null);
   const [showActionSheet, setShowActionSheet] = useState(false);
@@ -393,11 +392,6 @@ export default function FeedTab() {
   const [activeTab, setActiveTab] = useState<'projects' | 'drafts'>('projects');
   const tabIndicatorAnim = useRef(new Animated.Value(0)).current;
   const navigationLockRef = useRef<{ key: string; startedAt: number } | null>(null);
-  
-  const hasPendingVideos = useMemo(() =>
-    videos.some(v => v.status === 'pending' || v.status === 'processing' || v.status === 'preparing'),
-    [videos]
-  );
   
   const backendUser = useQuery(
     api.users.getCurrentUser,
