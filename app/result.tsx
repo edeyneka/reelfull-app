@@ -188,7 +188,7 @@ export default function ResultScreen() {
         });
 
         // Navigate to feed to see the new generating video
-        router.replace('/feed');
+        router.replace('/(tabs)');
       } else {
         throw new Error('Failed to create regenerated project');
       }
@@ -210,7 +210,7 @@ export default function ResultScreen() {
   };
 
   const handleGoHome = () => {
-    router.replace('/feed');
+    router.replace('/(tabs)');
   };
 
   if (!projectId) {
@@ -219,7 +219,7 @@ export default function ResultScreen() {
         <Text style={{ color: Colors.cream, fontSize: 18 }}>Error: No project ID</Text>
         <TouchableOpacity
           style={{ marginTop: 20, padding: 16, backgroundColor: Colors.ember, borderRadius: 100 }}
-          onPress={() => router.replace('/feed')}
+          onPress={() => router.replace('/(tabs)')}
         >
           <Text style={{ color: Colors.cream, fontFamily: Fonts.medium }}>Go to Feed</Text>
         </TouchableOpacity>
@@ -242,7 +242,7 @@ export default function ResultScreen() {
         <Text style={{ color: Colors.cream, fontSize: 18 }}>Video not ready yet</Text>
         <TouchableOpacity
           style={{ marginTop: 20, padding: 16, backgroundColor: Colors.ember, borderRadius: 100 }}
-          onPress={() => router.replace('/feed')}
+          onPress={() => router.replace('/(tabs)')}
         >
           <Text style={{ color: Colors.cream, fontFamily: Fonts.medium }}>Go to Feed</Text>
         </TouchableOpacity>

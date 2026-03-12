@@ -87,7 +87,7 @@ export default function IntroScreen() {
       if (ENABLE_TEST_RUN_MODE) {
         router.replace('/onboarding');
       } else {
-        router.replace('/feed');
+        router.replace('/(tabs)');
       }
     } else {
       router.replace('/auth');

@@ -973,7 +973,7 @@ export default function VideoPreviewScreen() {
     voiceSoundRef.current?.stopAsync().catch(() => {});
     musicSoundRef.current?.stopAsync().catch(() => {});
     if (isTestMode) {
-      router.replace('/feed');
+      router.replace('/(tabs)');
     } else {
       router.back();
     }

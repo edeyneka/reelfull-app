@@ -81,7 +81,7 @@ const queryClient = new QueryClient();
 const convexUrl = 
   process.env.EXPO_PUBLIC_CONVEX_URL || 
   Constants.expoConfig?.extra?.convexUrl ||
-  'https://mellow-horse-601.convex.cloud';
+  'https://industrious-ibex-578.convex.cloud';
 
 console.log('[App] Initializing Convex client...');
 console.log('[App] process.env.EXPO_PUBLIC_CONVEX_URL:', process.env.EXPO_PUBLIC_CONVEX_URL);
@@ -199,7 +199,7 @@ function AppContent() {
         } else {
           // No projectId (older local notification) — navigate to feed where user can see the ready video
           console.log('[App] video_ready notification without projectId, navigating to feed');
-          router.navigate('/feed');
+          router.navigate('/(tabs)');
         }
       } else if (data?.type === 'video_failed') {
         if (data?.projectId) {
@@ -209,7 +209,7 @@ function AppContent() {
         } else {
           // No projectId — navigate to feed
           console.log('[App] video_failed notification without projectId, navigating to feed');
-          router.navigate('/feed');
+          router.navigate('/(tabs)');
         }
       }
     });
@@ -232,7 +232,7 @@ function AppContent() {
       <Stack.Screen name="index" />
       <Stack.Screen name="auth" />
       <Stack.Screen name="onboarding" />
-      <Stack.Screen name="feed" options={{ animation: 'fade' }} />
+      <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
       <Stack.Screen name="chat-composer" options={{ gestureEnabled: false }} />
       <Stack.Screen name="video-preview" options={{ gestureEnabled: false }} />
       <Stack.Screen name="video-editor" options={{ gestureEnabled: false, animation: 'slide_from_right' }} />

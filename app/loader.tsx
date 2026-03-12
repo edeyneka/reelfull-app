@@ -140,7 +140,7 @@ export default function LoaderScreen() {
         [
           {
             text: 'Go to Feed',
-            onPress: () => router.replace('/feed'),
+            onPress: () => router.replace('/(tabs)'),
             style: 'default',
           },
         ],
@@ -236,7 +236,7 @@ export default function LoaderScreen() {
             </Text>
             <TouchableOpacity
               style={styles.retryButton}
-              onPress={() => router.replace('/feed')}
+              onPress={() => router.replace('/(tabs)')}
               activeOpacity={0.7}
             >
               <Text style={styles.retryButtonText}>Go to Feed</Text>

@@ -234,7 +234,7 @@ export default function AuthScreen() {
           // Test mode: always go to onboarding for testing
           router.replace('/onboarding');
         } else if (result.onboardingCompleted) {
-          router.replace('/feed');
+          router.replace('/(tabs)');
         } else {
           router.replace('/onboarding');
         }
@@ -294,7 +294,7 @@ export default function AuthScreen() {
         if (ENABLE_TEST_RUN_MODE) {
           router.replace('/onboarding');
         } else if (result.onboardingCompleted) {
-          router.replace('/feed');
+          router.replace('/(tabs)');
         } else {
           router.replace('/onboarding');
         }
@@ -359,7 +359,7 @@ export default function AuthScreen() {
           // Test mode: always go to onboarding for testing
           router.replace('/onboarding');
         } else if (result.onboardingCompleted) {
-          router.replace('/feed');
+          router.replace('/(tabs)');
         } else {
           router.replace('/onboarding');
         }
